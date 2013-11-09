@@ -58,6 +58,22 @@ $API = array(
 			)
 		)
 	),
+	'ExtDirectActivities'=>array(
+		'methods'=>array(
+			'createActivity'=>array(
+					'len'=>1
+			),
+			'readActivities'=>array(
+					'len'=>1
+			),
+			'updateActivity'=>array(
+					'len'=>1
+			),
+			'destroyActivity'=>array(
+					'len'=>1
+			)
+		)
+	),
 	'ExtDirectCommande'=>array(
 		'methods'=>array(
 			'readOrder'=>array(
@@ -88,6 +104,9 @@ $API = array(
 					'len'=>1
 			),
 			'destroyOrderLine'=>array(
+					'len'=>1
+			),
+			'readAvailabilityCodes'=>array(
 					'len'=>1
 			)
 		)
