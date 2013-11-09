@@ -13,6 +13,7 @@ if (!defined("PERMISSIONERROR"))	define("PERMISSIONERROR",-1001);
 if (!defined("SQLERROR"))			define("SQLERROR",-1002);
 if (!defined("UPDATEERROR"))		define("UPTADEERROR",-1003);
 if (!defined("PARAMETERERROR"))		define("PARAMETERERROR",-1004);
+if (!defined("VULNERABILITYERROR")) define("VULNERABILITYERROR",-1005);
 
 // Change this following line to use the correct relative path (../, ../../, etc)
 $res=0;
@@ -91,8 +92,13 @@ function doRpc($cdata){
 		} else {
 			$params = array($cdata->data);
 		}
-		error_reporting(0); // comment for debugging
-		if (($result = call_user_func_array(array($o, $method), $params)) < 0) {
+		//error_reporting(0); // comment for debugging
+		if(!object_analyse_sql_and_script($params, 0)) {
+			$result = VULNERABILITYERROR;
+		} else {
+			$result = call_user_func_array(array($o, $method), $params);
+		}
+		if ($result < 0) {
 			$error = new stdClass;
 			if ($result > CONNECTERROR) {
 				$error->message = "Error $result from dolibarr: $method on action $action";
@@ -112,9 +118,12 @@ function doRpc($cdata){
 					break;
 					case PARAMETERERROR:
 						$error->message = "Parameter Error: $method on action $action";
-						break;
+					break;
+					case VULNERABILITYERROR:
+						$error->message = "Vulnerability Error: $method on action $action";
+					break;
 					default:
-						"Error $result from server: $method on action $action";;
+						"Error $result from server: $method on action $action";
 					break;
 				}
 			}
@@ -153,6 +162,42 @@ function doAroundCalls(&$fns, &$cdata, &$returnData=null){
 		}
 	}else{
 		$fns($cdata, $returnData);
+	}
+}
+
+/**
+ * Security: Return true if OK, false otherwise.
+ *
+ * @param		unknown_type		&$var		Object/Array to check
+ * @param		int		$type		1=GET, 0=POST, 2=PHP_SELF
+ * @return		boolean					false if ther is an injection
+ */
+function object_analyse_sql_and_script(&$var, $type)
+{
+	if (is_array($var) || is_object($var))
+	{
+		foreach ($var as $key => $value)
+		{
+			if (object_analyse_sql_and_script($value,$type))
+			{
+				if (is_array($var))
+				{
+					$var[$key] = $value;
+				} else {
+					$var->$key = $value;
+				}
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	else
+	{
+		//print_r($var);
+		return (test_sql_and_script_inject($var,$type) <= 0);
 	}
 }
 
