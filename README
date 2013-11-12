@@ -97,6 +97,7 @@ Client CRUD calls:
 - Products
 - Customer orders
 - Customer shipments
+- Activity tracking
 
 
 > New classes will be added.
@@ -104,6 +105,10 @@ Client CRUD calls:
 **Authentication system:**
 
 The module uses an authentication system different from the usual login/password authentication. Instead authentication is done by sending an unique id for each app installation to the server. In the module setup page the system administrator can assign a user to the installed application and the module will return a unique access key to the app. You can also enable auto user assignment in the module setup page, advised to only use this for testing or demo purposes.
+
+**Activity tracking system:**
+
+Can be used to track when client app is started, when the app started editing or doing an action on a certain object, Folowing items are tracked: user, user alias, app name, time, activity name, activity status, object id.
 
 **Usage:**
 
