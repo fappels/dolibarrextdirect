@@ -19,7 +19,7 @@
 /**
  *  \file       extdirect/class/extdirect.class.php
  *  \ingroup    extdirect
- *  \brief      CRUD class file (Create/Read/Update/Delete) for table user_app
+ *  \brief      CRUD class file (Create/Read/Update/Delete) for table extdirect_user
  *  			and some common functions
  *				Initialy built by build_class_from_table on 2012-12-29 16:55
  */
@@ -66,7 +66,8 @@ class ExtDirect // extends CommonObject
         return 1;
     }
 
-
+    
+    
     /**
      *  Create object into database
      *
@@ -100,7 +101,7 @@ class ExtDirect // extends CommonObject
 		// Put here code to add control on parameters values
 
         // Insert request
-		$sql = "INSERT INTO ".MAIN_DB_PREFIX."user_app(";
+		$sql = "INSERT INTO ".MAIN_DB_PREFIX."extdirect_user(";
 		
 		$sql.= "fk_user,";
 		$sql.= "app_id,";
@@ -136,7 +137,7 @@ class ExtDirect // extends CommonObject
 
 		if (! $error)
         {
-            $this->id = $this->db->last_insert_id(MAIN_DB_PREFIX."user_app");
+            $this->id = $this->db->last_insert_id(MAIN_DB_PREFIX."extdirect_user");
 
 			if (! $notrigger)
 			{
@@ -195,7 +196,7 @@ class ExtDirect // extends CommonObject
     	$sql.= " t.dev_type";
     
     
-    	$sql.= " FROM ".MAIN_DB_PREFIX."user_app as t";
+    	$sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
     	if (!empty($filter)){
     		$sql.= " WHERE ".$filter;
     	}
@@ -264,7 +265,7 @@ class ExtDirect // extends CommonObject
 		$sql.= " t.dev_type";
 
 		
-        $sql.= " FROM ".MAIN_DB_PREFIX."user_app as t";
+        $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
         
         if ($id) 
         {
@@ -351,7 +352,7 @@ class ExtDirect // extends CommonObject
 		// Put here code to add control on parameters values
 
         // Update request
-        $sql = "UPDATE ".MAIN_DB_PREFIX."user_app SET";
+        $sql = "UPDATE ".MAIN_DB_PREFIX."extdirect_user SET";
         
 		$sql.= " fk_user=".(isset($this->fk_user)?$this->fk_user:"null").",";
 		$sql.= " app_id=".(isset($this->app_id)?"'".$this->db->escape($this->app_id)."'":"null").",";
@@ -439,7 +440,7 @@ class ExtDirect // extends CommonObject
 
 		if (! $error)
 		{
-    		$sql = "DELETE FROM ".MAIN_DB_PREFIX."user_app";
+    		$sql = "DELETE FROM ".MAIN_DB_PREFIX."extdirect_user";
     		$sql.= " WHERE rowid=".$this->id;
 
     		dol_syslog(get_class($this)."::delete sql=".$sql);
@@ -473,12 +474,18 @@ class ExtDirect // extends CommonObject
 	 * @return return array of stdClass
 	 */
 	 public static function toArray($params) {
-		if (is_object($params)){
+
+	 	if (is_object($params))
+	 	{
 			$paramArray[0]=$params;
-		} else {
+		} 
+		else 
+		{
 			$paramArray=$params;
 		}
 		return $paramArray;
 	}
+	
+	
 }
 ?>
