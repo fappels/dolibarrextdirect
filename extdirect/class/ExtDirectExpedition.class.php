@@ -22,6 +22,7 @@
  *  \file       htdocs/extdirect/class/ExtDirectExpedition.class.php
  *  \brief      Sencha Ext.Direct shipments remoting class
  */
+require_once DOL_DOCUMENT_ROOT.'/extdirect/class/extdirect.class.php';
 require_once DOL_DOCUMENT_ROOT.'/expedition/class/expedition.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
@@ -139,11 +140,7 @@ class ExtDirectExpedition extends Expedition
 	public function createShipment($param) {
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
-		if (is_object($param)){
-			$paramArray[0]=$param;
-		} else {
-			$paramArray=$param;
-		}
+		$paramArray = ExtDirect::toArray($param);
 		
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -170,11 +167,7 @@ class ExtDirectExpedition extends Expedition
 	public function updateShipment($param) {
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->valider)) return PERMISSIONERROR;
-		if (is_object($param)){
-			$paramArray[0]=$param;
-		} else {
-			$paramArray=$param;
-		}
+		$paramArray = ExtDirect::toArray($param);
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -220,11 +213,7 @@ class ExtDirectExpedition extends Expedition
 	public function destroyShipment($param) {
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
-		if (is_object($param)){
-			$paramArray[0]=$param;
-		} else {
-			$paramArray=$param;
-		}
+		$paramArray = ExtDirect::toArray($param);
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -323,11 +312,7 @@ class ExtDirectExpedition extends Expedition
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
 		$notrigger=0;
-		if (is_object($param)){
-			$paramArray[0]=$param;
-		} else {
-			$paramArray=$param;
-		}
+		$paramArray = ExtDirect::toArray($param);
 		
 		foreach ($paramArray as &$params) {
 			$this->id=$params->origin_id;
