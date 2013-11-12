@@ -108,6 +108,8 @@ class ExtDirectCommande extends Commande
 				}
 				$row->order_date = $this->date_commande;
 				$row->deliver_date= $this->date_livraison;
+				$row->availability_id = $this->availability_id;
+				$row->availability_code = $this->availability_code;
 					
 				array_push($results,$row);
 			} else {
@@ -160,7 +162,8 @@ class ExtDirectCommande extends Commande
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if ($params->id) {
-				$id = $params->id;
+				$this->id = $params->id;
+				$this->prepareOrderFields($params);
 				// update
 				switch ($params->orderstatus_id) {
 					case -1:
@@ -181,6 +184,7 @@ class ExtDirectCommande extends Commande
 				if ($result < 0) return $result;
 				if (($result = $this->set_date($this->_user, $params->order_date)) < 0)	return $result;
 				if (($result = $this->set_date_livraison($this->_user, $params->deliver_date)) < 0)	return $result;
+				if (($params->availability_id > 0) && ($result = $this->set_availability($this->_user, $params->availability_id)) < 0)	return $result;
 			} else {
 				return PARAMETERERROR;
 			}
@@ -238,6 +242,8 @@ class ExtDirectCommande extends Commande
 		isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ($this->user_author_id = null); 
 		isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ($this->date_commande = null);
 		isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ($this->date_livraison = null);
+		isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ($this->availability_id = null);
+		isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ($this->availability_code = null);
 	} 
 	
 	/**
@@ -260,11 +266,22 @@ class ExtDirectCommande extends Commande
 				if ($filter->property == 'ref') $ref=$filter->value;
 			}
 		}
-
-		$sql = "SELECT s.nom, s.rowid as socid, c.rowid, c.ref, c.fk_statut, c.ref_int";
+		
+		$sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status";
 		$sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande as c";
+		$sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+		$sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
+		$sql.= "   FROM (";
+		$sql.= "	SELECT MAX( rowid ) AS maxrow, activity_id";
+		$sql.= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
+		$sql.= "    GROUP BY activity_id";
+		$sql.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
+		$sql.= "   WHERE ma.maxrow = ea.rowid";
+		$sql.= " ) AS ea ON c.rowid = ea.activity_id";
 		$sql.= " WHERE c.entity = ".$conf->entity;
 		$sql.= " AND c.fk_soc = s.rowid";
+		
+		
         if ($statusFilterCount>0) {
         	$sql.= " AND ( ";
         	foreach($orderstatus_id as $key => $fk_statut) {
@@ -293,6 +310,8 @@ class ExtDirectCommande extends Commande
 				$row->ref_int			= $obj->ref_int;
 				$row->orderstatus_id= (int) $obj->fk_statut;
 				$row->orderstatus	= $this->LibStatut($obj->fk_statut, false, 1);
+				$row->availability_id = $obj->fk_availability;
+				$row->status        = $obj->status;
 				array_push($results,$row);
 			}
 			$this->db->free($resql);
@@ -321,6 +340,56 @@ class ExtDirectCommande extends Commande
 			array_push($results,$row);
 		}
 		return $results;
+	}
+	
+	/**
+	 * public method to read a list of availability codes
+	 *
+	 * @return     stdClass result data or error number
+	 */
+
+	function readAvailabilityCodes()
+	{
+		global $langs;
+
+		if (!isset($this->db)) return CONNECTERROR;
+		$results = array();
+		$row = new stdClass;
+
+		$sql = 'SELECT ca.rowid, ca.code , ca.label';
+		$sql .= ' FROM '.MAIN_DB_PREFIX.'c_availability as ca';
+		$sql .= ' WHERE ca.active = 1';
+		$sql .= ' ORDER BY ca.rowid';
+		
+		dol_syslog(get_class($this)."::readAvailabilityCodes sql=".$sql, LOG_DEBUG);
+		$resql=$this->db->query($sql);
+		
+		if ($resql)
+		{
+			$num=$this->db->num_rows($resql);
+
+			for ($i = 0;$i < $num; $i++)
+			{
+				$obj = $this->db->fetch_object($resql);
+				$row = null;
+
+				$row->id = $obj->rowid;
+				$transcode=$langs->trans($obj->code);
+				$label=($transcode!=null?$transcode:$obj->label);
+				$row->code = $obj->code;
+				$row->label = $label;
+				array_push($results,$row);
+			}
+
+			$this->db->free($resql);
+			return $results;
+		}
+		else
+		{
+			$error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readAvailabilityCodes".$error, LOG_ERR);
+            return -1;
+		}
 	}
 	
 	/**
@@ -367,6 +436,7 @@ class ExtDirectCommande extends Commande
 						$row->product_ref = $line->product_ref;
 						$row->product_label = $line->product_label;
 						$row->product_desc = $line->product_desc;
+						$row->product_barcode= $myprod->barcode?$myprod->barcode:'';
 						$row->qty_asked = $line->qty;
 						$this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
 						$row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
@@ -385,6 +455,7 @@ class ExtDirectCommande extends Commande
 								$row->product_ref = $line->product_ref;
 								$row->product_label = $line->product_label;
 								$row->product_desc = $line->product_desc;
+								$row->product_barcode= $myprod->barcode?$myprod->barcode:'';
 								// limit qty asked to stock qty
 								if ($qtyToAsk > $stockReal) {
 									$row->qty_asked = $stockReal;
