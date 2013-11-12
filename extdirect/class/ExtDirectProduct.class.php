@@ -1,7 +1,7 @@
 <?PHP
 
 /*
- * Copyright (C) 2012		Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013		Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -143,9 +143,9 @@ class ExtDirectProduct extends Product
 				//! Unite de duree
 				$row->duration_unit= $this->duration_unit;
 				// Statut indique si le produit est en vente '1' ou non '0'
-				$row->status= $this->status;
+				$row->tosell= $this->status;
 				// Status indicate whether the product is available for purchase '1' or not '0'
-				$row->status_buy= $this->status_buy;
+				$row->tobuy= $this->status_buy;
 				// Statut indique si le produit est un produit fini '1' ou une matiere premiere '0'
 				$row->finished= $this->finished;
 					
@@ -168,7 +168,7 @@ class ExtDirectProduct extends Product
 					
 				//! barcode
 				$row->barcode= $this->barcode?$this->barcode:'';               // value
-				$row->barcode_type= $this->fk_barcode_type;          // id
+				$row->barcode_type= (int) $this->barcode_type;          // id
 					
 				// no links to offers in this version
 				// no multilangs in this version
@@ -370,17 +370,29 @@ class ExtDirectProduct extends Product
 		$results = array();
 		$row = new stdClass;
 		$warehouseid=null;
-		$status=null;
-		$status_buy=null;
+		$tosell=null;
+		$tobuy=null;
 		$finished=null;
+		$limit=null;
+		$start=0;
+		$contentFilter=null;
+		
+		if (isset($param->limit)) {
+			$limit = $param->limit;
+			$start = $param->start;
+		}
 		if (isset($param->filter)) {
 			foreach ($param->filter as $key => $filter){
 				if ($filter->property == 'warehouse_id') $warehouseid=$filter->value;
-				if ($filter->property == 'status') $status=$filter->value;
-				if ($filter->property == 'status_buy') $status_buy=$filter->value;
-				if ($filter->property == 'finished') $finished=$filter->value;				
+				if ($filter->property == 'tosell') $tosell=$filter->value;
+				if ($filter->property == 'tobuy') $tobuy=$filter->value;
+				if ($filter->property == 'finished') $finished=$filter->value;		
+				if ($filter->property == 'content') {
+					$contentValue = strtolower($filter->value);
+					$contentFilter = " AND (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%' OR LOWER(p.barcode) like '%".$contentValue."%')" ;
+				}
 			}
-		}
+		} 		
 	
 		$sql = "SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot";
 		$sql.= " FROM ".MAIN_DB_PREFIX."product as p, ".MAIN_DB_PREFIX."product_stock as ps";
@@ -389,20 +401,26 @@ class ExtDirectProduct extends Product
 		if ($warehouseid  && $warehouseid != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
 			$sql.= " AND ps.fk_entrepot = ".$warehouseid;
 		}
-		if ($status) {
-			$sql.= " AND p.tosell = ".$status;
+		if ($tosell) {
+			$sql.= " AND p.tosell = ".$tosell;
 		}
-		if ($status_buy) {
-			$sql.= " AND p.tobuy = ".$status_buy;
+		if ($tobuy) {
+			$sql.= " AND p.tobuy = ".$tobuy;
 		}
 		if ($finished) {
 			$sql.= " AND p.finished = ".$finished;
 		}
+		if ($contentFilter) {
+			$sql.= $contentFilter;
+		}
 		$sql .= " ORDER BY p.ref ASC";
+		if ($limit) {
+			$sql .= $this->db->plimit($limit,$start);
+		}
 	
 		dol_syslog(get_class($this)."::readProductList sql=".$sql, LOG_DEBUG);
 		$resql=$this->db->query($sql);
-	
+		
 		if ($resql) {
 			$num=$this->db->num_rows($resql);
 			for ($i = 0;$i < $num; $i++){
@@ -476,9 +494,9 @@ class ExtDirectProduct extends Product
 		//! Unite de duree
 		isset($param->duration_unit) ? ( $this->duration_unit =$param->duration_unit) : null;
 		// Statut indique si le produit est en vente '1' ou non '0'
-		isset($param->status) ? ( $this->status =$param->status) : null;
+		isset($param->tosell) ? ( $this->status =$param->tosell) : null;
 		// Status indicate whether the product is available for purchase '1' or not '0'
-		isset($param->status_buy) ? ( $this->status_buy =$param->status_buy) : null;
+		isset($param->tobuy) ? ( $this->status_buy =$param->tobuy) : null;
 		// Statut indique si le produit est un produit fini '1' ou une matiere premiere '0'
 		isset($param->finished) ? ( $this->finished =$param->finished) : null;
 		
