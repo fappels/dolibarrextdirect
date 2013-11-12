@@ -3,16 +3,19 @@
  */
 
 var appUuid = null,
+	app_id = null,
 	warehouseIds = [],
 	priceIndex = null,
 	orderId = null,
 	shipmentId = null,
 	productIds = [];
+	customerId = null;
 
 var TIMEOUT = 5000;
+
 	
 describe("Authentication", function () {
-	// enable autoasignment of superadmin in connector
+	// enable autoasignment of superadmin in connector and set correct provider url and customer id in test below
 	var testresult = null,
 		acknowledgeId = null,
 		flag = false;
@@ -32,6 +35,8 @@ describe("Authentication", function () {
 				dev_platform: 	Ext.os.name + ' ' + Ext.os.version,
 				dev_type:		Ext.os.deviceType				
 			});
+			customerId = 1;
+			Ext.Direct.getProvider("dolibarr_connector").setUrl("../router.php");
 			Ext.getStore('authentication').setData([authentication]);
 			Ext.getStore('authentication').sync();
 			Ext.getStore('authentication').clearFilter();
@@ -41,6 +46,7 @@ describe("Authentication", function () {
 					Ext.Array.each(records,function (record) {
 						testresult = record;
 						acknowledgeId = testresult.get('ack_id');
+						app_id = testresult.getId();
 					});
 					flag = true;
 				}
@@ -226,6 +232,48 @@ describe("priceindex", function () {
 	});
 });
 
+describe("Activities", function () {
+	var flag = false,
+		testresults = [],
+		testresult = null;
+	
+	it("create startup activity", function() {
+		runs(function() {
+			// add some activities
+			var activityData,
+				date = new Date();
+			
+			flag = false;
+			activityData = {
+				app_id:appUuid,
+				activity_name:'APP_Start',
+				activity_id:0,
+				status:'DONE',
+				datec:Ext.Date.format(date,'U')
+			};
+			Ext.getStore('activities').add(activityData);
+			Ext.getStore('activities').sync();
+			Ext.getStore('activities').load({
+				callback: function (records) {
+					Ext.Array.each(records,function(record){
+						testresults.push(record.get('status'));
+						testresult = records.length;
+						console.log(record);
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain('DONE');	
+			expect(testresult).toBeGreaterThan(0);	
+		});
+	});
+});
+
 describe("products", function () {
 	var flag = false,			
 		testresults = [],
@@ -257,19 +305,19 @@ describe("products", function () {
 				correct_stock_movement: 0,					// add (0) or remove(1) from stock 
 				correct_stock_label: 'new test product',	// stock movement reason
 				correct_stock_price: '10',					// stock buy price
-				barcode: '1234567890005',					// product barcode
-				barcode_type: 2								// barcode type 1 = EAN8, 2 = EAN13, 3 = UPC, 4 = ISBN, 5 = C39, 6 = C128
+				barcode: '*12345*',					// product barcode
+				barcode_type: 5								// barcode type 1 = EAN8, 2 = EAN13, 3 = UPC, 4 = ISBN, 5 = C39, 6 = C128
 			};
 			for (i=0;i<3;i++) {
 				switch (i) {
 					case 1:
 						productData.ref = 'CT0002';
-						productData.barcode = '1234567890012';
+						productData.barcode = '*123456*';
 						break;
 						
 					case 2:
 						productData.ref = 'CT0003';
-						productData.barcode = '1234567890029';
+						productData.barcode = '*1234567*';
 						break;
 	
 					default:
@@ -513,9 +561,10 @@ describe("order", function () {
 				note_private: 'connectortest private',
 				note_public: 'connectortest public',
 				ref_customer: 'connectortest',
-				customer_id: 1,
+				customer_id: customerId,
 				orderstatus_id: orderstatusIds[1],
-				user_id: 1
+				user_id: 1,
+				order_date: Ext.Date.format(new Date(),'U')
 			};
 			order = Ext.create('ConnectorTest.model.Order',orderData);
 			Ext.getStore('order').add(order);					
@@ -793,13 +842,14 @@ describe("shipment", function () {
 				origin: 'commande',
 				origin_id: orderId,
 				ref_customer: 'connectortest',
-				customer_id: 1,
+				customer_id: customerId,
 				weight_units:0,
 				weight:10,
 				size_units:0,
 				trueDepth:.2,
 				trueWidth:.2,
-				trueHeight:.2
+				trueHeight:.2,
+				deliver_date: Ext.Date.format(new Date(),'U')
 			};
 			shipment = Ext.create('ConnectorTest.model.Order',shipmentData);
 			Ext.getStore('shipment').add(shipment);					
@@ -1138,30 +1188,6 @@ describe("delete test records", function () {
 		
 		runs(function () {
 			expect(testresult).toBe(-1);
-		});
-	});
-});
-
-xdescribe("destroy connection", function () {
-	var flag = false,
-		testresult = null;
-		
-	it("destroy connection", function() {
-		runs(function() {
-			flag = false;
-			ExtDirectConnect.destroyUuid(appUuid, function (result,e) {
-				testresult = result;
-				flag = true;
-    		}); 
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(testresult).not.toBeLessThan(0);
-			expect(testresult).not.toBe(null);
-			expect(testresult.id).toBeDefined();
-			expect(testresult.id).toBeGreaterThan(0);
 		});
 	});
 });
