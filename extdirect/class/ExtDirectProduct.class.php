@@ -127,10 +127,10 @@ class ExtDirectProduct extends Product
 					
 				//! Stock
 				if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID){
-					$row->stock_reel= (int) $this->stock_warehouse[$warehouse]->real;
+					$row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
 					$row->pmp= $this->stock_warehouse[$warehouse]->pmp;
 				} else {
-					$row->stock_reel= (int) $this->stock_reel;
+					$row->stock_reel= (float) $this->stock_reel;
 					//! Average price value for product entry into stock (PMP)
 					$row->pmp= $this->pmp;
 				}
@@ -394,7 +394,7 @@ class ExtDirectProduct extends Product
 			}
 		} 		
 	
-		$sql = "SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot";
+		$sql = "SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel";
 		$sql.= " FROM ".MAIN_DB_PREFIX."product as p, ".MAIN_DB_PREFIX."product_stock as ps";
 		$sql.= " WHERE p.entity = ".$conf->entity;
 		$sql.= " AND p.rowid = ps.fk_product";
@@ -432,6 +432,7 @@ class ExtDirectProduct extends Product
 				$row->label   	= $obj->label;
 				$row->barcode	= $obj->barcode;
 				$row->warehouse_id	= $obj->fk_entrepot;
+				$row->stock		= (float) $obj->reel;
 				array_push($results,$row);
 			}
 			$this->db->free($resql);
