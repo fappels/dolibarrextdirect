@@ -73,7 +73,7 @@ class ExtDirectProduct extends Product
 		global $conf,$langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		$results = array();
 		$row = new stdClass;
 		$id = 0;
@@ -199,7 +199,7 @@ class ExtDirectProduct extends Product
 	public function createProduct($params) {
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
 		$notrigger=0;
 		$paramArray = ExtDirect::toArray($params);
 		
@@ -247,7 +247,7 @@ class ExtDirectProduct extends Product
 	 */
 	public function updateProduct($params) {
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
 		// dolibarr update settings
 		$allowmodcodeclient=0;
 		$notrigger=false;
@@ -335,7 +335,7 @@ class ExtDirectProduct extends Product
 	 */
 	public function destroyProduct($params) {
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->produit->supprimer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -367,6 +367,7 @@ class ExtDirectProduct extends Product
 	public function readProductList(stdClass $param) {
 		global $conf;
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		$results = array();
 		$row = new stdClass;
 		$warehouseid=null;
