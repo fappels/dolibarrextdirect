@@ -22,10 +22,11 @@
  *  \file       htdocs/extdirect/class/ExtDirectCommande.class.php
  *  \brief      Sencha Ext.Direct orders remoting class
  */
-require_once DOL_DOCUMENT_ROOT.'/extdirect/class/extdirect.class.php';
+
 require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectCommande class
  * 

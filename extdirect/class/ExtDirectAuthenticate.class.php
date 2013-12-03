@@ -21,8 +21,9 @@
  *  \file       htdocs/extdirec/class/ExtDirectAuthenticate.class.php
  *  \brief      Sencha Ext.Direct remoting class with CRUD methods to connect to Dolibarr
  */
-require_once DOL_DOCUMENT_ROOT.'/extdirect/class/extdirect.class.php';
+
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectConnect class
  * 

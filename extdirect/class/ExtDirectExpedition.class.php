@@ -22,11 +22,12 @@
  *  \file       htdocs/extdirect/class/ExtDirectExpedition.class.php
  *  \brief      Sencha Ext.Direct shipments remoting class
  */
-require_once DOL_DOCUMENT_ROOT.'/extdirect/class/extdirect.class.php';
+
 require_once DOL_DOCUMENT_ROOT.'/expedition/class/expedition.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectExpedition class
  * Class to access shipments with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector

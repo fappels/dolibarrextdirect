@@ -22,10 +22,11 @@
  *  \file       htdocs/extdirect/class/ExtDirectProduct.class.php
  *  \brief      Sencha Ext.Direct products remoting class
  */
-require_once DOL_DOCUMENT_ROOT.'/extdirect/class/extdirect.class.php';
+
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
-require_once DOL_DOCUMENT_ROOT.'/extdirect/class/ExtDirectFormProduct.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
+dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
 
 /** ExtDirectProduct class
  * 
