@@ -21,12 +21,7 @@ if (! $res && file_exists("../main.inc.php")) $res=@include("../main.inc.php");
 if (! $res) die("Include of main fails");
 
 require('config.php');
-$debugData = '[
-	{"action":"ExtDirectConnect","method":"checkUuid","data":["AuthenticationTest","l6dc8ecohh61uvkn76lct5gqe7524dc72dc10ca4.32284834","1"],"type":"rpc","tid":3},
-	{"action":"ExtDirectProduct","method":"destroyProduct","data":[
-		{"weight":null,"id":"444","date_creation":"2013-10-03 19:36:25","date_modification":"2013-10-03 21:36:25","label":"connectortest","description":"connectortest test product","note":"null","type":"0","price":"0.00000000","price_ttc":"0.00000000","tva_tx":"0.000","stock_reel":1,"status":true,"status_buy":"1","finished":"1","customcode":"","country_id":null,"ref":"CT0002","weight_units":null,"length":null,"length_units":null,"surface":null,"surface_units":null,"volume":null,"volume_units":null,"barcode":"","barcode_type":"0","warehouse_id":4,"multiprices_index":null,"correct_stock_dest_warehouseid":null,"correct_stock_nbpiece":null,"correct_stock_movement":null,"correct_stock_label":null,"correct_stock_price":null,"local_id":null}
-	],"type":"rpc","tid":14},
-	{"action":"ExtDirectConnect","method":"destroyUuid","data":["test1234"],"type":"rpc","tid":15}]';
+$debugData = '[]';
 
 /** Action class
  * class to execute extdirect functions

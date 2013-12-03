@@ -113,3 +113,4 @@ Can be used to track when client app is started, when the app started editing or
 **Usage:**
 
 For more details on how to use the Classes in your client side code, you can examine the provided jasmine unit tests in file extdirect/testing/test.js. You can run the test with URL "http://your.server.net/.../htdocs/extdirect/testing/", enable auto superAdmin assignment for this.
+At least two warehouses and one customer must be available to succeed the test.
