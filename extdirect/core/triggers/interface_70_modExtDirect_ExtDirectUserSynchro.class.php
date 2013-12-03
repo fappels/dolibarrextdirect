@@ -18,7 +18,7 @@
  */
 
 /**
- *  \file       htdocs/extdirect/core/triggers/interface_99_modExtDirect_Udl.class.php
+ *  \file       htdocs/extdirect/core/triggers/interface_70_modExtDirect_ExtDirectUserSynchro.class.php
  *  \ingroup    extdirect
  *  \brief      Fichier de demo de personalisation des actions du workflow
  *  \remarks    Son propre fichier d'actions peut etre cree par recopie de celui-ci:
@@ -32,7 +32,7 @@
 /**
  *  Class of triggers for demo module
  */
-class InterfaceUserappsynchro
+class InterfaceExtDirectUserSynchro
 {
     var $db;
     
@@ -47,8 +47,8 @@ class InterfaceUserappsynchro
     
         $this->name = preg_replace('/^Interface/i','',get_class($this));
         $this->family = "module";
-        $this->description = "Triggers of this module synchronise user modifaction with the user_app table.";
-        $this->version = '1.0.1';            // 'development', 'experimental', 'dolibarr' or version
+        $this->description = "Triggers of this module synchronise user modifaction with the extdirect_user table.";
+        $this->version = '1.0.2';            // 'development', 'experimental', 'dolibarr' or version
         $this->picto = 'technic';
     }
     
@@ -144,8 +144,8 @@ class InterfaceUserappsynchro
             
             $extDirect = new ExtDirect($this->db);
             $extDirect->fetchList("fk_user = '" . $object->id . "'");
-            foreach ($extDirect->dataset as $user_app) {
-            	$extDirect->id=$user_app['rowid'];
+            foreach ($extDirect->dataset as $extDirectUser) {
+            	$extDirect->id=$extDirectUser['rowid'];
             	if ($extDirect->delete($user)<0) {
             		dol_syslog("Trigger failed'".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             	}
