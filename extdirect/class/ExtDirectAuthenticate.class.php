@@ -58,7 +58,7 @@ class ExtDirectAuthenticate extends ExtDirect
 	 * @return return mixed stdClass  or int <0 if error
 	 */
 	public function createAuthentication($params) {
-		$paramArray = $this->toArray($params);
+		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			$this->prepareAuthenticationFields($param);
 			
@@ -137,11 +137,11 @@ class ExtDirectAuthenticate extends ExtDirect
 	/**
 	 * Ext.direct method to update authorisation details, update not possible.
 	 *
-	 * @param unknown_type $params parameter
+	 * @param unknown_type $param parameter
 	 * 
 	 * @return return  int PARAMETERERROR
 	 */
-	public function updateAuthentication($params) {
+	public function updateAuthentication($param) {
 		return PARAMETERERROR;// no update possible
 	}
 	
@@ -153,14 +153,13 @@ class ExtDirectAuthenticate extends ExtDirect
 	 */
 	
 	public function destroyAuthentication($params) {
-		$paramArray = $this->toArray($params);
+		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			// fetch id, if not found return error
-			if (($resql = $this->fetch(0,$params->app_id)) < 0) return $resql;
+			if (($resql = $this->fetch(0,$param->app_id)) < 0) return $resql;
 			$this->_user->fetch($this->fk_user);
 			// delete id, if not deleted return error
 			if (($resql = $this->delete($this->_user)) < 0) return $resql;
-			return $params;
 		}
 		
 		if (is_array($params)) {
