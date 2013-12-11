@@ -8,8 +8,9 @@ var appUuid = null,
 	priceIndex = null,
 	orderId = null,
 	shipmentId = null,
-	productIds = [];
-	customerId = null;
+	productIds = [],
+	customerId = null,
+	multiPrices = false;
 
 var TIMEOUT = 5000;
 
@@ -225,7 +226,11 @@ describe("priceindex", function () {
 			Ext.Array.each(testresults, function (testresult,index) {
 				// label must contain 1 or more characters
 				expect(testresult).toMatch(/^.*$/);
-				expect(priceIndex).toBe(0);
+				if (multiPrices) {
+					expect(priceIndex).toBe(1);
+				} else {
+					expect(priceIndex).toBe(0);
+				}
 			});
 			
 		});
@@ -358,7 +363,7 @@ describe("products", function () {
 			});
 		});
 		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT*2);
 		
 		runs(function () {
 			Ext.Array.each(testresults,function (result) {
