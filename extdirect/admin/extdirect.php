@@ -24,8 +24,8 @@
 
 require("../../main.inc.php");
 require_once(DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php");
-require_once(DOL_DOCUMENT_ROOT."/extdirect/class/extdirect.class.php");
-require_once(DOL_DOCUMENT_ROOT."/extdirect/class/extdirectactivity.class.php");
+dol_include_once("/extdirect/class/extdirect.class.php");
+dol_include_once("/extdirect/class/extdirectactivity.class.php");
 
 $langs->load("admin");
 $langs->load("extdirect@extdirect");

@@ -25,6 +25,7 @@
 
 // Put here all includes required by your class file
 require_once(DOL_DOCUMENT_ROOT."/core/class/commonobject.class.php");
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /**
  *	Put here description of your class
@@ -173,7 +174,12 @@ class ExtDirectActivity extends CommonObject
     	$sql.= " eu.requestid,";
     	$sql.= " eu.app_name,";
     	$sql.= " u.firstname,";
-    	$sql.= " u.lastname";
+    	if (ExtDirect::checkDolVersion() >= 3.3) {
+    		$sql.= " u.lastname";
+    	} else {
+    		$sql.= " u.name";
+    	}
+    	
     	    
     	$sql.= " FROM ".MAIN_DB_PREFIX."extdirect_activity as ea, ".MAIN_DB_PREFIX."extdirect_user as eu, ".MAIN_DB_PREFIX."user as u";
     	$sql.= " WHERE ea.app_id = eu.app_id AND ea.fk_user = u.rowid";
@@ -205,7 +211,12 @@ class ExtDirectActivity extends CommonObject
     			$this->dataset[$i]['requestid'] = $obj->requestid;
     			$this->dataset[$i]['app_name'] = $obj->app_name;
     			$this->dataset[$i]['firstname'] = $obj->firstname;
-    			$this->dataset[$i++]['lastname'] = $obj->lastname;
+    			if (ExtDirect::checkDolVersion() >= 3.3) {
+    				$this->dataset[$i++]['lastname'] = $obj->lastname;
+    			} else {
+    				$this->dataset[$i++]['lastname'] = $obj->name;
+    			}
+    			
     		}
     		$this->db->free($resql);
     

@@ -498,30 +498,58 @@ class ExtDirectCommande extends Commande
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			$this->prepareOrderLineFields($params,$orderLine);
-			if (($result = $this->addline(
-					  $orderLine->fk_commande, 
-					  $orderLine->desc, 
-					  $orderLine->subprice, 
-					  $orderLine->qty, 
-					  $orderLine->tva_tx,
-					  $orderLine->localtax1_tx,
-					  $orderLine->localtax2_tx,
-					  $orderLine->fk_product,
-					  $orderLine->remise_percent,
-					  $orderLine->info_bits,
-					  $orderLine->fk_remise_except,
-					  'HT',
-					  0,
-					  $orderLine->date_start,
-					  $orderLine->date_end,
-					  $orderLine->product_type,
-					  $orderLine->rang,
-					  $orderLine->special_code,
-					  $orderLine->fk_parent_line,
-					  $orderLine->fk_fournprice,
-					  $orderLine->pa_ht,
-					  $orderLine->label
-			)) < 0)	return $result;
+			if (ExtDirect::checkDolVersion() >= 3.5) {
+				$this->id = $orderLine->fk_commande;
+				if (($result = $this->addline(
+						  $orderLine->desc,
+						  $orderLine->subprice,
+						  $orderLine->qty,
+						  $orderLine->tva_tx,
+						  $orderLine->localtax1_tx,
+						  $orderLine->localtax2_tx,
+						  $orderLine->fk_product,
+						  $orderLine->remise_percent,
+						  $orderLine->info_bits,
+						  $orderLine->fk_remise_except,
+						  'HT',
+						  0,
+						  $orderLine->date_start,
+						  $orderLine->date_end,
+						  $orderLine->product_type,
+						  $orderLine->rang,
+						  $orderLine->special_code,
+						  $orderLine->fk_parent_line,
+						  $orderLine->fk_fournprice,
+						  $orderLine->pa_ht,
+						  $orderLine->label
+				)) < 0)	return $result;
+			} else {
+				if (($result = $this->addline(
+						  $orderLine->fk_commande,
+						  $orderLine->desc,
+						  $orderLine->subprice,
+						  $orderLine->qty,
+						  $orderLine->tva_tx,
+						  $orderLine->localtax1_tx,
+						  $orderLine->localtax2_tx,
+						  $orderLine->fk_product,
+						  $orderLine->remise_percent,
+						  $orderLine->info_bits,
+						  $orderLine->fk_remise_except,
+						  'HT',
+						  0,
+						  $orderLine->date_start,
+						  $orderLine->date_end,
+						  $orderLine->product_type,
+						  $orderLine->rang,
+						  $orderLine->special_code,
+						  $orderLine->fk_parent_line,
+						  $orderLine->fk_fournprice,
+						  $orderLine->pa_ht,
+						  $orderLine->label
+				)) < 0)	return $result;
+			}
+			
 		}
 	
 		if (is_array($param)) {

@@ -14,12 +14,13 @@ if (!defined("SQLERROR"))			define("SQLERROR",-1002);
 if (!defined("UPDATEERROR"))		define("UPTADEERROR",-1003);
 if (!defined("PARAMETERERROR"))		define("PARAMETERERROR",-1004);
 if (!defined("VULNERABILITYERROR")) define("VULNERABILITYERROR",-1005);
+if (!defined("COMPATIBILITYERROR")) define("COMPATIBILITYERROR",-1006);
 
 // Change this following line to use the correct relative path (../, ../../, etc)
 $res=0;
 if (! $res && file_exists("../main.inc.php")) $res=@include("../main.inc.php");
 if (! $res) die("Include of main fails");
-
+require('class/extdirect.class.php');
 require('config.php');
 $debugData = '[]';
 
@@ -56,6 +57,7 @@ if(isset($HTTP_RAW_POST_DATA)) {
 
 function doRpc($cdata){
 	global $API;
+	
 	try {
 		if(!isset($API[$cdata->action])){
 			throw new Exception('Call to undefined action: ' . $cdata->action);
@@ -87,11 +89,15 @@ function doRpc($cdata){
 		} else {
 			$params = array($cdata->data);
 		}
-		//error_reporting(0); // comment for debugging
+		error_reporting(0); // comment for debugging
 		if(!object_analyse_sql_and_script($params, 0)) {
 			$result = VULNERABILITYERROR;
 		} else {
-			$result = call_user_func_array(array($o, $method), $params);
+			if (ExtDirect::checkDolVersion() < 0) {
+				$result = COMPATIBILITYERROR;
+			} else {
+				$result = call_user_func_array(array($o, $method), $params);
+			}
 		}
 		if ($result < 0) {
 			$error = new stdClass;
@@ -116,6 +122,9 @@ function doRpc($cdata){
 					break;
 					case VULNERABILITYERROR:
 						$error->message = "Vulnerability Error: $method on action $action";
+					break;
+					case COMPATIBILITYERROR:
+						$error->message = "Compatibility Error: $method on action $action";
 					break;
 					default:
 						"Error $result from server: $method on action $action";
