@@ -129,6 +129,9 @@ class ExtDirectProduct extends Product
                     
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
+                    if (ExtDirect::checkDolVersion() >= 3.5) {
+                        $this->load_stock();
+                    } 
                     $row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
                     $row->pmp= $this->stock_warehouse[$warehouse]->pmp;
                 } else {

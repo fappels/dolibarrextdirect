@@ -431,6 +431,9 @@ class ExtDirectCommande extends Commande
                 foreach ($this->lines as $line) {
                     $myprod = new Product($this->db);
                     if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+                    if (ExtDirect::checkDolVersion() >= 3.5) {
+                        if (($result = $myprod->load_stock()) < 0) return $result;
+                    } 
                     if (isset($warehouse_id) || ($myprod->stock_reel == 0)) {
                         $row = null;
                         $row->id = $line->rowid.'_'.$warehouse_id;
