@@ -1,7 +1,7 @@
 <?php
 /* Copyright (C) 2005-2011 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2005-2011 Regis Houssin        <regis.houssin@capnetworks.com>
- * Copyright (C) 2012	   Francis Appels       <francis.appels@z-application.com>
+ * Copyright (C) 2012      Francis Appels       <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
  *  \brief      Fichier de demo de personalisation des actions du workflow
  *  \remarks    Son propre fichier d'actions peut etre cree par recopie de celui-ci:
  *              - Le nom du fichier doit etre: interface_99_modMymodule_Mytrigger.class.php
- *				                           ou: interface_99_all_Mytrigger.class.php
+ *                                         ou: interface_99_all_Mytrigger.class.php
  *              - Le fichier doit rester stocke dans core/triggers
  *              - Le nom de la classe doit etre InterfaceMytrigger
  *              - Le nom de la propriete name doit etre Mytrigger
@@ -39,13 +39,13 @@ class InterfaceExtDirectUserSynchro
     /**
      *   Constructor
      *
-     *   @param		DoliDB		$db      Database handler
+     *   @param     DoliDB      $db      Database handler
      */
     function __construct($db)
     {
         $this->db = $db;
     
-        $this->name = preg_replace('/^Interface/i','',get_class($this));
+        $this->name = preg_replace('/^Interface/i', '', get_class($this));
         $this->family = "module";
         $this->description = "Triggers of this module synchronise user modifaction with the extdirect_user table.";
         $this->version = '1.0.2';            // 'development', 'experimental', 'dolibarr' or version
@@ -94,14 +94,14 @@ class InterfaceExtDirectUserSynchro
      *      Function called when a Dolibarrr business event is done.
      *      All functions "run_trigger" are triggered if file is inside directory htdocs/core/triggers
      *
-     *      @param	string		$action		Event action code
-     *      @param  Object		$object     Object
-     *      @param  User		$user       Object user
-     *      @param  Translate	$langs      Object langs
-     *      @param  conf		$conf       Object conf
-     *      @return int         			<0 if KO, 0 if no triggered ran, >0 if OK
+     *      @param  string      $action     Event action code
+     *      @param  Object      $object     Object
+     *      @param  User        $user       Object user
+     *      @param  Translate   $langs      Object langs
+     *      @param  conf        $conf       Object conf
+     *      @return int                     <0 if KO, 0 if no triggered ran, >0 if OK
      */
-	function run_trigger($action,$object,$user,$langs,$conf)
+    function run_trigger($action,$object,$user,$langs,$conf)
     {
         // Put here code you want to execute when a Dolibarr business events occurs.
         // Data and type of action are stored into $object and $action
@@ -137,18 +137,18 @@ class InterfaceExtDirectUserSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-        else*/if ($action == 'USER_DELETE')
-        {
+        else*/
+        if ($action == 'USER_DELETE') {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             require(DOL_DOCUMENT_ROOT."/extdirect/class/extdirect.class.php");
             
             $extDirect = new ExtDirect($this->db);
             $extDirect->fetchList("fk_user = '" . $object->id . "'");
             foreach ($extDirect->dataset as $extDirectUser) {
-            	$extDirect->id=$extDirectUser['rowid'];
-            	if ($extDirect->delete($user)<0) {
-            		dol_syslog("Trigger failed'".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
-            	}
+                $extDirect->id=$extDirectUser['rowid'];
+                if ($extDirect->delete($user)<0) {
+                    dol_syslog("Trigger failed'".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
+                }
             }
             
         }/*
@@ -165,8 +165,8 @@ class InterfaceExtDirectUserSynchro
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
 
-		// Groups
-		elseif ($action == 'GROUP_CREATE')
+        // Groups
+        elseif ($action == 'GROUP_CREATE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
@@ -178,7 +178,7 @@ class InterfaceExtDirectUserSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-		
+        
         // Companies
         elseif ($action == 'COMPANY_CREATE')
         {
@@ -221,7 +221,7 @@ class InterfaceExtDirectUserSynchro
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
 
-		// Customer orders
+        // Customer orders
         elseif ($action == 'ORDER_CREATE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
@@ -259,7 +259,7 @@ class InterfaceExtDirectUserSynchro
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
 
-		// Supplier orders
+        // Supplier orders
         elseif ($action == 'ORDER_SUPPLIER_CREATE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
@@ -366,7 +366,7 @@ class InterfaceExtDirectUserSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-		elseif ($action == 'BILL_UNVALIDATE')
+        elseif ($action == 'BILL_UNVALIDATE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
@@ -386,11 +386,11 @@ class InterfaceExtDirectUserSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-		elseif ($action == 'LINEBILL_INSERT')
+        elseif ($action == 'LINEBILL_INSERT')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-		elseif ($action == 'LINEBILL_DELETE')
+        elseif ($action == 'LINEBILL_DELETE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
@@ -413,8 +413,8 @@ class InterfaceExtDirectUserSynchro
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
 
-		// Interventions
-		elseif ($action == 'FICHINTER_CREATE')
+        // Interventions
+        elseif ($action == 'FICHINTER_CREATE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
@@ -426,7 +426,7 @@ class InterfaceExtDirectUserSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-	    elseif ($action == 'FICHINTER_DELETE')
+        elseif ($action == 'FICHINTER_DELETE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
@@ -542,9 +542,8 @@ class InterfaceExtDirectUserSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-		*/
-		return 0;
+        */
+        return 0;
     }
 
 }
-?>
