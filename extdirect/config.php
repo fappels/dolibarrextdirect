@@ -72,6 +72,25 @@ $API = array(
             )
         )
     ),
+    'ExtDirectCategorie'=>array(
+        'methods'=>array(
+            'readCategorie'=>array(
+                'len'=>1
+            ),
+            'createCategorie'=>array(
+                'len'=>1
+            ),
+            'updateCategorie'=>array(
+                'len'=>1
+            ),
+            'destroyCategorie'=>array(
+                'len'=>1
+            ),
+            'readCategorieList'=>array(
+                'len'=>1
+            )
+        )
+    ),
     'ExtDirectProduct'=>array(
         'methods'=>array(
             'readProduct'=>array(
