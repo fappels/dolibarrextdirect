@@ -81,7 +81,7 @@ class ExtDirectContact extends Contact
                         $row = null;
                         $row->id                = (int) $this->id;
                         $row->civility_id       = $this->civilite_id;
-                        $row->name              = $this->name;
+                        $row->lastname          = $this->lastname;
                         $row->firstname         = $this->firstname;
                         $row->address           = $this->address;
                         $row->zip               = $this->zip;
@@ -96,7 +96,7 @@ class ExtDirectContact extends Contact
                         $row->phone_perso       = $this->phone_perso;
                         $row->phone_mobile      = $this->phone_mobile;
                         $row->skype             = $this->skype;
-                        $row->mail              = $this->mail;
+                        $row->email             = $this->email;
                         $row->jabberid          = $this->jabberid;
                         $row->priv              = (int) $this->priv;
                         $row->birthday          = $this->birthday;
@@ -117,6 +117,110 @@ class ExtDirectContact extends Contact
             }
         }
         return PARAMETERERROR;
+    }
+    
+    /**
+     *    Load contact parties list from database into memory, keep properties of same kind together
+     *
+     *    @param    stdClass    $params     property filter with properties and values:
+     *                                          id           Id of third party to load
+     *                                          company_id       commercial status of third party
+     *                                          town            Town of third party
+     *                                          content         filter on part of name, label or town value
+     *                                      property sort with properties field names and directions:
+     *                                      property limit for paging with sql LIMIT and START values
+     *
+     *    @return     stdClass result data or -1
+     */
+    function readContactList(stdClass $params)
+    {
+        global $conf,$langs;
+    
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
+        $results = array();
+        $row = new stdClass;
+        $filterSize = 0;
+    
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+        if (isset($params->filter)) {
+            $filterSize = count($params->filter);
+        }
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
+        } else {
+            $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.name as lastname, c.firstname,c.cp as zip, c.ville as town';
+        }
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
+        if ($filterSize > 0) {
+            // TODO improve sql command to allow random property type
+            $sql .= ' WHERE (';
+            foreach ($params->filter as $key => $filter) {
+                if ($filter->property == 'id')
+                    $sql .= 'c.rowid = '.$filter->value;
+                else if ($filter->property == 'company_id')
+                    $sql .= "(s.rowid = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'town')
+                    $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'content') {
+                    $contentValue = strtolower($filter->value);
+                    $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    $sql.= " OR LOWER(c.town) like '%".$contentValue."%')" ;
+                } else break;
+                if ($key < ($filterSize-1)) {
+                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
+                    else $sql .= ') AND (';
+                }
+            }
+            $sql .= ')';
+        }
+        $sql .= " ORDER BY ";
+        if (isset($params->sort)) {
+            $sorterSize = count($params->sort);
+            foreach($params->sort as $key => $sort) {
+                $sql .= $sort->property. ' '.$sort->direction;
+                if ($key < ($sorterSize-1)) {
+                    $sql .= ",";
+                }
+            }
+        } else {
+            $sql .= "lastname ASC";
+        }
+         
+        if ($limit) {
+            $sql .= $this->db->plimit($limit, $start);
+        }
+    
+        dol_syslog(get_class($this)."::readContactList sql=".$sql, LOG_DEBUG);
+        $resql=$this->db->query($sql);
+    
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
+    
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+    
+                $row = null;
+                $row->id            = (int) $obj->id;
+                $row->name          = ($obj->firstname != "") ? ($obj->firstname.' '.$obj->lastname) : ($obj->lastname);
+                $row->company_id    = (int) $obj->company_id;
+                $row->companyname   = $obj->companyname;
+                $row->zip           = $obj->zip;
+                $row->town          = $obj->town;
+    
+                array_push($results, $row);
+            }
+            $this->db->free($resql);
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);
+            return -1;
+        }
     }
     
     
@@ -225,15 +329,27 @@ class ExtDirectContact extends Contact
     private function prepareFields($params) 
     {
         ($params->civility_id) ? ($this->civilite_id = $params->civility_id) : null;
-        ($params->name) ? ($this->lastname = $params->name) : null;
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            ($params->lastname) ? ($this->lastname = $params->lastname) : null;
+        } else {
+            ($params->lastname) ? ($this->name = $params->lastname) : null;
+        }
         ($params->firstname) ? ($this->firstname = $params->firstname) : null;
         ($params->address) ? ($this->address = $params->address) : null;
-        ($params->zip) ? ($this->cp = $params->zip) : null;
-        ($params->town) ? ($this->ville = $params->town) : null;
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            ($params->zip) ? ($this->zip = $params->zip) : null;
+        } else {
+            ($params->zip) ? ($this->cp = $params->zip) : null;
+        }
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            ($params->town) ? ($this->town = $params->town) : null;
+        } else {
+            ($params->town) ? ($this->ville = $params->town) : null;
+        }
         ($params->fax) ? ($this->fax = $params->fax) : null;
         ($params->phone_perso) ? ($this->phone_perso = $params->phone_perso) : null;
         ($params->skype) ? ($this->skype = $params->skype) : null;
-        ($params->mail) ? ($this->mail = $params->mail) : null;
+        ($params->email) ? ($this->email = $params->email) : null;
         ($params->state) ? ($this->state=$params->state) : null;
         ($params->country) ? ($this->country=$params->country) : null;
         ($params->company_id) ? ($this->socid=$params->company_id) : null;
