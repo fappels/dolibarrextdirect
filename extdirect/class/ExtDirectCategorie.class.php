@@ -228,6 +228,7 @@ class ExtDirectCategorie extends Categorie
         if (($cats = $this->get_all_categories($type, false)) < 0) return $cats;
 
         foreach ($cats as $cat) {
+            $row=null;
             $row->id = $cat->id;
             $row->categorie = $cat->label;
             array_push($results, $row); 

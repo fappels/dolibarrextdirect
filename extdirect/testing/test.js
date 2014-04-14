@@ -12,6 +12,7 @@ var appUuid = null,
 	companyIds = [],
 	contactId = 0,
 	customerId = null,
+	actionId,
 	multiPrices = true;
 
 var TIMEOUT = 8000;
@@ -439,10 +440,12 @@ describe("companies", function ()
         runs(function ()
         {
             flag = false;
-            var contactData;
+            var contacts = Ext.getStore('contacts'),
+            	contactList = Ext.getStore('contactlist'),
+            	contactData;
 
             contactData = {
-                name: 'Contact', 							// company name
+                lastname: 'Contact', 							// company name
                 firstname: 'connectortest',
                 adress: '22 jump street',
                 zip: '99999',
@@ -458,60 +461,48 @@ describe("companies", function ()
                 company_id: companyIds[0]
             };
 
-            Ext.getStore('contacts').add(Ext.create('ConnectorTest.model.Contact', contactData));
-            Ext.getStore('contacts').sync();
-            Ext.getStore('companycontact').clearFilter();
-            Ext.getStore('companycontact').filter([Ext.create('Ext.util.Filter', { property: "rowid", value: companyIds[0] })]);
-            Ext.getStore('companycontact').load({
-                callback: function (records)
+            contacts.add(Ext.create('ConnectorTest.model.Contact', contactData));
+            contacts.sync();
+            
+            
+        	contactList.clearFilter();
+        	contactList.filter([Ext.create('Ext.util.Filter', { property: "town", value: 'MyTown' }),
+                                Ext.create('Ext.util.Filter', { property: "company_id", value: companyIds[0] })]);
+            contactList.load({
+                callback: function ()
                 {
-                    if (records.length > 0)
-                    {
-                        contactId = records[0].get('contact_id');
-                        Ext.getStore('contacts').clearFilter();
-                        Ext.getStore('contacts').filter([Ext.create('Ext.util.Filter', { property: "id", value: contactId })]);
-                        Ext.getStore('contacts').load({
-                            callback: function (records)
-                            {
-                                Ext.Array.each(records, function (record)
-                                {
-                                    testresult = record.get('firstname');
-                                });
-                                flag = true;
-                            }
-                        });
-                    }
+                    testresult = contactList.first().get('name');
+                    contactId = contactList.first().getId();
+                    flag = true;
                 }
             });
-
         });
 
         waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
 
         runs(function ()
         {
-            Ext.Array.each(testresults, function (result)
-            {
-                expect(testresult).toBe('connectortest');
-            });
+            expect(testresult).toBe('connectortest Contact');
         });
     });
-
-    xit("update contact", function () //TODO doesn't sync, don't know why
+    
+    it("update contact", function () //TODO doesn't sync, don't know why
     {
         var record;
 
         runs(function ()
         {
-            flag = false;
-            Ext.getStore('contacts').clearFilter();
-            Ext.getStore('contacts').filter([Ext.create('Ext.util.Filter', { property: "id", value: contactId })]);
-            Ext.getStore('contacts').load({
+        	var contacts = Ext.getStore('contacts');
+        	
+        	flag = false;
+        	contacts.clearFilter();
+        	contacts.filter([Ext.create('Ext.util.Filter', { property: "id", value: contactId })]);
+        	contacts.load({
                 callback: function (records)
                 {
                     records[0].set('firstname', 'connectortested');
-                    Ext.getStore('contacts').sync();
-                    Ext.getStore('contacts').load({
+                    contacts.sync();
+                    contacts.load({
                         callback: function (records)
                         {
                             Ext.Array.each(records, function (record)
@@ -747,7 +738,9 @@ describe("actions", function () {
 	it("create action", function() {
 		runs(function() {
 			
-			var actionData;
+			var actions = Ext.getStore('actions'),
+				actionList = Ext.getStore('actionlist'),
+				actionData;
 
 			flag = false;
 			actionData = {
@@ -762,16 +755,22 @@ describe("actions", function () {
 				contact_id:contactId,
 				durationp: 10
 			};
-			Ext.getStore('actions').add(Ext.create('ConnectorTest.model.Action', actionData));
-            Ext.getStore('actions').sync();
-            Ext.getStore('actions').clearFilter();
-            Ext.getStore('actions').filter([Ext.create('Ext.util.Filter', { property: "company_id", value: companyIds[0]})]);
-            Ext.getStore('actions').load({
+			actions.add(Ext.create('ConnectorTest.model.Action', actionData));
+			actions.sync();
+			
+			actionList.clearFilter();
+        	actionList.filter([Ext.create('Ext.util.Filter', { property: "company_id", value: companyIds[0] })]);
+        	actionList.load({
                 callback: function (records)
                 {
-                    Ext.Array.each(records, function (record)
+                	
+                	Ext.Array.each(records, function (record, index)
                     {
-                        testresults[0] = record.get('location');
+                    	if (record.get('label') === 'myAction') {
+                    		actionId = actions.first().getId();
+                    	}
+                    	
+                		testresults[index] = record.get('companyname');
                     });
                     flag = true;
                 }
@@ -781,38 +780,35 @@ describe("actions", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			Ext.Array.each(testresults,function (result) {
-				expect(result).toBe('connectortest');
-			});
-		});
+            expect(testresults).toContain('Company1');
+        });
 	});
 	
 	it("update action", function ()
     {
-        var record;
+        var actions = Ext.getStore('actions');
 
         runs(function ()
         {
             flag = false;
-            if ((record = Ext.getStore('actions').find('label', 'myAction')) !== undefined)
-            {
-                Ext.getStore('actions').getAt(record).set('location', 'connectortested');
-                Ext.getStore('actions').sync();
-                Ext.getStore('actions').load({
-                    callback: function (records)
-                    {
-                        Ext.Array.each(records, function (record)
+            
+        	actions.clearFilter();
+        	actions.filter([Ext.create('Ext.util.Filter', { property: "id", value: actionId })]);
+        	actions.load({
+                callback: function () {
+                	actions.first().set('location','connectortested');
+                	actions.sync();
+                	actions.load({
+                        callback: function (records) {
+                		Ext.Array.each(records, function (record)
                         {
                             testresults.push(record.get('location'));
                         });
                         flag = true;
-                    }
-                });
-            } else
-            {
-                flag = true;
-            }
-
+                        }
+                    });
+                }
+            });
         });
 
         waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
@@ -1967,7 +1963,7 @@ describe("delete categories and actions", function () {
 			flag = false;
 			
 			Ext.getStore('actions').clearFilter();
-			Ext.getStore('actions').filter([Ext.create('Ext.util.Filter',{property:"label",value:'myAction'})]);
+			Ext.getStore('actions').filter([Ext.create('Ext.util.Filter',{property:"id",value:actionId})]);
 			Ext.getStore('actions').load({
 				callback: function (records) {
 					Ext.getStore('actions').remove(records);
@@ -2008,7 +2004,7 @@ describe("delete contacts and companies", function () {
 			flag = false;
 			
 			Ext.getStore('contacts').clearFilter();
-			Ext.getStore('contacts').filter([Ext.create('Ext.util.Filter',{property:"name",value:'Contact'})]);
+			Ext.getStore('contacts').filter([Ext.create('Ext.util.Filter',{property:"id", value:contactId})]);
 			Ext.getStore('contacts').load({
 				callback: function (records) {
 					Ext.getStore('contacts').remove(records);

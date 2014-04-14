@@ -31,15 +31,15 @@ $API = array(
             ),
             'readProspectLevel'=>array(
                     'len'=>1
-            ),
-            'readContactId'=>array(
-                    'len'=>1
             )
         )
     ),
     'ExtDirectContact'=>array(
         'methods'=>array(
             'readContact'=>array(
+                    'len'=>1
+            ),
+            'readContactList'=>array(
                     'len'=>1
             ),
             'createContact'=>array(
