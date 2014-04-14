@@ -58,6 +58,7 @@ class ExtDirectActionComm extends ActionComm
         }
     }
     
+   
     /**
      *    Load actions of societe
      *    
@@ -72,49 +73,155 @@ class ExtDirectActionComm extends ActionComm
         if (!isset($this->_user->rights->agenda->myactions->read) 
             || !isset($this->_user->rights->agenda->allactions->read)) return PERMISSIONERROR;
         $results = array();
-        $actions = array();
         $row = new stdClass();
-        $societeId=0;
-        $userFilter = '';
-        $type_code = 'AC_OTH';
-        if (isset($params->filter)) {   
+        if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'company_id') 
-                    $societeId = $filter->value;
-                else if ($filter->property == 'type_code') 
-                    $type_code = $filter->value;
-                else if ($filter->property == 'user_id') 
-                    $userFilter = ' AND (fk_user_action = '.$filter->value.' OR fk_user_done = '.$filter->value.')';
-            }
-        }
-        if (($actions = $this->getActions($this->db, $societeId, 0, '', $userFilter)) < 0) return $actions;
-        if (isset($actions[0])) {
-            foreach ($actions as $action) {
-                $row = null;
-                $row->id                = (int) $action->id;
-                $row->datep             = $action->datep;
-                $row->datef             = $action->datef;
-                $row->type_code         = $action->type_code;
-                $row->type              = $action->type;
-                $row->label             = $action->label;
-                $row->note              = $action->note;
-                $row->usertodo_id       = (int) $action->usertodo->id;
-                $row->userdone_id       = (int) $action->userdone->id;
-                $row->location          = $action->location;
-                $row->company_id        = (int) $action->societe->id;
-                $row->contact_id        = (int) $action->contact->id;
-                $row->durationp         = $action->durationp;
+                if ($filter->property == 'id') {
+                    if (($result = $this->fetch($filter->value)) < 0)   return $result;
+                    if ($result == 0) {
+                        return array(); // no results
+                    }
+                    if (!$this->error) {
+                        $row = null;
+                        $row->id                = (int) $this->id;
+                        $row->code              = $this->code;
+                        $row->label             = $this->label;
+                        $row->datep             = $this->datep;
+                        $row->datef             = $this->datef;
+                        $row->durationp         = (int) ($this->datef - $this->datep);
+                        $row->fulldayevent      = (int) $this->fulldayevent;
+                        $row->percentage        = (int) $this->percentage;
+                        $row->location          = $this->location;
+                        $row->transparency      = (int) $this->transparency;
+                        $row->priority          = $this->priority;
+                        $row->note              = $this->note;
+                        $row->usertodo_id       = (int) $this->usertodo->id;
+                        $row->userdone_id       = (int) $this->userdone->id;
+                        $row->company_id        = (int) $this->societe->id;
+                        $row->contact_id        = (int) $this->contact->id;
+                        $row->project_id        = (int) $this->fk_project;
                 
-                // filter on type code
-                if (isset($type_code)) {
-                    if ($row->type_code == $type_code){
                         array_push($results, $row);
+                        return $results;
+                    } else {
+                        return $result;
                     }
                 }
             }
         }
-        return $results;
+        return PARAMETERERROR;
     }
+
+    /**
+     *    Load action list from database into memory, keep properties of same kind together
+     *
+     *    @param    stdClass    $params     property filter with properties and values:
+     *                                          id           Id of third party to load
+     *                                          company_id       id of third party
+     *                                          contact_id       id of contact
+     *                                          content         filter on part of company name, label, firstnamet or lastname
+     *                                      property sort with properties field names and directions:
+     *                                      property limit for paging with sql LIMIT and START values
+     *
+     *    @return     stdClass result data or -1
+     */
+    function readActionList(stdClass $params)
+    {
+        global $conf,$langs;
+    
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
+        $results = array();
+        $row = new stdClass;
+        $filterSize = 0;
+    
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+        if (isset($params->filter)) {
+            $filterSize = count($params->filter);
+        }
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            $sql = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+        } else {
+            $sql = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.name as lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+        }
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
+        if ($filterSize > 0) {
+            // TODO improve sql command to allow random property type
+            $sql .= ' WHERE (';
+            foreach ($params->filter as $key => $filter) {
+                if ($filter->property == 'id')
+                    $sql .= 'a.id = '.$filter->value;
+                else if ($filter->property == 'company_id')
+                    $sql .= "(s.rowid = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'contact_id')
+                    $sql .= "(c.rowid = ".$filter->value.")";
+                else if ($filter->property == 'user_id') 
+                    $sql.= '(fk_user_action = '.$filter->value.' OR fk_user_done = '.$filter->value.')';
+                else if ($filter->property == 'content') {
+                    $contentValue = strtolower($filter->value);
+                    $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    $sql.= " OR LOWER(s.name) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contenValue."%')" ;
+                } else break;
+                if ($key < ($filterSize-1)) {
+                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
+                    else $sql .= ') AND (';
+                }
+            }
+            $sql .= ')';
+        }
+        $sql .= " ORDER BY ";
+        if (isset($params->sort)) {
+            $sorterSize = count($params->sort);
+            foreach($params->sort as $key => $sort) {
+                $sql .= $sort->property. ' '.$sort->direction;
+                if ($key < ($sorterSize-1)) {
+                    $sql .= ",";
+                }
+            }
+        } else {
+            $sql .= "datep ASC";
+        }
+         
+        if ($limit) {
+            $sql .= $this->db->plimit($limit, $start);
+        }
+    
+        dol_syslog(get_class($this)."::readActionList sql=".$sql, LOG_DEBUG);
+        $resql=$this->db->query($sql);
+    
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
+    
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+    
+                $row = null;
+                $row->id            = (int) $obj->id;
+                $row->percentage    = (int) $obj->percentage;
+                $row->companyname   = $obj->companyname;
+                $row->contactname    = ($obj->firstname != "") ? ($obj->firstname.' '.$obj->lastname) : ($obj->lastname);
+                $row->datep         = $this->db->jdate($obj->datep);
+                $row->datef         = $this->db->jdate($obj->datef);
+                $row->company_id    = $obj->company_id;
+                $row->contact_id    = $obj->contact_id;
+                $row->label         = $obj->label;
+                              
+                array_push($results, $row);
+            }
+            $this->db->free($resql);
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readActionList ".$error, LOG_ERR);
+            return -1;
+        }
+    }
+    
     
     
     /**
@@ -162,17 +269,21 @@ class ExtDirectActionComm extends ActionComm
         if (!isset($this->_user->rights->agenda->myactions->create) 
             || !isset($this->_user->rights->agenda->allactions->create)) return PERMISSIONERROR;
         // dolibarr update settings 
-        $notrigger=1;
+        $notrigger=0;
         
         $paramArray = ExtDirect::toArray($params);
         foreach ($paramArray as &$param) {
             // prepare fields
             if ($param->id) {
                 $this->id = $param->id;
-                if (($result = $this->fetch($this->id)) < 0) return $result;
+                if (($result = $this->fetch($this->id)) < 0) {
+                    return $result;
+                }
                 $this->prepareFields($param);
                 // update
-                if (($result = $this->update($this->_user, $notrigger)) < 0)    return $result;
+                if (($result = $this->update($this->_user, $notrigger)) < 0) {
+                     return $result;
+                }  
                 $this->_societe->id=$this->societe->id;
                 $this->_societe->add_commercial($this->_user, $this->usertodo->id);
             } else {
@@ -288,11 +399,15 @@ class ExtDirectActionComm extends ActionComm
         isset($params->label) ? $this->label = $params->label : null;
         isset($params->note) ? $this->note = $params->note : null;
         isset($params->usertodo_id) ? $this->usertodo->id = $params->usertodo_id : null;
-        isset($params->userdone_id) ? $this->userdone->id = $this->_user->id : null;
+        isset($params->userdone_id) ? $this->userdone->id = $params->userdone_id : null;
         isset($params->location) ? $this->location = $params->location : null;
         isset($params->company_id) ? $this->societe->id=$params->company_id : null;
         isset($params->contact_id) ? $this->contact->id=$params->contact_id : null;
         isset($params->durationp) ? $this->durationp=$params->durationp : null;
-        isset($params->percentage) ? $this->percentage=$params->percentage : $this->percentage = 100;
+        isset($params->percentage) ? $this->percentage=$params->percentage : null;
+        isset($params->code) ? $this->code=$params->code : null;
+        isset($params->fulldayevent) ? $this->fulldayevent=$params->fulldayevent : null;
+        isset($params->transparency) ? $this->transparency=$params->transparency : null;
+        isset($params->project_id) ? $this->fk_project=$params->project_id : null;
     }
 }
