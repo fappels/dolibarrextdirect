@@ -58,6 +58,9 @@ $API = array(
             'readAction'=>array(
                     'len'=>1
             ),
+            'readActionList'=>array(
+                    'len'=>1
+            ),
             'createAction'=>array(
                     'len'=>1
             ),
