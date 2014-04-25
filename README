@@ -15,8 +15,7 @@ PHP class:
     	public function __construct() {
     		...
     	}
-    	public function readProduct(stdClass $param)
-    	{
+    	public function readProduct(stdClass $param) {
     		...
     	}
     	public function createProduct($params) {
@@ -122,4 +121,4 @@ At least two warehouses and one customer must be available to succeed the test.
 **Supported Dolibarr Versions:**
 
 - Min version:	3.2
-- Max version:	3.5.0
+- Max version:	3.5

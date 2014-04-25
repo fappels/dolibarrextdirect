@@ -417,9 +417,13 @@ class ExtDirectSociete extends Societe
             
             $row->client         = (int) $this->client;
             $row->supplier    = (int) $this->fournisseur;
+            if (ExtDirect::checkDolVersion() >= 3.4) {
+                $row->note_private   = $this->note_private;
+                $row->note_public    = $this->note_public;
+            } else {
+                $row->note_public    = $this->note;
+            }
             
-            $row->note_private   = $this->note_private;
-            $row->note_public    = $this->note_public;
             $row->default_lang   = $this->default_lang;
             $row->logo           = $this->logo;
             
@@ -799,5 +803,11 @@ class ExtDirectSociete extends Societe
         isset($params->code_compta_supplier) ? ($this->code_compta_fournisseur = $params->code_compta_supplier) : null;
         isset($params->code_client) ? ($this->code_client = $params->code_client) : null;
         isset($params->code_supplier) ? ($this->code_fournisseur = $params->code_supplier) : null;
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+           isset($params->note_public) ? ($this->note_public = $params->note_public) : null;
+           isset($params->note_private) ? ($this->note_private = $params->note_private) : null;
+        } else {
+           isset($params->note_public) ? ($this->note = $params->note_public) : null;
+        }
     }
 }
