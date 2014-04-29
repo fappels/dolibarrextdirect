@@ -343,7 +343,6 @@ class ExtDirectActionComm extends ActionComm
     function getAllUsers() 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->user->user->lire)) return PERMISSIONERROR;
         
         $results = array();
         $row = new stdClass;

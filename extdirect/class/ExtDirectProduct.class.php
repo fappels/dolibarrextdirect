@@ -469,7 +469,7 @@ class ExtDirectProduct extends Product
         isset($param->description) ? ( $this->description = $param->description) : null;
         //! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
         isset($param->type) ? ( $this->type = $param->type) : null;
-        isset($param->note) ? ( $this->note =$param->note) : null;
+        isset($param->note) ? ( $this->note = $param->note) : (isset($this->note) ? null : ($this->note = ''));
         //! Selling price
         
         if (! empty($conf->global->PRODUIT_MULTIPRICES) && !empty($param->multiprices_index)) {
