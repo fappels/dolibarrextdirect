@@ -407,9 +407,9 @@ class ExtDirectProduct extends Product
         }       
     
         $sql = "SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel";
-        $sql.= " FROM ".MAIN_DB_PREFIX."product as p, ".MAIN_DB_PREFIX."product_stock as ps";
+        $sql.= " FROM ".MAIN_DB_PREFIX."product as p LEFT JOIN ".MAIN_DB_PREFIX."product_stock as ps ON p.rowid = ps.fk_product";
         $sql.= " WHERE p.entity = ".$conf->entity;
-        $sql.= " AND p.rowid = ps.fk_product";
+        
         if ($warehouseid  && $warehouseid != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
             $sql.= " AND ps.fk_entrepot = ".$warehouseid;
         }
@@ -443,7 +443,16 @@ class ExtDirectProduct extends Product
                 $row->ref       = $obj->ref;
                 $row->label     = $obj->label;
                 $row->barcode   = $obj->barcode;
-                $row->warehouse_id  = $obj->fk_entrepot;
+                if (empty($obj->fk_entrepot)) {
+                     $row->warehouse_id = ExtDirectFormProduct::ALLWAREHOUSE_ID;
+                } else {
+                    $row->warehouse_id = $obj->fk_entrepot;
+                }
+                if (empty($obj->reel)) {
+                    $row->stock = 0;
+                } else {
+                    $row->stock = (float) $obj->reel;
+                }
                 $row->stock     = (float) $obj->reel;
                 array_push($results, $row);
             }
