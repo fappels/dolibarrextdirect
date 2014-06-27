@@ -1,7 +1,7 @@
 <?PHP
 
 /*
- * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ class ExtDirectCommande extends Commande
      *
      *    @param    stdClass    $params     filter with elements:
      *      id                  Id of order to load
-     *      ref                 Reference of order, name
+     *      ref                 ref, ref_int
      *      
      *    @return     stdClass result data or error number
      */
@@ -112,6 +112,12 @@ class ExtDirectCommande extends Commande
                 $row->deliver_date= $this->date_livraison;
                 $row->availability_id = $this->availability_id;
                 $row->availability_code = $this->availability_code;
+                $row->reduction_percent = $this->remise_percent;
+                $row->payment_condition_id = $this->cond_reglement_id;
+                $row->payment_type_id = $this->mode_reglement_id;
+                $row->total_net = $this->total_ht;
+                $row->total_tax = $this->total_tva;
+                $row->total_inc = $this->total_ttc;
                     
                 array_push($results, $row);
             } else {
@@ -169,7 +175,7 @@ class ExtDirectCommande extends Commande
                 $this->id = $params->id;
                 $this->prepareOrderFields($params);
                 // update
-                switch ($params->orderstatus_id) {
+                switch ($this->statut) {
                     case -1:
                         $result = $this->cancel();
                         break;
@@ -186,10 +192,17 @@ class ExtDirectCommande extends Commande
                         break;   
                 }
                 if ($result < 0) return $result;
-                if (($result = $this->set_date($this->_user, $params->order_date)) < 0) return $result;
-                if (($result = $this->set_date_livraison($this->_user, $params->deliver_date)) < 0) return $result;
-                if (($params->availability_id > 0) && 
-                    ($result = $this->set_availability($this->_user, $params->availability_id)) < 0)  return $result;
+                if (($result = $this->set_date($this->_user, $this->date_commande)) < 0) return $result;
+                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return $result;
+                if (($this->availability_id > 0) && 
+                    ($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return $result;
+                if (isset($this->remise_percent) && 
+                    ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return $result;
+                if (isset($this->cond_reglement_id) &&
+                    ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return $result;
+                if (isset($this->mode_reglement_id) &&
+                    ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return $result;
+                
             } else {
                 return PARAMETERERROR;
             }
@@ -251,15 +264,22 @@ class ExtDirectCommande extends Commande
         isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ($this->date_livraison = null);
         isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ($this->availability_id = null);
         isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ($this->availability_code = null);
+        isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
+        isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
+        isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
     } 
     
     /**
      * public method to read a list of orders
      *
-     * @param stdClass $params to filter on order status
+     * @param stdClass $params to filter on order status and ref
      * @return     stdClass result data or error number
      */
-    public function readOrdelList(stdClass $params) 
+    public function readOrdelList(stdClass $params) { // deprecated
+        return $this->readOrderList($params);
+    }
+    
+    public function readOrderList(stdClass $params) 
     {
         global $conf;
         
@@ -303,7 +323,7 @@ class ExtDirectCommande extends Commande
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
-        dol_syslog(get_class($this)."::readOrdelList sql=".$sql, LOG_DEBUG);
+        dol_syslog(get_class($this)."::readOrderList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -398,10 +418,14 @@ class ExtDirectCommande extends Commande
     }
     
     /**
-     *    Load orderline from database into memory
+     *    Load orderlines from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
      *                          Id of order to load lines from
+     *                          warehouse_id 
+     *                              warehouse_id x to get qty_stock of 
+     *                              warehouse_id -1 will get total qty_stock
+     *                              no warehouse_id will split lines in qty_stock by warehouse
      *    @return     stdClass result data or error number
      */
     public function readOrderLine(stdClass $params)
@@ -435,35 +459,86 @@ class ExtDirectCommande extends Commande
                         if (($result = $myprod->load_stock()) < 0) return $result;
                     } 
                     if (isset($warehouse_id) || ($myprod->stock_reel == 0)) {
-                        $row = null;
-                        $row->id = $line->rowid.'_'.$warehouse_id;
-                        $row->origin_id = $line->commande_id;
-                        $row->origin_line_id = $line->rowid;
-                        $row->description = $line->desc;
-                        $row->product_id = $line->fk_product;
-                        $row->product_ref = $line->product_ref;
-                        $row->product_label = $line->product_label;
-                        $row->product_desc = $line->product_desc;
-                        $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
-                        $row->qty_asked = $line->qty;
-                        $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                        $row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
-                        $row->warehouse_id = $warehouse_id;
-                        array_push($results, $row);
+                        if ($warehouse_id == -1) {
+                            // get orderline with complete stock
+                            $row = null;
+                            $row->id = $line->rowid;
+                            $row->origin_id = $line->fk_commande;
+                            $row->origin_line_id = $line->rowid;
+                            $row->label = $line->label;
+                            $row->description = $line->desc;
+                            $row->product_id = $line->fk_product;
+                            $row->product_ref = $line->product_ref;
+                            $row->product_label = $line->product_label;
+                            $row->product_desc = $line->product_desc;
+                            $row->product_type = $line->product->type;
+                            $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
+                            $row->qty_asked = $line->qty;
+                            $row->tax_tx = $line->tva_tx;
+                            $row->localtax1_tx = $line->localtax1_tx;
+                            $row->localtax2_tx = $line->localtax2_tx;
+                            $row->total_net = $line->total_ht;
+                            $row->total_inc = $line->total_ttc;
+                            $row->total_tax = $line->total_tva;
+                            $row->total_localtax1 = $line->total_localtax1;
+                            $row->total_localtax2 = $line->total_localtax2;
+                            $row->product_price = $line->subprice;
+                            $row->rang = $line->rang;
+                            $row->price = $line->price;
+                            $row->reduction_percent = $line->remise_percent;
+                            $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                            $row->qty_stock = (int) $myprod->stock_reel;
+                            $row->warehouse_id = $warehouse_id;
+                            array_push($results, $row);
+                        } else {
+                            // get orderline with stock of warehouse
+                            $row = null;
+                            $row->id = $line->rowid.'_'.$warehouse_id;
+                            $row->origin_id = $line->fk_commande;
+                            $row->origin_line_id = $line->rowid;
+                            $row->label = $line->label;
+                            $row->description = $line->desc;
+                            $row->product_id = $line->fk_product;
+                            $row->product_ref = $line->product_ref;
+                            $row->product_label = $line->product_label;
+                            $row->product_desc = $line->product_desc;
+                            $row->product_type = $line->product->type;
+                            $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
+                            $row->qty_asked = $line->qty;
+                            $row->tax_tx = $line->tva_tx;
+                            $row->localtax1_tx = $line->localtax1_tx;
+                            $row->localtax2_tx = $line->localtax2_tx;
+                            $row->total_net = $line->total_ht;
+                            $row->total_inc = $line->total_ttc;
+                            $row->total_tax = $line->total_tva;
+                            $row->total_localtax1 = $line->total_localtax1;
+                            $row->total_localtax2 = $line->total_localtax2;
+                            $row->product_price = $line->subprice;
+                            $row->rang = $line->rang;
+                            $row->price = $line->price;
+                            $row->reduction_percent = $line->remise_percent;
+                            $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                            $row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
+                            $row->warehouse_id = $warehouse_id;
+                            array_push($results, $row);
+                        }
+                        
                     } else {
                         $qtyToAsk=$line->qty;
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                             if (($stockReal = (int) $stock_warehouse->real > 0)) {
                                 $row = null;
                                 $row->id = $line->rowid.'_'.$warehouse;
-                                $row->origin_id = $line->commande_id;
+                                $row->origin_id = $line->fk_commande;
                                 $row->origin_line_id = $line->rowid;
+                                $row->label = $line->label;
                                 $row->description = $line->desc;
                                 $row->product_id = $line->fk_product;
                                 $row->product_ref = $line->product_ref;
                                 $row->product_label = $line->product_label;
                                 $row->product_desc = $line->product_desc;
                                 $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
+                                $row->product_type = $line->product->type;
                                 // limit qty asked to stock qty
                                 if ($qtyToAsk > $stockReal) {
                                     $row->qty_asked = $stockReal;
@@ -471,7 +546,18 @@ class ExtDirectCommande extends Commande
                                 } else {
                                     $row->qty_asked = $qtyToAsk;
                                 }
-                                
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                $row->product_price = $line->subprice;
+                                $row->rang = $line->rang;
+                                $row->price = $line->price;
+                                $row->reduction_percent = $line->remise_percent;
                                 $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                                 $row->qty_stock = $stock_warehouse->real;
                                 $row->warehouse_id = $warehouse;
@@ -489,7 +575,7 @@ class ExtDirectCommande extends Commande
     
     
     /**
-     * Ext.direct method to Create Order
+     * Ext.direct method to Create Orderlines
      *
      * @param unknown_type $param object or object array with product model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
@@ -568,7 +654,7 @@ class ExtDirectCommande extends Commande
     }
     
     /**
-     * Ext.direct method to update order
+     * Ext.direct method to update orderlines
      *
      * @param unknown_type $param object or object array with order model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
@@ -630,7 +716,7 @@ class ExtDirectCommande extends Commande
     }
     
     /**
-     * Ext.direct method to destroy order
+     * Ext.direct method to destroy orderlines
      *
      * @param unknown_type $param object or object array with order model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
@@ -639,15 +725,14 @@ class ExtDirectCommande extends Commande
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
-        $orderLine = new OrderLine($this->db);
         $paramArray = ExtDirect::toArray($param);
     
         foreach ($paramArray as &$params) {
             // prepare fields
             if ($params->origin_line_id) {
-                $orderLine->rowid = $params->origin_line_id;
                 // delete 
-                if (($result = $orderLine->delete()) < 0)   return $result;
+                $this->id = $params->origin_id;
+                if (($result = $this->deleteline($params->origin_line_id)) < 0)   return $result;
             } else {
                 return PARAMETERERROR;
             }
@@ -676,5 +761,12 @@ class ExtDirectCommande extends Commande
         isset($params->product_tax) ? ( $orderLine->tva_tx = $params->product_tax) : null;
         isset($params->description) ? ( $orderLine->desc = $params->description) : null;
         isset($params->qty_asked) ? ( $orderLine->qty = $params->qty_asked) : null;
+        isset($params->reduction_percent) ? ($orderLine->remise_percent = $params->reduction_percent) : null;
+        isset($params->tax_tx) ? ($orderLine->tva_tx = $params->tax_tx) : null;
+        isset($params->localtax1_tx) ? ($orderLine->localtax1_tx = $params->localtax1_tx) : null;
+        isset($params->localtax2_tx) ? ($orderLine->localtax2_tx = $params->localtax2_tx) : null;
+        isset($params->product_type) ? ($orderLine->product_type = $params->product_type) : null;
+        isset($params->rang) ? ($orderLine->rang = $params->rang) : null;
+        isset($params->label) ? ($orderLine->label = $params->label) : null;        
     }
 }
