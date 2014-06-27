@@ -1,7 +1,7 @@
 <?PHP
 
 /*
- * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -369,7 +369,18 @@ class ExtDirectProduct extends Product
     /**
      * public method to read a list of products
      *
-     * @param stdClass $param to filter on order status
+     * @param stdClass $param 
+     *       property filter to filter on:
+     *              warehouse_id
+     *              tosell
+     *              tobuy
+     *              finished
+     *              type
+     *              categorie_id
+     *              content of ref, label and barcode
+     *       property sort with properties field names and directions:
+     *       property limit for paging with sql LIMIT and START values
+     *              
      * @return     stdClass result data or -1
      */
     public function readProductList(stdClass $param) 
@@ -379,53 +390,77 @@ class ExtDirectProduct extends Product
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
         $results = array();
         $row = new stdClass;
-        $warehouseid=null;
-        $tosell=null;
-        $tobuy=null;
-        $finished=null;
+        $filterSize = 0;
         $limit=null;
-        $start=0;
-        $contentFilter=null;
+        $start=0;        
         
         if (isset($param->limit)) {
             $limit = $param->limit;
             $start = $param->start;
         }
         if (isset($param->filter)) {
+            $filterSize = count($param->filter);
+        }
+        
+        $sql = 'SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel';
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
+        if ($filterSize > 0) {
+            // TODO improve sql command to allow random property type
+            $sql .= ' WHERE (';
             foreach ($param->filter as $key => $filter) {
-                if ($filter->property == 'warehouse_id') $warehouseid=$filter->value;
-                if ($filter->property == 'tosell') $tosell=$filter->value;
-                if ($filter->property == 'tobuy') $tobuy=$filter->value;
-                if ($filter->property == 'finished') $finished=$filter->value;      
-                if ($filter->property == 'content') {
+                if ($filter->property == 'warehouse_id') {
+                    if ($filter->value != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
+                        $sql .= 'ps.fk_entrepot = '.$filter->value;
+                    } else {
+                        $sql .= '1';
+                    }
+                } else if ($filter->property == 'tosell') {
+                    $sql .= "p.tosell = ".$filter->value;
+                } else if ($filter->property == 'tobuy') {
+                    $sql .= "p.tobuy = ".$filter->value;
+                } else if ($filter->property == 'status') { // backward comp
+                    $sql .= "p.tosell = ".$filter->value;
+                } else if ($filter->property == 'status_buy') {  // backward comp
+                    $sql .= "p.tobuy = ".$filter->value;
+                } else if ($filter->property == 'finished') {
+                    $sql .= "p.finished = ".$filter->value;
+                } else if ($filter->property == 'type') {
+                    $sql .= "p.fk_product_type = ".$filter->value;
+                } else if ($filter->property == 'categorie_id') {
+                    //allow filtering on non categorized societe
+                    if ($filter->value == 0) {
+                        $sql .= "c.rowid IS NULL";
+                    } else {
+                        $sql .= "c.rowid = ".$filter->value;
+                    }
+                } else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);
-                    $contentFilter = " AND (LOWER(p.ref) like '%".$contentValue."%' 
-                         OR LOWER(p.label) like '%".$contentValue."%' 
-                         OR LOWER(p.barcode) like '%".$contentValue."%')" ;
+                    $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
+                    $sql.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
+                }
+                if ($key < ($filterSize-1)) {
+                    if($filter->property == $param->filter[$key+1]->property) $sql .= ' OR ';
+                    else $sql .= ') AND (';
                 }
             }
-        }       
-    
-        $sql = "SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel";
-        $sql.= " FROM ".MAIN_DB_PREFIX."product as p LEFT JOIN ".MAIN_DB_PREFIX."product_stock as ps ON p.rowid = ps.fk_product";
-        $sql.= " WHERE p.entity = ".$conf->entity;
-        
-        if ($warehouseid  && $warehouseid != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
-            $sql.= " AND ps.fk_entrepot = ".$warehouseid;
+            $sql .= ')';
         }
-        if ($tosell) {
-            $sql.= " AND p.tosell = ".$tosell;
+        $sql .= " ORDER BY ";
+        if (isset($param->sort)) {
+            $sorterSize = count($param->sort);
+            foreach($param->sort as $key => $sort) {
+                $sql .= $sort->property. ' '.$sort->direction;
+                if ($key < ($sorterSize-1)) {
+                    $sql .= ",";
+                }
+            }
+        } else {
+            $sql .= "p.ref ASC";
         }
-        if ($tobuy) {
-            $sql.= " AND p.tobuy = ".$tobuy;
-        }
-        if ($finished) {
-            $sql.= " AND p.finished = ".$finished;
-        }
-        if ($contentFilter) {
-            $sql.= $contentFilter;
-        }
-        $sql .= " ORDER BY p.ref ASC";
+
         if ($limit) {
             $sql .= $this->db->plimit($limit, $start);
         }
