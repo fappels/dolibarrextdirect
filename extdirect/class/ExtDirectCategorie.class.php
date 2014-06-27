@@ -1,7 +1,7 @@
 <?PHP
 
 /*
- * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +19,15 @@
  */
 
 /**
- *  \file       htdocs/extdirect/class/ExtDirectProduct.class.php
- *  \brief      Sencha Ext.Direct products remoting class
+ *  \file       htdocs/extdirect/class/ExtDirectCategorie.class.php
+ *  \brief      Sencha Ext.Direct categories remoting class
  */
 
 require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
 
-/** ExtDirectProduct class
+/** ExtDirectCategorie class
  * 
- * Class to access products with CRUD(L) methods to connect to Extjs or sencha touch using Ext.direct connector
+ * Class to access categories with CRUD(L) methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectCategorie extends Categorie
 {
@@ -57,14 +57,12 @@ class ExtDirectCategorie extends Categorie
     
     
     /**
-     *    Load products from database into memory
+     *    Load categories from database into memory
      *
      *    @param    stdClass    $param  filter with elements:
      *      id                  Id of product to load
-     *      ref                 Reference of product, name
-     *      warehouse_id        filter product on a warehouse
-     *      multiprices_index   filter product on a multiprice index
-     *      barcode             barcode of product 
+     *      label               Reference of product, name
+     *
      *    @return     stdClass result data or -1
      */
     public function readCategorie(stdClass $param)
@@ -107,10 +105,10 @@ class ExtDirectCategorie extends Categorie
 
 
     /**
-     * Ext.direct method to Create product
+     * Ext.direct method to Create categorie
      * 
-     * @param unknown_type $params object or object array with product model(s)
-     * @return Ambigous <multitype:, unknown_type>|unknown
+     * @param unknown_type $params object or object array with categorie model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown 
      */
     public function createCategorie($params) 
     {
@@ -137,9 +135,9 @@ class ExtDirectCategorie extends Categorie
     }
 
     /**
-     * Ext.direct method to update product
+     * Ext.direct method to update categorie
      * 
-     * @param unknown_type $params object or object array with product model(s)
+     * @param unknown_type $params object or object array with categorie model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
     public function updateCategorie($params) 
@@ -170,9 +168,9 @@ class ExtDirectCategorie extends Categorie
     }
 
     /**
-     * Ext.direct method to destroy product
+     * Ext.direct method to destroy categorie
      * 
-     * @param unknown_type $params object or object array with product model(s)
+     * @param unknown_type $params object or object array with categorie model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
     public function destroyCategorie($params) 
@@ -201,24 +199,21 @@ class ExtDirectCategorie extends Categorie
     }
     
     /**
-     * public method to read a list of products
+     * public method to read a list of categories
      *
-     * @param stdClass $param to filter on order status
+     * @param stdClass $param to    filter on type
+     *                              
      * @return     stdClass result data or -1
      */
     public function readCategorieList(stdClass $param) 
     {
-        global $conf;
+        global $conf, $langs;
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
         $results = array();
         $row = new stdClass;
         $type = 0;
         
-        if (isset($param->limit)) {
-            $limit = $param->limit;
-            $start = $param->start;
-        }
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'type') $type=$filter->value;
@@ -226,6 +221,10 @@ class ExtDirectCategorie extends Categorie
         }       
         
         if (($cats = $this->get_all_categories($type, false)) < 0) return $cats;
+        // id 0 is not categorised
+        $row->id = 0;
+        $row->categorie = ($langs->trans('NotCategorized') ? $langs->trans('NotCategorized') : 'Without category');
+        array_push($results, $row);
 
         foreach ($cats as $cat) {
             $row=null;
