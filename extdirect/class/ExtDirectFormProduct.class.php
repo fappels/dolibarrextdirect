@@ -1,7 +1,7 @@
 <?PHP
 
 /**
- * Copyright (C) 2012       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2012-2014  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,7 +103,7 @@ class ExtDirectFormProduct extends FormProduct
     /**
      *    Load available priceindexes from database into memory
      *
-     *    @param    stdClass    $params     filter with elements:
+     *    @param    stdClass    $params     not used
      *      
      *    @return     stdClass result data 
      */
@@ -129,4 +129,34 @@ class ExtDirectFormProduct extends FormProduct
         }
         return $results;
     }    
+
+    /**
+     *    Load available producttypes
+     *
+     *    @param    stdClass    $params     not used
+     *      
+     *    @return     stdClass result data 
+     */
+    public function readProductType(stdClass $params)
+    {
+        global $conf,$langs;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        if (! empty($conf->product->enabled)) {
+            $row=null;
+            $row->id = 0;
+            $row->label = $langs->trans("Product") ? $langs->trans("Product") : "Product";//lang
+            array_push($results, $row);
+        }
+        if (! empty($conf->service->enabled)) {
+            $row=null;
+            $row->id = 1;
+            $row->label = $langs->trans("Service") ? $langs->trans("Service") : "Service";//lang
+            array_push($results, $row);
+        }
+        
+        return $results;
+    }  
 }

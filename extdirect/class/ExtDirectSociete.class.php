@@ -23,6 +23,7 @@
  *  \brief      Sencha Ext.Direct third party remoting class
  */
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 
@@ -52,6 +53,7 @@ class ExtDirectSociete extends Societe
                     $langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("companies");
+                $langs->load("bills");
                 $this->db = $db;
             }
         }
@@ -63,7 +65,7 @@ class ExtDirectSociete extends Societe
      *
      *    @return   stdClass                result data or -1
      */
-    function readStComm() 
+    public function readStComm() 
     {
         global $langs;
         
@@ -106,7 +108,7 @@ class ExtDirectSociete extends Societe
      *
      *    @return     stdClass result data or -1
      */
-    function readProspectLevel()
+    public function readProspectLevel()
     {
         global $langs;
 
@@ -147,11 +149,77 @@ class ExtDirectSociete extends Societe
     }
     
     /**
+     *    Load the available paiment condition constants
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readPaymentConditions()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
+
+        require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+
+        $results = array();
+        $row = new stdClass;
+        $formHelpers = new Form($this->db);
+
+        if ($formHelpers->load_cache_conditions_paiements() > 0) {
+            foreach ($formHelpers->cache_conditions_paiements as $id => $values) {
+                $row = null;
+                $row->id = $id;
+                $row->code = $values['code'];
+                $row->label = $values['label'];
+                array_push($results, $row);
+            }
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readPaymentConditions ".$error, LOG_ERR);
+            return -1;
+        }
+    }
+    
+    /**
+     *    Load the available paiment type constants
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readPaymentTypes()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
+    
+        require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+    
+        $results = array();
+        $row = new stdClass;
+        $formHelpers = new Form($this->db);
+    
+        if ($formHelpers->load_cache_types_paiements() > 0) {
+            foreach ($formHelpers->cache_types_paiements as $id => $values) {
+                $row = null;
+                $row->id = $id;
+                $row->code = $values['code'];
+                $row->label = $values['label'];
+                $row->type = $values['type'];
+                array_push($results, $row);
+            }
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readPaymentTypes ".$error, LOG_ERR);
+            return -1;
+        }
+    }
+    
+    /**
      *    Load third parties list from database into memory, keep properties of same kind together
      *
      *    @param    stdClass    $params     property filter with properties and values:
      *                                          id              Id of third party to load
      *                                          ref             Reference of third party, name
+     *                                          client          company type 0 = none, 1 = customer, 2 = prospect, 3 = both
      *                                          stcomm_id       commercial status of third party
      *                                          town            Town of third party
      *                                          categorie_id    Categorie id of third party
@@ -161,7 +229,7 @@ class ExtDirectSociete extends Societe
      *                                          
      *    @return     stdClass result data or -1
      */
-    function readSocieteList(stdClass $params)
+    public function readSocieteList(stdClass $params)
     {
         global $conf,$langs;
     
@@ -170,6 +238,8 @@ class ExtDirectSociete extends Societe
         $results = array();
         $row = new stdClass;
         $filterSize = 0;
+        $limit=null;
+        $start=0;
         
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -179,9 +249,9 @@ class ExtDirectSociete extends Societe
             $filterSize = count($params->filter);
         }
         if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel';
+            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity';
         } else {
-            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel';
+            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel, s.logo, s.entity';
         }
         
         $sql .= ', st.libelle as commercial_status';
@@ -198,6 +268,8 @@ class ExtDirectSociete extends Societe
                     $sql .= 's.rowid = '.$filter->value;
                 else if ($filter->property == 'ref') 
                     $sql .= "(s.nom = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'client') 
+                    $sql .= "(s.client = ".$filter->value." AND s.entity = ".$conf->entity.")";
                 else if ($filter->property == 'town') {
                     if (ExtDirect::checkDolVersion() >= 3.4) {
                         $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
@@ -222,7 +294,7 @@ class ExtDirectSociete extends Societe
                     } else {
                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
                     }
-                } else break;
+                }
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
                     else $sql .= ') AND (';
@@ -270,6 +342,15 @@ class ExtDirectSociete extends Societe
                 $row->fk_prospectlevel = $obj->fk_prospectlevel;
                 $row->categorie     = $obj->categorie;
                 $row->categorie_id  = $obj->categorie_id;
+                if (!empty($obj->logo)) {
+                    $dir = $conf->societe->multidir_output[(int) $obj->entity]."/".$obj->rowid."/logos/thumbs";
+                    $logo_parts = pathinfo($obj->logo);
+                    $filename=$dir.'/'.$logo_parts['filename'].'_mini.'.$logo_parts['extension'];
+                    // Read image path, convert to base64 encoding
+                    $imgData = base64_encode(file_get_contents($filename));
+                    // Format the image SRC:  data:{mime};base64,{data};
+                    $row->logo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                }
                 
                 array_push($results, $row);
             }
@@ -290,16 +371,18 @@ class ExtDirectSociete extends Societe
      *      ref         Reference of third party, name
      *      ref_ext     External reference of third party 
      *                  (Warning, this information is a free field not provided by Dolibarr)
+     *      ref_int
      *      idprof1     Prof id 1 of third party
      *      idprof2     Prof id 2 of third party
      *      idprof3     Prof id 3 of third party
      *      idprof4     Prof id 4 of third party
-     *      town        Town of third party
-     *      categorie   Categorie of third party
+     *      
      *    @return     stdClass result data or -1
      */
-    function readSociete(stdClass $param)
+    public function readSociete(stdClass $param)
     {
+        global $conf;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
@@ -411,9 +494,9 @@ class ExtDirectSociete extends Societe
             
             $row->prefix_comm    = $this->prefix_comm;
             
-            $row->remise_percent = $this->remise_client;
-            $row->mode_reglement_id= $this->mode_reglement;
-            $row->cond_reglement_id= $this->cond_reglement;                
+            $row->reduction_percent = $this->remise_percent;
+            $row->payment_condition_id = $this->cond_reglement_id;
+            $row->payment_type_id = $this->mode_reglement_id;
             
             $row->client         = (int) $this->client;
             $row->supplier    = (int) $this->fournisseur;
@@ -425,7 +508,15 @@ class ExtDirectSociete extends Societe
             }
             
             $row->default_lang   = $this->default_lang;
-            $row->logo           = $this->logo;
+            if (!empty($this->logo)) {
+                $dir = $conf->societe->multidir_output[(int) $this->entity]."/".$this->id."/logos/thumbs";
+                $logo_parts = pathinfo($this->logo);
+                $filename=$dir.'/'.$logo_parts['filename'].'_small.'.$logo_parts['extension'];
+                // Read image path, convert to base64 encoding
+                $imgData = base64_encode(file_get_contents($filename));
+                // Format the image SRC:  data:{mime};base64,{data};
+                $row->logo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+            }
             
             // multiprix
             $row->price_level    = $this->price_level;
@@ -677,6 +768,7 @@ class ExtDirectSociete extends Societe
             // prepare fields
             if ($param->id) {
                 $id = $param->id;
+                $this->id = $id;
                 if (($result = $this->fetch($id)) < 0)  return $result;
                 
                 $this->prepareFields($param);
@@ -686,6 +778,16 @@ class ExtDirectSociete extends Societe
                 if ($param->stcomm_id || $param->fk_prospectlevel) {
                     if ($this->updateProspectStatLevel($id, $param->stcomm_id, $param->fk_prospectlevel) < 0) die ($this->error);
                 }
+                if (isset($param->reduction_percent)) {
+                    $this->set_remise_client($param->reduction_percent, 'Mobilid', $this->_user);
+                }
+                if (isset($param->payment_condition_id)) {
+                    $this->setPaymentTerms($param->payment_condition_id);
+                }
+                if (isset($param->payment_type_id)) {
+                    $this->setPaymentMethods($param->payment_type_id);
+                }
+                
             } else {
                 return PARAMETERERROR;
             }
@@ -803,11 +905,18 @@ class ExtDirectSociete extends Societe
         isset($params->code_compta_supplier) ? ($this->code_compta_fournisseur = $params->code_compta_supplier) : null;
         isset($params->code_client) ? ($this->code_client = $params->code_client) : null;
         isset($params->code_supplier) ? ($this->code_fournisseur = $params->code_supplier) : null;
+        isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
+        isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
+        isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
         if (ExtDirect::checkDolVersion() >= 3.4) {
            isset($params->note_public) ? ($this->note_public = $params->note_public) : null;
            isset($params->note_private) ? ($this->note_private = $params->note_private) : null;
         } else {
            isset($params->note_public) ? ($this->note = $params->note_public) : null;
         }
+        /*	$img = str_replace('data:image/png;base64,', '', $params->logo);
+	        $img = str_replace(' ', '+', $img);
+	        $data = base64_decode($img);*/
     }
 }
+

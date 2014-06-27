@@ -240,6 +240,66 @@ describe("priceindex", function () {
 	});
 });
 
+describe("producttype", function () {
+	var flag = false,
+		testresults = [];
+		
+	it("load producttypes", function() {
+		runs(function() {
+			flag = false;
+			Ext.getStore("ProductTypeList").load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('label');
+					});
+					flag = true;
+				}
+    		}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			Ext.Array.each(testresults, function (testresult,index) {
+				// label must contain 1 or more characters
+				expect(testresult).toMatch(/^Product|Service$/);
+			});
+			
+		});
+	});
+});
+
+describe("availability codes", function () {
+	var flag = false,
+		testresults = [];
+		
+	it("load availability codes", function() {
+		runs(function() {
+			flag = false;
+			Ext.getStore("availability").load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('code');
+					});
+					flag = true;
+				}
+    		}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			Ext.Array.each(testresults, function (testresult,index) {
+				// label must contain 1 or more characters
+				expect(testresult).toMatch(/^AV_.+/);
+			});
+			
+		});
+	});
+});
+
+
+
 describe("Activities", function () {
 	var flag = false,
 		testresults = [],
@@ -630,6 +690,62 @@ describe("companies", function ()
             expect(testresults).toContain('PL_NONE');
         });
     });
+    
+    it("read payment types", function ()
+    {
+
+        runs(function ()
+        {
+
+            flag = false;
+
+            Ext.getStore('PaymentTypes').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record, index)
+                    {
+                        testresults[index] = record.get('code');
+                    });
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(testresults).toContain('LIQ');
+        });
+    });
+    
+    it("read payment terms", function ()
+    {
+
+        runs(function ()
+        {
+
+            flag = false;
+
+            Ext.getStore('PaymentConditions').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record, index)
+                    {
+                        testresults[index] = record.get('code');
+                    });
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(testresults).toContain('RECEP');
+        });
+    });
 
     it("read Company 1 by Id", function ()
     {
@@ -948,293 +1064,246 @@ describe("categories", function () {
         });
     });
 });
-
-describe("products", function ()
-{
-    var flag = false,
+  
+describe("products", function () {
+	var flag = false,			
 		testresults = [],
 		testresult = null,
-        testresult2 = null,
 		productRefs = [],
 		productBarcodes = [];
+		
+	beforeEach(function() {
+		testresults = [];
+		testresult = null;
+	});
+		
+	it("create products", function() {
+		runs(function() {
+			// add 2 products
+			var productData,i,products = [],productStore;
 
-    beforeEach(function ()
-    {
-        testresults = [];
-        testresult = null;
-        testresult2 = null;
-    });
-
-    it("create products", function ()
-    {
-        runs(function ()
-        {
-            // add 2 products
-            var productData, i, products = [], productStore;
-
-            flag = false;
-            productData = {
-                ref: 'CT0001', 							// company name
-                label: 'connectortest', 					// product name
-                type: 0, 								// product type (0 = product, 1 = service)
-                description: 'connectortest test product', // product detailed description
-                warehouse_id: warehouseIds[1], 			// product location
-                status: true, 							// product to sell or not
-                status_buy: 1, 							// make or buy product, 0 is make, 1 is buy
-                finished: 1, 							// product finished (1) or raw material (0)
-                correct_stock_nbpiece: 10, 				// product stock amount
-                correct_stock_movement: 0, 				// add (0) or remove(1) from stock 
-                correct_stock_label: 'new test product', // stock movement reason
-                correct_stock_price: '10', 				// stock buy price
-                barcode: '*12345*', 						// product barcode
-                barcode_type: 5								// barcode type 1 = EAN8, 2 = EAN13, 3 = UPC, 4 = ISBN, 5 = C39, 6 = C128
-            };
-            for (i = 0; i < 3; i++)
-            {
-                switch (i)
-                {
-                    case 1:
-                        productData.ref = 'CT0002';
-                        productData.barcode = '*123456*';
-                        productData.note = 'note';
-                        break;
-
-                    case 2:
-                        productData.ref = 'CT0003';
-                        productData.barcode = '*1234567*';
-                        break;
-
-                    default:
-                        break;
-                }
-                products[i] = Ext.create('ConnectorTest.model.Product', productData);
-            }
-            productStore = Ext.getStore('product');
-            productStore.add(products);
-            productStore.sync();
-            productStore.clearFilter();
-            productStore.filter([Ext.create('Ext.util.Filter', { property: "ref", value: 'CT0001' })]);
-            productStore.load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresults[0] = record.get('label');
-                    });
-                }
-            });
-            productStore.clearFilter();
-            productStore.filter([Ext.create('Ext.util.Filter', { property: "ref", value: 'CT0002' })]);
-            productStore.load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresults[1] = record.get('label');
-                    });
-                }
-            });
-            productStore.clearFilter();
-            productStore.filter([Ext.create('Ext.util.Filter', { property: "ref", value: 'CT0003' })]);
-            productStore.load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresults[2] = record.get('label');
-                    });
-                    delete products;
-                    flag = true;
-                }
-            });
-        });
-
-        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT * 2);
-
-        runs(function ()
-        {
-            Ext.Array.each(testresults, function (result)
-            {
-                expect(result).toBe('connectortest');
-            });
-        });
-    });
-
-    it("read productlist", function ()
-    {
-
-        runs(function ()
-        {
-            var i = 0;
-
-            flag = false;
-            Ext.getStore('productlist').clearFilter();
-            Ext.getStore('productlist').filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
-			                                    Ext.create('Ext.util.Filter', { property: "status", value: true }),
-			                                    Ext.create('Ext.util.Filter', { property: "status_buy", value: 1 }),
-			                                    Ext.create('Ext.util.Filter', { property: "finished", value: 1 })]);
-            Ext.getStore('productlist').load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record, index)
-                    {
-                        testresults[index] = record.get('label');
-                        if (record.get('label') == 'connectortest')
-                        {
-                            productIds[i] = record.get('product_id');
-                            productBarcodes[i] = record.get('barcode');
-                            productRefs[i++] = record.get('ref');
-                        }
-                    });
-                    flag = true;
-                }
-            });
-        });
-
-        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
-
-        runs(function ()
-        {
-            expect(testresults).toContain('connectortest');
-        });
-    });
-
-    it("read product 1 by Id", function ()
-    {
-
-        runs(function ()
-        {
-            flag = false;
+			flag = false;
+			productData = {
+				ref: 'CT0001',								// company name
+				label: 'connectortest',						// product name
+				type: 0,									// product type (0 = product, 1 = service)
+				description: 'connectortest test product',	// product detailed description
+				warehouse_id: warehouseIds[1],				// product location
+				tosell: 1,									// product to sell or not
+				tobuy: 1,									// make or buy product, 0 is make, 1 is buy
+				finished: 1,								// product finished (1) or raw material (0)
+				correct_stock_nbpiece: 10,					// product stock amount
+				correct_stock_movement: 0,					// add (0) or remove(1) from stock 
+				correct_stock_label: 'new test product',	// stock movement reason
+				correct_stock_price: '10',					// stock buy price
+				barcode: '*12345*',							// product barcode
+				barcode_type: 5								// barcode type 1 = EAN8, 2 = EAN13, 3 = UPC, 4 = ISBN, 5 = C39, 6 = C128
+			};
+			for (i=0;i<3;i++) {
+				switch (i) {
+					case 1:
+						productData.ref = 'CT0002';
+						productData.barcode = '*123456*';
+						break;
+						
+					case 2:
+						productData.ref = 'CT0003';
+						productData.barcode = '*1234567*';
+						break;
+	
+					default:
+						break;
+				}
+				products[i] = Ext.create('ConnectorTest.model.Product',productData);
+			}
+			productStore = Ext.getStore('product');
+			productStore.add(products);					
+			productStore.sync();
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"ref",value:'CT0001'})]);
+			productStore.load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults[0] = record.get('label');
+					});
+				}
+			});
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"ref",value:'CT0002'})]);
+			productStore.load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults[1] = record.get('label');
+					});
+				}
+			});
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"ref",value:'CT0003'})]);
+			productStore.load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults[2] = record.get('label');
+					});
+					delete products;
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT*2);
+		
+		runs(function () {
+			Ext.Array.each(testresults,function (result) {
+				expect(result).toBe('connectortest');
+			});
+		});
+	});
+	
+	it("read productlist", function() {
+	
+		runs(function() {
+			var i=0;
+			
+			flag = false;
+			Ext.getStore('productlist').clearFilter();
+			Ext.getStore('productlist').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                                    Ext.create('Ext.util.Filter',{property:"status",value:1}),
+			                                    Ext.create('Ext.util.Filter',{property:"status_buy",value:1}),
+			                                    Ext.create('Ext.util.Filter',{property:"finished",value:1})]);
+			Ext.getStore('productlist').load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('label');
+						if (record.get('label') == 'connectortest') {
+							productIds[i] = record.get('product_id');
+							productBarcodes[i] = record.get('barcode');
+							productRefs[i++] = record.get('ref');
+						}
+					});
+					flag = true;
+				}
+    		}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT*2);
+		
+		runs(function () {
+			expect(testresults).toContain('connectortest');	
+		});
+	});
+	
+	it("read product 1 by Id", function() {
+	
+		runs(function() {
+			flag = false;
+			Ext.getStore('product').clearFilter();
+			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+											Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+											Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
+			Ext.getStore('product').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult = record.get('ref');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe('CT0001');
+		});
+	});
+	
+	it("update product 1", function() {
+		var record = Ext.getStore('product').find('ref','CT0001');
+		
+		runs(function() {
+			flag = false;
+			Ext.getStore('product').getAt(record).set('label','connectortested');
+			Ext.getStore('product').getAt(record).set('correct_stock_nbpiece',5);
+			Ext.getStore('product').getAt(record).set('correct_stock_movement',1);	
+			Ext.getStore('product').getAt(record).set('correct_stock_label','move');
+			Ext.getStore('product').getAt(record).set('correct_stock_price','15');
+			Ext.getStore('product').getAt(record).set('correct_stock_dest_warehouseid',warehouseIds[2]);
+			Ext.getStore('product').sync();
             Ext.getStore('product').clearFilter();
-            Ext.getStore('product').filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
-											Ext.create('Ext.util.Filter', { property: "multiprices_index", value: priceIndex }),
-											Ext.create('Ext.util.Filter', { property: "id", value: productIds[0] })]);
-            Ext.getStore('product').load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresult = record.get('ref');
-                        testresult2 = record.get('note');
-                    });
-                    flag = true;
-                }
-            });
-        });
-
-        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
-
-        runs(function ()
-        {
-            expect(testresult).toBe('CT0001');
-            expect(testresult2).toBe('');
-        });
-    });
-
-    it("update product 1", function ()
-    {
-        var record = Ext.getStore('product').find('ref', 'CT0001');
-
-        runs(function ()
-        {
-            flag = false;
-            Ext.getStore('product').getAt(record).set('label', 'connectortested');
-            Ext.getStore('product').getAt(record).set('correct_stock_nbpiece', 5);
-            Ext.getStore('product').getAt(record).set('correct_stock_movement', 1);
-            Ext.getStore('product').getAt(record).set('correct_stock_label', 'move');
-            Ext.getStore('product').getAt(record).set('correct_stock_price', '15');
-            Ext.getStore('product').getAt(record).set('correct_stock_dest_warehouseid', warehouseIds[2]);
-            Ext.getStore('product').sync();
-            Ext.getStore('product').clearFilter();
-            Ext.getStore('product').filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
-			                                Ext.create('Ext.util.Filter', { property: "multiprices_index", value: priceIndex }),
-			                                Ext.create('Ext.util.Filter', { property: "id", value: productIds[0] })]);
-            Ext.getStore('product').load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresults.push(record.get('label'));
-                        testresults.push(record.get('stock_reel'));
-                    });
-                    flag = true;
-                }
-            });
-        });
-
-        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
-
-        runs(function ()
-        {
-            expect(record).toBe(0);
-            expect(testresults).toContain('connectortested');
-            expect(testresults).toContain(5);
-        });
-    });
-
-
-
-    it("read product 2 by ref", function ()
-    {
-
-        runs(function ()
-        {
-            flag = false;
-            Ext.getStore('product').clearFilter();
-            Ext.getStore('product').filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
-			                                Ext.create('Ext.util.Filter', { property: "multiprices_index", value: priceIndex }),
-			                                Ext.create('Ext.util.Filter', { property: "ref", value: productRefs[1] })]);
-            Ext.getStore('product').load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresult = record.get('ref');
-                        testresult2 = record.get('note');
-                    });
-                    flag = true;
-                }
-            });
-        });
-
-        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
-
-        runs(function ()
-        {
-            expect(testresult).toBe('CT0002');
-            expect(testresult2).toBe('note');
-        });
-    });
-
-    it("read product 3 by barcode", function ()
-    {
-
-        runs(function ()
-        {
-            flag = false;
-            Ext.getStore('product').clearFilter();
-            Ext.getStore('product').filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
-			                                Ext.create('Ext.util.Filter', { property: "multiprices_index", value: priceIndex }),
-			                                Ext.create('Ext.util.Filter', { property: "barcode", value: productBarcodes[2] })]);
-            Ext.getStore('product').load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record)
-                    {
-                        testresult = record.get('ref');
-                    });
-                    flag = true;
-                }
-            });
-        });
-
-        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
-
-        runs(function ()
-        {
-            expect(testresult).toBe('CT0003');
-        });
-    });
+			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                                Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+			                                Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
+			Ext.getStore('product').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults.push(record.get('label'));
+						testresults.push(record.get('stock_reel'));
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(record).toBe(0);
+			expect(testresults).toContain('connectortested');
+			expect(testresults).toContain(5);
+		});
+	});
+	
+	
+	
+	it("read product 2 by ref", function() {
+		
+		runs(function() {
+			flag = false;
+			Ext.getStore('product').clearFilter();
+			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                                Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+			                                Ext.create('Ext.util.Filter',{property:"ref",value:productRefs[1]})]);
+			Ext.getStore('product').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult = record.get('ref');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe('CT0002');
+		});
+	});
+	
+	it("read product 3 by barcode", function() {
+		
+		runs(function() {
+			flag = false;
+			Ext.getStore('product').clearFilter();
+			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                                Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+			                                Ext.create('Ext.util.Filter',{property:"barcode",value:productBarcodes[2]})]);
+			Ext.getStore('product').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult = record.get('ref');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe('CT0003');
+		});
+	});
 });
 
 describe("order", function () {

@@ -31,6 +31,12 @@ $API = array(
             ),
             'readProspectLevel'=>array(
                     'len'=>1
+            ),
+            'readPaymentConditions'=>array(
+                    'len'=>1
+            ),
+            'readPaymentTypes'=>array(
+                    'len'=>1
             )
         )
     ),
@@ -130,6 +136,9 @@ $API = array(
             ),
             'readPriceIndex'=>array(
                     'len'=>1
+            ),
+            'readProductType'=>array(
+                    'len'=>1
             )
         )
     ),
@@ -179,7 +188,10 @@ $API = array(
             'destroyOrder'=>array(
                     'len'=>1
             ),
-            'readOrdelList'=>array(
+            'readOrdelList'=>array( // deprecated
+                    'len'=>1
+            ),
+            'readOrderList'=>array(
                     'len'=>1
             ),
             'readOrderStatus'=>array(
