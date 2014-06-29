@@ -1,6 +1,6 @@
 <?php
 /* Copyright (C) 2007-2012 Laurent Destailleur  <eldy@users.sourceforge.net>
- * Copyright (C) 2013 Francis Appels <francis.appels@yahoo.com>
+ * Copyright (C) 2013-2014 Francis Appels <francis.appels@yahoo.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  */
 
 /**
- *  \file       dev/skeletons/extdirectactivity.class.php
- *  \ingroup    mymodule othermodule1 othermodule2
+ *  \file       extdirect/class/extdirectactivity.class.php
+ *  \ingroup    extdirect
  *  \brief      CRUD class file (Create/Read/Update/Delete) for table extdirect_activity
  *              Initialy built by build_class_from_table on 2013-10-18 16:15
  */
@@ -32,21 +32,22 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectActivity extends CommonObject
 {
-    var $db;                            //!< To store db handler
-    var $error;                         //!< To return error code (or message)
-    var $errors=array();                //!< To return several error codes (or messages)
+    public $db;                            //!< To store db handler
+    public $error;                         //!< To return error code (or message)
+    public $errors=array();                //!< To return several error codes (or messages)
     //var $element='extdirectactivity';         //!< Id that identify managed objects
     //var $table_element='extdirectactivity';       //!< Name of table without prefix where object is stored
 
-    var $id;
+    public $id;
     
-    var $tms='';
-    var $fk_user;
-    var $app_id;
-    var $activity_name;
-    var $activity_id;
-    var $datec='';
-    var $status;
+    public $tms='';
+    public $fk_user;
+    public $app_id;
+    public $app_version;
+    public $activity_name;
+    public $activity_id;
+    public $datec='';
+    public $status;
 
     // array with multiple records
     public $dataset=array();
@@ -81,6 +82,7 @@ class ExtDirectActivity extends CommonObject
         
         if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
         if (isset($this->app_id)) $this->app_id=$this->app_id;
+        if (isset($this->app_version)) $this->app_version=trim($this->app_version);
         if (isset($this->activity_name)) $this->activity_name=trim($this->activity_name);
         if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);
         if (isset($this->status)) $this->status=trim($this->status);
@@ -95,6 +97,7 @@ class ExtDirectActivity extends CommonObject
         
         $sql.= "fk_user,";
         $sql.= "app_id,";
+        $sql.= "app_version,";
         $sql.= "activity_name,";
         $sql.= "activity_id,";
         $sql.= "datec,";
@@ -105,6 +108,7 @@ class ExtDirectActivity extends CommonObject
         
         $sql.= " ".(! isset($this->fk_user)?'NULL':"'".$this->fk_user."'").",";
         $sql.= " ".(! isset($this->app_id)?'NULL':"'".$this->app_id."'").",";
+        $sql.= " ".(! isset($this->app_version)?'NULL':"'".$this->db->escape($this->app_version)."'").",";
         $sql.= " ".(! isset($this->activity_name)?'NULL':"'".$this->db->escape($this->activity_name)."'").",";
         $sql.= " ".(! isset($this->activity_id)?'NULL':"'".$this->activity_id."'").",";
         $sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0?'NULL':$this->db->idate($this->datec)).",";
@@ -163,6 +167,7 @@ class ExtDirectActivity extends CommonObject
         $sql.= " ea.tms,";
         $sql.= " ea.fk_user,";
         $sql.= " ea.app_id,";
+        $sql.= " ea.app_version,";
         $sql.= " ea.activity_name,";
         $sql.= " ea.activity_id,";
         $sql.= " ea.datec,";
@@ -199,6 +204,7 @@ class ExtDirectActivity extends CommonObject
                 $this->dataset[$i]['tms'] = $this->db->jdate($obj->tms);
                 $this->dataset[$i]['fk_user'] = $obj->fk_user;
                 $this->dataset[$i]['app_id'] = $obj->app_id;
+                $this->dataset[$i]['app_version']  = $obj->app_version;
                 $this->dataset[$i]['activity_name'] = $obj->activity_name;
                 $this->dataset[$i]['activity_id'] = $obj->activity_id;
                 $this->dataset[$i]['datec'] = $obj->datec;
@@ -239,6 +245,7 @@ class ExtDirectActivity extends CommonObject
         $sql.= " t.tms,";
         $sql.= " t.fk_user,";
         $sql.= " t.app_id,";
+        $sql.= " t.app_version,";
         $sql.= " t.activity_name,";
         $sql.= " t.activity_id,";
         $sql.= " t.datec,";
@@ -259,6 +266,7 @@ class ExtDirectActivity extends CommonObject
                 $this->tms = $this->db->jdate($obj->tms);
                 $this->fk_user = $obj->fk_user;
                 $this->app_id = $obj->app_id;
+                $this->app_version = $obj->app_version;
                 $this->activity_name = $obj->activity_name;
                 $this->activity_id = $obj->activity_id;
                 $this->datec = $this->db->jdate($obj->datec);
@@ -291,6 +299,7 @@ class ExtDirectActivity extends CommonObject
         
         if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
         if (isset($this->app_id)) $this->app_id=$this->app_id;
+        if (isset($this->app_version)) $this->app_name=trim($this->app_version);
         if (isset($this->activity_name)) $this->activity_name=trim($this->activity_name);
         if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);
         if (isset($this->status)) $this->status=trim($this->status);
@@ -304,6 +313,7 @@ class ExtDirectActivity extends CommonObject
         $sql.= " tms=".(dol_strlen($this->tms)!=0 ? "'".$this->db->idate($this->tms)."'" : 'null').",";
         $sql.= " fk_user=".(isset($this->fk_user)?$this->fk_user:"null").",";
         $sql.= " app_id=".(isset($this->app_id)?$this->app_id:"null").",";
+        $sql.= " app_version=".(isset($this->app_version)?"'".$this->db->escape($this->app_version)."'":"null").",";
         $sql.= " activity_name=".(isset($this->activity_name)?"'".$this->db->escape($this->activity_name)."'":"null").",";
         $sql.= " activity_id=".(isset($this->activity_id)?$this->activity_id:"null").",";
         $sql.= " datec=".(dol_strlen($this->datec)!=0 ? "'".$this->db->idate($this->datec)."'" : 'null').",";

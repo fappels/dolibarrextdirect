@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -121,6 +121,7 @@ class ExtDirectActivities extends ExtDirectActivity
                 $row = null;
                 $row->id = (int) $data['rowid'];
                 $row->app_id = (int) $data['app_id'];
+                $row->app_version = $data['app_version'];                
                 $row->activity_name = $data['activity_name'];
                 $row->activity_id = $data['activity_id'];
                 $row->datec = $this->db->jdate($data['datec']);
@@ -165,6 +166,7 @@ class ExtDirectActivities extends ExtDirectActivity
     private function prepareActivityFields($params) 
     {
         isset($params->app_id) ? ( $this->app_id = $params->app_id ) : ( $this->app_id = null);
+        isset($params->app_version) ? ( $this->app_version = $params->app_version) : ( $this->app_version = null);
         isset($params->activity_name) ? ( $this->activity_name = $params->activity_name) : ( $this->activity_name = null);
         isset($params->activity_id) ? ( $this->activity_id = $params->activity_id) : ( $this->activity_id = null);
         isset($params->status) ? ( $this->status = $params->status) : ($this->status  = null);

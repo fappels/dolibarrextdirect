@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
+dol_include_once('/extdirect/core/modules/modExtDirect.class.php');
 
 /** ExtDirectConnect class
  * 
@@ -92,9 +93,13 @@ class ExtDirectAuthenticate extends ExtDirect
      */
     public function readAuthentication(stdClass $param) 
     {
+        if (!isset($this->db)) return CONNECTERROR;
+        
         $result = new stdClass;
         $ack_id = '';
         $app_id = '';
+        
+        $moduleInfo = new modExtDirect($this->db);
         
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -133,6 +138,10 @@ class ExtDirectAuthenticate extends ExtDirect
             $result->dev_platform = $this->dev_platform;
             $result->dev_type = $this->dev_type;
             $result->username = $this->_user->firstname.($this->_user->firstname?($this->_user->lastname?' ':''):'').$this->_user->lastname;
+            $result->connector_id = $moduleInfo->numero;
+            $result->connector_name = $moduleInfo->name;
+            $result->connector_description = $moduleInfo->description;
+            $result->connector_version = $moduleInfo->version;
             return $result;
         }
     }

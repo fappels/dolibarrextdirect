@@ -15,6 +15,7 @@ AutoUser=User to asign to all connections
 AppId=Application ID
 RequestId=Requestor
 AppName=Name
+AppVersion=Version
 Ack=Acknowledged
 DateC=Date first connect
 DateLastConnect=Date last connect

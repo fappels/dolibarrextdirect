@@ -15,6 +15,7 @@ AutoUser=L'utilisateur d'assigner des à toutes les connexions
 AppId=Application ID
 RequestId=Demandeur
 AppName=Nom
+AppVersion=Version
 Ack=Reconnu
 DateC=Date creation
 DateLastConnect=Date connexion

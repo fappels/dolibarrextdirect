@@ -1,6 +1,6 @@
 <?php
 /* 
- * Copyright (C) 2012      Francis Appels       <francis.appels@z-application.com>
+ * Copyright (C) 2012-2014  Francis Appels       <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -246,6 +246,7 @@ if ($mode == $tabs['tab1']->mode) {
     print '<tr class="liste_titre">';
     print '<td>'.$langs->trans("RequestId").'</td>';
     print '<td>'.$langs->trans("AppName").'</td>';
+    print '<td>'.$langs->trans("AppVersion").'</td>';
     print '<td>'.$langs->trans("DateC").'</td>';
     print '<td>'.$langs->trans("ActivityName").'</td>';
     print '<td>'.$langs->trans("Status").'</td>';
@@ -258,6 +259,7 @@ if ($mode == $tabs['tab1']->mode) {
             print '<tr '.$bc[$var].'>';
             print '<td>'.$data['requestid'].'</td>';
             print '<td>'.$data['app_name'].'</td>';
+            print '<td>'.$data['app_version'].'</td>';
             print '<td>'.$data['datec'].'</td>';
             print '<td>'.$data['activity_name'].'</td>';
             print '<td>'.$data['status'].'</td>';

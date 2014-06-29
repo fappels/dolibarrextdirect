@@ -15,6 +15,7 @@ AutoUser=Automatisch toe te kennen gebruiker
 AppId=Applicatie ID
 RequestId=Aanvrager
 AppName=Naam
+AppVersion=Versie
 Ack=Bevestigd
 DateC=Eerste verbinding
 DateLastConnect=Laatste verbinding
