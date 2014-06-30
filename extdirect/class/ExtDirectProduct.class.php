@@ -411,40 +411,40 @@ class ExtDirectProduct extends Product
             // TODO improve sql command to allow random property type
             $sql .= ' WHERE (';
             foreach ($param->filter as $key => $filter) {
-                if ($filter->property == 'warehouse_id') {
-                    if ($filter->value != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
-                        $sql .= 'ps.fk_entrepot = '.$filter->value;
+                $value = $this->db->escape($filter->value);
+                if (empty($value)) {
+                    if ($filter->property == 'categorie_id') {
+                        $sql .= 'c.rowid IS NULL';
                     } else {
                         $sql .= '1';
-                    }
-                } else if ($filter->property == 'tosell') {
-                    $sql .= "p.tosell = ".$filter->value;
-                } else if ($filter->property == 'tobuy') {
-                    $sql .= "p.tobuy = ".$filter->value;
-                } else if ($filter->property == 'status') { // backward comp
-                    $sql .= "p.tosell = ".$filter->value;
-                } else if ($filter->property == 'status_buy') {  // backward comp
-                    $sql .= "p.tobuy = ".$filter->value;
-                } else if ($filter->property == 'finished') {
-                    $sql .= "p.finished = ".$filter->value;
-                } else if ($filter->property == 'type') {
-                    $sql .= "p.fk_product_type = ".$filter->value;
-                } else if ($filter->property == 'categorie_id') {
-                    //allow filtering on non categorized societe
-                    if ($filter->value == 0) {
-                        $sql .= "c.rowid IS NULL";
-                    } else {
-                        $sql .= "c.rowid = ".$filter->value;
-                    }
-                } else if ($filter->property == 'content') {
-                    $contentValue = strtolower($filter->value);
-                    $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
-                    $sql.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
-                }
+                    }                    
+                } else {
+                    if ($filter->property == 'warehouse_id') {
+                        $sql .= 'ps.fk_entrepot = '.$value;
+                    } else if ($filter->property == 'tosell') {
+                        $sql .= "p.tosell = ".$value;
+                    } else if ($filter->property == 'tobuy') {
+                        $sql .= "p.tobuy = ".$value;
+                    } else if ($filter->property == 'status') { // backward comp
+                        $sql .= "p.tosell = ".$value;
+                    } else if ($filter->property == 'status_buy') {  // backward comp
+                        $sql .= "p.tobuy = ".$value;
+                    } else if ($filter->property == 'finished') {
+                        $sql .= "p.finished = ".$value;
+                    } else if ($filter->property == 'type') {
+                        $sql .= "p.fk_product_type = ".$value;
+                    } else if ($filter->property == 'categorie_id') {
+                        $sql .= "c.rowid = ".$value;
+                    } else if ($filter->property == 'content') {
+                        $contentValue = strtolower($value);
+                        $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
+                    }                   
+                }    
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $param->filter[$key+1]->property) $sql .= ' OR ';
                     else $sql .= ') AND (';
-                }
+                }            
             }
             $sql .= ')';
         }
