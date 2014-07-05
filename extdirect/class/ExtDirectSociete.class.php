@@ -90,7 +90,7 @@ class ExtDirectSociete extends Societe
                 $transcode=$langs->transnoentities('StatusProspect'.$obj->id);
                 $libelle=($transcode!='StatusProspect'.$obj->id?$transcode:$obj->libelle);
                 $row->id = (int) $obj->id;     // id statut commercial
-                $row->commercial_status = $libelle;    // libelle statut commercial
+                $row->commercial_status = htmlspecialchars_decode($libelle, ENT_QUOTES);    // libelle statut commercial
                 $row->stcomm_code       = $obj->code;
                 array_push($results, $row);
             }
@@ -135,7 +135,7 @@ class ExtDirectSociete extends Societe
                 $transcode=$langs->transnoentities($obj->code);
                 $label=($transcode!=null?$transcode:$obj->label);
                 $row->prospectlevel_code = $obj->code;
-                $row->prospectlevel_label = $label;
+                $row->prospectlevel_label = htmlspecialchars_decode($label, ENT_QUOTES);
                 array_push($results, $row);
             }
 
@@ -169,7 +169,7 @@ class ExtDirectSociete extends Societe
                 $row = null;
                 $row->id = $id;
                 $row->code = $values['code'];
-                $row->label = $values['label'];
+                $row->label = htmlspecialchars_decode($values['label'], ENT_QUOTES);
                 array_push($results, $row);
             }
             return $results;
@@ -201,7 +201,7 @@ class ExtDirectSociete extends Societe
                 $row = null;
                 $row->id = $id;
                 $row->code = $values['code'];
-                $row->label = $values['label'];
+                $row->label = htmlspecialchars_decode($values['label'], ENT_QUOTES);
                 $row->type = $values['type'];
                 array_push($results, $row);
             }
