@@ -152,7 +152,6 @@ class ExtDirect
 
         $this->db->begin();
 
-        dol_syslog(get_class($this)."::create sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if (! $resql) { 
             $error++; $this->errors[]="Error ".$this->db->lasterror(); 
@@ -221,8 +220,6 @@ class ExtDirect
             $sql.= " ORDER BY ".$orderBy;
         }
         
-    
-        dol_syslog(get_class($this)."::fetchList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -292,8 +289,6 @@ class ExtDirect
             return PARAMETERERROR;
         }
         
-
-        dol_syslog(get_class($this)."::fetch sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql) {
             if ($this->db->num_rows($resql)) {
@@ -369,7 +364,6 @@ class ExtDirect
 
         $this->db->begin();
 
-        dol_syslog(get_class($this)."::update sql=".$sql, LOG_DEBUG);
         $resql = $this->db->query($sql);
         if (! $resql) { 
             $error++; $this->errors[]="Error ".$this->db->lasterror();
@@ -436,7 +430,6 @@ class ExtDirect
             $sql = "DELETE FROM ".MAIN_DB_PREFIX."extdirect_user";
             $sql.= " WHERE rowid=".$this->id;
 
-            dol_syslog(get_class($this)."::delete sql=".$sql);
             $resql = $this->db->query($sql);
             if (! $resql) { $error++; $this->errors[]="Error ".$this->db->lasterror(); }
         }

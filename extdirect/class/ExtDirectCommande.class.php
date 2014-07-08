@@ -166,7 +166,7 @@ class ExtDirectCommande extends Commande
     public function updateOrder($param) 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->valider)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {
@@ -177,16 +177,28 @@ class ExtDirectCommande extends Commande
                 // update
                 switch ($this->statut) {
                     case -1:
-                        $result = $this->cancel();
+                        if (isset($this->_user->rights->commande->annuler)) {
+                            $result = $this->cancel();
+                        } else {
+                            return PERMISSIONERROR;
+                        }
                         break;
                     case 0:
                         $result = $this->set_draft($this->_user);
                         break;
                     case 1:
-                        $result = $this->valid($this->_user);
+                        if (isset($this->_user->rights->commande->valider)) {
+                            $result = $this->valid($this->_user);
+                        } else {
+                            return PERMISSIONERROR;
+                        }
                         break;
                     case 3:
-                        $result = $this->cloture($this->_user);
+                        if (isset($this->_user->rights->commande->annuler)) {
+                            $result = $this->cloture($this->_user);
+                        } else {
+                            return PERMISSIONERROR;
+                        }
                         break;
                     default:
                         break;   
