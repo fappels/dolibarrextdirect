@@ -262,7 +262,7 @@ describe("producttype", function () {
 		runs(function () {
 			Ext.Array.each(testresults, function (testresult,index) {
 				// label must contain 1 or more characters
-				expect(testresult).toMatch(/^Product|Service$/);
+				expect(testresult).toMatch(/^Produit|Product|Service$/);
 			});
 			
 		});
@@ -595,8 +595,9 @@ describe("companies", function ()
             Ext.getStore('towns').load({
                 callback: function (records)
                 {
-                    testresults[0] = records[0].get('id');
-                    testresults[1] = records[0].get('town');
+                    Ext.Array.each(records, function(record,index) {
+                    	testresults[index] =record.get('town');
+                    });                	
                     flag = true;
                 }
             });
@@ -606,7 +607,7 @@ describe("companies", function ()
 
         runs(function ()
         {
-            expect(testresults[0]).toMatch(testresults[1]);
+            expect(testresults).toContain('MyTown');
         });
     });
 
@@ -1013,7 +1014,7 @@ describe("categories", function () {
                 callback: function (records)
                 {
                     Ext.Array.each(records, function(record,index) {
-                    	testresult = record.get('categorie');
+                    	testresults[index] = record.get('categorie');
                     });
                     flag = true;
                 }
@@ -1024,7 +1025,7 @@ describe("categories", function () {
 
         runs(function ()
         {
-            expect(testresult).toBe('Categorie1');
+            expect(testresults).toContain('Categorie1');
         });
     });
 	

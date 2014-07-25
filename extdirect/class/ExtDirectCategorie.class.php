@@ -184,6 +184,7 @@ class ExtDirectCategorie extends Categorie
             if ($param->id) {
                 $id = $param->id;
                 $this->id = $id;
+                $this->fk_parent = 0; // bug in categorie.class.php introduced in 3.5.4
                 // delete product
                 if (($result = $this->delete($this->_user)) <= 0)    return $result;
             } else {

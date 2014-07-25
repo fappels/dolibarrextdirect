@@ -1,4 +1,4 @@
-# Dolibarr language file - en_US - directconnect = 
+# Dolibarr language file - en_US - extdirect
 CHARSET = UTF-8
 DirectConnect = Ext.direct connector
 Module605002Name = Ext.direct connector
@@ -11,9 +11,9 @@ Parameters=Parameters
 Value=Value
 AutoAsignAbility=Enable automatic user login assignment, be careful! everybody who has access to your url has access to your data.
 Modify=Modify
-AutoUser=User to asign to all connections
+AutoUser=User to assign to all connections
 AppId=Application ID
-RequestId=Requestor
+RequestId=Requester
 AppName=Name
 AppVersion=Version
 Ack=Acknowledged
@@ -30,3 +30,4 @@ Authentication=Authentication
 Activities=Activities
 ActivityName=Activity
 Status=Status
+Clear=Clear
