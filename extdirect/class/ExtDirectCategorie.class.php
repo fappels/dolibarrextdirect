@@ -231,7 +231,13 @@ class ExtDirectCategorie extends Categorie
             $row=null;
             $row->id = $cat->id;
             $row->categorie = $cat->label;
-            array_push($results, $row); 
+            if (ExtDirect::checkDolVersion() >= 3.3) {
+                array_push($results, $row);
+            } else {
+                if ($type == $cat->type) {
+                    array_push($results, $row);
+                }
+            } 
         }
         return $results;
     }
