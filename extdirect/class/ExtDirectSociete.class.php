@@ -396,7 +396,7 @@ class ExtDirectSociete extends Societe
         $idprof2=null;
         $idprof3=null;
         $idprof4=null;
-        
+        $barcode=null;
         
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -408,6 +408,7 @@ class ExtDirectSociete extends Societe
                 else if ($filter->property == 'idprof2') $idprof2=$filter->value;
                 else if ($filter->property == 'idprof3') $idprof3=$filter->value;
                 else if ($filter->property == 'idprof4') $idprof4=$filter->value;
+                else if ($filter->property == 'barcode') $barcode=$filter->value;
             }
         }
         if (empty($id) && empty($ref) && empty($ref_ext) && empty($ref_int)) return PARAMETERERROR;
@@ -522,8 +523,9 @@ class ExtDirectSociete extends Societe
             $row->price_level    = $this->price_level;
             
             $row->import_key     = $this->import_key;
-
-            array_push($results, $row);
+            if ((!isset($barcode)) || ($barcode == $row->barcode)) {
+                array_push($results, $row);
+            }
         } else {
             return SQLERROR;
         }
