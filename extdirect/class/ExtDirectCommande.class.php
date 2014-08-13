@@ -79,14 +79,14 @@ class ExtDirectCommande extends Commande
         $ref = '';
         $ref_ext = '';
         $ref_int = '';
-        $orderstatus_id = null;
+        $orderstatus_ids = array();
         
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
                 else if ($filter->property == 'ref') $ref=$filter->value;
                 else if ($filter->property == 'ref_int') $ref_int=$filter->value;
-                else if ($filter->property == 'orderstatus_id') $orderstatus_id=$filter->value;
+                else if ($filter->property == 'orderstatus_id') array_push($orderstatus_ids,$filter->value);
             }
         }
         
@@ -120,8 +120,14 @@ class ExtDirectCommande extends Commande
                 $row->total_net = $this->total_ht;
                 $row->total_tax = $this->total_tva;
                 $row->total_inc = $this->total_ttc;
-                if ((!isset($orderstatus_id)) || ($orderstatus_id == $row->orderstatus_id)) {
+                if (empty($orderstatus_ids)) {
                     array_push($results, $row);
+                } else {
+                    foreach($orderstatus_ids as $orderstatus_id) {
+                        if ($orderstatus_id == $row->orderstatus_id) {
+                            array_push($results, $row);
+                        }
+                    }
                 }
             } else {
                 return 0;
