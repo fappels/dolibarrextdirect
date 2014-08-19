@@ -35,7 +35,7 @@ class modExtDirect extends DolibarrModules
      *
      *   @param      DoliDB     $db      Database handler
      */
-    function modExtDirect($db)
+    function __construct($db)
     {
         global $langs,$conf;
 
@@ -55,9 +55,9 @@ class modExtDirect extends DolibarrModules
         $this->name = preg_replace('/^mod/i', '', get_class($this));
         // Module description, used if translation string 'ModuleXXXDesc' 
         // not found (where XXX is value of numeric property 'numero' of module)
-        $this->description = "Connect to external applications which use Sencha Ext.direct rpc communication technology";
+        $this->description = "Connect to external applications which use Sencha Ext.direct";
         // Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-        $this->version = '1.0.15';
+        $this->version = '1.0.16';
         // Key used in llx_const table to save module status enabled/disabled 
         // (where MYMODULE is value of property name of module in uppercase)
         $this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
@@ -78,12 +78,8 @@ class modExtDirect extends DolibarrModules
             'substitutions' => 0,                    // Set this to 1 if module has its own substitution function file
             'menus' => 0,                            // Set this to 1 if module has its own menus handler directory
             'barcode' => 0,                          // Set this to 1 if module has its own barcode directory
-            'models' => 0//,                         // Set this to 1 if module has its own models directory
-        //  'css' => '/mymodule/css/mymodule.css.php',// Set this to relative path of css if module has its own css file
-        //  'hooks' => array('hookcontext1','hookcontext2')// Set here all hooks context managed by module
-        //  'workflow' => array('order' => array('WORKFLOW_ORDER_AUTOCREATE_INVOICE')) // Set here all workflow context managed by module
+            'models' => 0                            // Set this to 1 if module has its own models directory
         );
-        //$this->module_parts = array();
 
         // Data directories to create when module is enabled.
         // Example: this->dirs = array("/mymodule/temp");
@@ -107,57 +103,21 @@ class modExtDirect extends DolibarrModules
         );
 
         // Array to add new pages in new tabs
-        // Example: $this->tabs = array('objecttype:+tabname1:Title1:langfile@mymodule:$user->rights->mymodule->read:/mymodule/mynewtab1.php?id=__ID__',  // To add a new tab identified by code tabname1
-        //                              'objecttype:+tabname2:Title2:langfile@mymodule:$user->rights->othermodule->read:/mymodule/mynewtab2.php?id=__ID__',  // To add another new tab identified by code tabname2
-        //                              'objecttype:-tabname');                                                     // To remove an existing tab identified by code tabname
-        // where objecttype can be
-        // 'thirdparty'       to add a tab in third party view
-        // 'intervention'     to add a tab in intervention view
-        // 'order_supplier'   to add a tab in supplier order view
-        // 'invoice_supplier' to add a tab in supplier invoice view
-        // 'invoice'          to add a tab in customer invoice view
-        // 'order'            to add a tab in customer order view
-        // 'product'          to add a tab in product view
-        // 'stock'            to add a tab in stock view
-        // 'propal'           to add a tab in propal view
-        // 'member'           to add a tab in fundation member view
-        // 'contract'         to add a tab in contract view
-        // 'user'             to add a tab in user view
-        // 'group'            to add a tab in group view
-        // 'contact'          to add a tab in contact view
-        // 'categories_x'     to add a tab in category view (replace 'x' by type of category (0=product, 1=supplier, 2=customer, 3=member)
+        
         $this->tabs = array();
 
         // Dictionnaries
-        if (! isset($conf->mymodule->enabled)) $conf->mymodule->enabled=0;
-        $this->dictionnaries=array();
-        /* Example:
-        if (! isset($conf->mymodule->enabled)) $conf->mymodule->enabled=0;  // This is to avoid warnings
-        $this->dictionnaries=array(
-            'langs'=>'mymodule@mymodule',
-            'tabname'=>array(MAIN_DB_PREFIX."table1",MAIN_DB_PREFIX."table2",MAIN_DB_PREFIX."table3"),      // List of tables we want to see into dictonnary editor
-            'tablib'=>array("Table1","Table2","Table3"),                                                    // Label of tables
-            'tabsql'=>array('SELECT f.rowid as rowid, f.code, f.label, f.active FROM '.MAIN_DB_PREFIX.'table1 as f','SELECT f.rowid as rowid, f.code, f.label, f.active FROM '.MAIN_DB_PREFIX.'table2 as f','SELECT f.rowid as rowid, f.code, f.label, f.active FROM '.MAIN_DB_PREFIX.'table3 as f'),   // Request to select fields
-            'tabsqlsort'=>array("label ASC","label ASC","label ASC"),                                                                                   // Sort order
-            'tabfield'=>array("code,label","code,label","code,label"),                                                                                  // List of fields (result of select to show dictionnary)
-            'tabfieldvalue'=>array("code,label","code,label","code,label"),                                                                             // List of fields (list of fields to edit a record)
-            'tabfieldinsert'=>array("code,label","code,label","code,label"),                                                                            // List of fields (list of fields for insert)
-            'tabrowid'=>array("rowid","rowid","rowid"),                                                                                                 // Name of columns with primary key (try to always name it 'rowid')
-            'tabcond'=>array($conf->mymodule->enabled,$conf->mymodule->enabled,$conf->mymodule->enabled)                                                // Condition to show each dictionnary
-        );
-        */
+        if (! isset($conf->mymodule->enabled))
+        {
+        	$conf->mymodule=new stdClass();
+        	$conf->mymodule->enabled=0;
+        }
+        $this->dictionaries=array();
 
         // Boxes
         // Add here list of php file(s) stored in core/boxes that contains class to show a box.
         $this->boxes = array();         // List of boxes
         $r=0;
-        // Example:
-        /*
-        $this->boxes[$r][1] = "myboxa.php";
-        $r++;
-        $this->boxes[$r][1] = "myboxb.php";
-        $r++;
-        */
 
         // Permissions
         $this->rights = array();        // Permission array used by this module
@@ -185,7 +145,7 @@ class modExtDirect extends DolibarrModules
     {
         $sql = array();
 
-        $result=$this->load_tables();
+        $result=$this->_load_tables('/extdirect/sql/');
 
         return $this->_init($sql, $options);
     }
@@ -203,19 +163,5 @@ class modExtDirect extends DolibarrModules
         $sql = array();
 
         return $this->_remove($sql, $options);
-    }
-
-
-    /**
-     *      Create tables, keys and data required by module
-     *      Files llx_table1.sql, llx_table1.key.sql llx_data.sql with create table, create keys
-     *      and create data commands must be stored in directory /mymodule/sql/
-     *      This function is called by this->init
-     *
-     *      @return     int     <=0 if KO, >0 if OK
-     */
-    function load_tables()
-    {
-        return $this->_load_tables('/extdirect/sql/');
     }
 }

@@ -53,6 +53,7 @@ if ($mode == $activities->mode) {
     $extDirect= new ExtDirect($db);
     $extDirect->fetchList('', 'date_last_connect ASC');
 }
+
 /*
  * Actions
  */
@@ -105,6 +106,13 @@ if ($action == 'autoasign') {
         }
     }
     $extDirect->fetchList('', 'rowid ASC');
+} elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
+    // validate if dolibarr version is in compatibility range
+    if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
+        $mesg = '<font class="error">'.$langs->trans("Error").': '.$mesgText.'</font>';
+    } else {
+        $mesg = '<font class="error">'.$langs->trans("Error").': '.'Dolibarr version not yet tested for compatibility'.'</font>';
+    }
 }
 
 

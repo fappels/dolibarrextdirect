@@ -31,3 +31,4 @@ Activities=Activiteiten
 ActivityName=Activiteit
 Status=Status
 Clear=Ledigen
+DolibarrCompatibilityError=Dolibarr versie nog niet getest op compatibiliteit
