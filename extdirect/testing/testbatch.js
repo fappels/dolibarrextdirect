@@ -1071,17 +1071,19 @@ describe("products", function () {
 		testresults = [],
 		testresult = null,
 		productRefs = [],
-		productBarcodes = [];
+		productBarcodes = [],
+		productStore;
 		
 	beforeEach(function() {
 		testresults = [];
 		testresult = null;
+        productStore = Ext.getStore('product');
 	});
 		
 	it("create products", function() {
 		runs(function() {
-			// add 2 products
-			var productData,i,products = [],productStore;
+			// add 3 products
+			var productData,i,products = [];
 
 			flag = false;
 			productData = {
@@ -1110,6 +1112,11 @@ describe("products", function () {
 					case 2:
 						productData.ref = 'CT0003';
 						productData.barcode = '*1234567*';
+						productData.sellby = Ext.Date.format(new Date(),'U');
+						productData.eatby = Ext.Date.format(new Date(),'U');
+						productData.batch = 'batch1';
+						productData.has_batch = 1;
+						productData.correct_stock_nbpiece = 5;	
 						break;
 	
 					default:
@@ -1117,7 +1124,6 @@ describe("products", function () {
 				}
 				products[i] = Ext.create('ConnectorTest.model.Product',productData);
 			}
-			productStore = Ext.getStore('product');
 			productStore.add(products);					
 			productStore.sync();
 			productStore.clearFilter();
@@ -1197,11 +1203,11 @@ describe("products", function () {
 	
 		runs(function() {
 			flag = false;
-			Ext.getStore('product').clearFilter();
-			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
 											Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
 											Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
-			Ext.getStore('product').load({
+			productStore.load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresult = record.get('ref');
@@ -1219,22 +1225,23 @@ describe("products", function () {
 	});
 	
 	it("update product 1", function() {
-		var record = Ext.getStore('product').find('ref','CT0001');
+		var recordIndex = productStore.find('ref','CT0001'),
+			record = productStore.getAt(recordIndex);
 		
 		runs(function() {
 			flag = false;
-			Ext.getStore('product').getAt(record).set('label','connectortested');
-			Ext.getStore('product').getAt(record).set('correct_stock_nbpiece',5);
-			Ext.getStore('product').getAt(record).set('correct_stock_movement',1);	
-			Ext.getStore('product').getAt(record).set('correct_stock_label','move');
-			Ext.getStore('product').getAt(record).set('correct_stock_price','15');
-			Ext.getStore('product').getAt(record).set('correct_stock_dest_warehouseid',warehouseIds[2]);
-			Ext.getStore('product').sync();
-            Ext.getStore('product').clearFilter();
-			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
-			                                Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
-			                                Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
-			Ext.getStore('product').load({
+			record.set('label','connectortested');
+			record.set('correct_stock_nbpiece',5);
+			record.set('correct_stock_movement',1);	
+			record.set('correct_stock_label','move');
+			record.set('correct_stock_price','15');
+			record.set('correct_stock_dest_warehouseid',warehouseIds[2]);
+			productStore.sync();
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                     Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+			                     Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
+			productStore.load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresults.push(record.get('label'));
@@ -1248,7 +1255,7 @@ describe("products", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(record).toBe(0);
+			expect(recordIndex).toBe(0);
 			expect(testresults).toContain('connectortested');
 			expect(testresults).toContain(5);
 		});
@@ -1260,11 +1267,11 @@ describe("products", function () {
 		
 		runs(function() {
 			flag = false;
-			Ext.getStore('product').clearFilter();
-			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
-			                                Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
-			                                Ext.create('Ext.util.Filter',{property:"ref",value:productRefs[1]})]);
-			Ext.getStore('product').load({
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                     Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+			                     Ext.create('Ext.util.Filter',{property:"ref",value:productRefs[1]})]);
+			productStore.load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresult = record.get('ref');
@@ -1285,10 +1292,10 @@ describe("products", function () {
 		
 		runs(function() {
 			flag = false;
-			Ext.getStore('product').clearFilter();
-			Ext.getStore('product').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
-			                                Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
-			                                Ext.create('Ext.util.Filter',{property:"barcode",value:productBarcodes[2]})]);
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                     Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+			                     Ext.create('Ext.util.Filter',{property:"barcode",value:productBarcodes[2]})]);
 			Ext.getStore('product').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
@@ -1305,6 +1312,73 @@ describe("products", function () {
 			expect(testresult).toBe('CT0003');
 		});
 	});
+	
+	it("update product 3 with new batch", function() {
+		var recordIndex = Ext.getStore('product').find('ref','CT0003'),
+			record = productStore.getAt(recordIndex);
+		
+		runs(function() {
+			flag = false;
+			record.set('label','connectortested');
+			record.set('correct_stock_nbpiece',5);
+			record.set('correct_stock_movement',0);	
+			record.set('correct_stock_label','batch');
+			record.set('correct_stock_price','15');
+			record.set('sellby',Ext.Date.format(new Date(),'U'));
+			record.set('eatby',Ext.Date.format(new Date(),'U'));
+			record.set('batch','batch2');			
+			productStore.sync();
+			productStore.clearFilter();
+			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                     Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
+                                 Ext.create('Ext.util.Filter',{property:"batch",value:'batch2'}),
+			                     Ext.create('Ext.util.Filter',{property:"ref",value:'CT0003'})]);
+			productStore.load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults.push(record.get('label'));
+						testresults.push(record.get('stock_reel'));
+					});
+					flag = true;
+				}
+			});
+		});
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(recordIndex).toBe(0);
+			expect(testresults).toContain('connectortested');
+			expect(testresults).toContain(5);
+		});
+	});
+	
+	it("read productbatchlist for product 3", function() {
+		
+		runs(function() {
+			var i=0,
+				recordIndex = productStore.find('ref','CT0003');
+			
+			flag = false;
+			Ext.getStore('productbatchlist').clearFilter();
+			Ext.getStore('productbatchlist').filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
+			                                    Ext.create('Ext.util.Filter',{property:"product_id",value:productStore.getAt(recordIndex).getId()})]);
+			Ext.getStore('productbatchlist').load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('batch');
+					});
+					flag = true;
+				}
+			}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain('batch1');	
+			expect(testresults).toContain('batch2');
+		});
+	});
 });
 
 describe("order", function () {
@@ -1313,7 +1387,8 @@ describe("order", function () {
 		testresult = null,
 		orderRef = null,
 		orderstatusIds = [],
-		orderLineIds = [];
+		orderLineIds = [],
+        orderLineBatchIds = [];
 		
 	beforeEach(function() {
 		testresults = [];
@@ -1417,7 +1492,7 @@ describe("order", function () {
 	
 	it("create orderlines", function() {
 		runs(function() {
-			// add 2 products
+			// add 3 products
 			var orderData,orderLine,orderLines = [];
 
 			flag = false;
@@ -1545,6 +1620,9 @@ describe("order", function () {
 						testresults.push(record.get('warehouse_id'));
 						stock+=record.get('qty_stock');
 						asked+=record.get('qty_asked');
+                        if (record.get('batch_id')) {
+                            orderLineBatchIds.push(record.get('batch_id'));
+                        }
 					});
 					flag = true;
 				}
@@ -1556,9 +1634,9 @@ describe("order", function () {
 		runs(function () {
 			expect(testresults).toContain(1);
 			expect(testresults).toContain(2);
-			expect(testresults.length).toBe(4);
+			expect(testresults.length).toBe(5);
 			expect(stock).toBe(30);
-			expect(asked).toBe(8);
+			expect(asked).toBe(10);
 		});
 	});
 	
@@ -1584,7 +1662,7 @@ describe("order", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(testresult).toBe(12);
+			expect(testresult).toBe(14);
 		});
 	});
 	
@@ -1612,217 +1690,265 @@ describe("order", function () {
 		runs(function () {
 			expect(testresults).toContain(1);
 			expect(testresults).not.toContain(2);
-			expect(testresults.length).toBe(3);
+			expect(testresults.length).toBe(4);
 			expect(stock).toBe(25);
 		});
 	});
 });
 
-describe("shipment", function () {
-	var flag = false,			
+describe("shipment", function ()
+{
+    var flag = false,
 		testresults = [],
 		testresult = null,
 		shipmentRef = null,
 		shipmentLineIds = [];
-		
-	beforeEach(function() {
-		testresults = [];
-		testresult = null;
-	});
-				
-	it("create shipment", function() {
-		runs(function() {
-			// add 2 products
-			var shipmentData,shipment;
 
-			flag = false;
-			shipmentData = {
-				ref_int: 'CT0001',
-				origin: 'commande',
-				origin_id: orderId,
-				ref_customer: 'connectortest',
-				customer_id: customerId,
-				weight_units:0,
-				weight:10,
-				size_units:0,
-				trueDepth:.2,
-				trueWidth:.2,
-				trueHeight:.2,
-				deliver_date: Ext.Date.format(new Date(),'U')
-			};
-			shipment = Ext.create('ConnectorTest.model.Order',shipmentData);
-			Ext.getStore('shipment').add(shipment);					
-			Ext.getStore('shipment').sync();
-			Ext.getStore('shipment').clearFilter();
-			Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter',{property:"ref_int",value:'CT0001'})]);
-			Ext.getStore('shipment').load({
-				callback: function (records) {
-					Ext.Array.each(records,function (record) {
-						testresult = record.get('ref_customer');
-						shipmentId = record.get('id');
-						shipmentRef = record.get('ref');
-					});
-					delete order;
-					flag = true;
-				}
-			});
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(testresult).toBe('connectortest');
-		});
-	});
-	
-	it("create shipmentlines", function() {
-		runs(function() {
-			// add 2 products
-			var shipmentData,shipmentLine,shipmentLines = [];
+    beforeEach(function ()
+    {
+        testresults = [];
+        testresult = null;
+    });
 
-			flag = false;
-			Ext.getStore('orderline').each(function(orderLine) {
-				shipmentData = {
-					origin_id: shipmentId,
-					warehouse_id:orderLine.get('warehouse_id'),
-					origin_line_id:orderLine.get('origin_line_id'),
-					qty_toship:2
-				};
-				shipmentLine = Ext.create('ConnectorTest.model.OrderLine',shipmentData);
-				shipmentLines.push(shipmentLine);
-			});
-			Ext.getStore('shipmentline').add(shipmentLines);					
-			Ext.getStore('shipmentline').sync();
-			Ext.getStore('shipmentline').clearFilter();
-			Ext.getStore('shipmentline').filter([Ext.create('Ext.util.Filter',{property:"origin_id",value:shipmentId})]);
-			Ext.getStore('shipmentline').load({
-				callback: function (records) {
-					Ext.Array.each(records,function (record,index) {
-						testresults[index] = record.get('description');
-						shipmentLineIds[index] = record.get('origin_line_id');
-					});
-					delete shipmentLines;
-					flag = true;
-				}
-			});			
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			Ext.Array.each(testresults, function(testresult,index) {
-				if (index == 0)
+    it("create shipment", function ()
+    {
+        runs(function ()
+        {
+            var shipmentData, shipment;
+
+            flag = false;
+            shipmentData = {
+                ref_int: 'CT0001',
+                origin: 'commande',
+                origin_id: orderId,
+                ref_customer: 'connectortest',
+                customer_id: customerId,
+                weight_units: 0,
+                weight: 10,
+                size_units: 0,
+                trueDepth: .2,
+                trueWidth: .2,
+                trueHeight: .2,
+                deliver_date: Ext.Date.format(new Date(), 'U')
+            };
+            shipment = Ext.create('ConnectorTest.model.Order', shipmentData);
+            Ext.getStore('shipment').add(shipment);
+            Ext.getStore('shipment').sync();
+            Ext.getStore('shipment').clearFilter();
+            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "ref_int", value: 'CT0001' })]);
+            Ext.getStore('shipment').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record)
+                    {
+                        testresult = record.get('ref_customer');
+                        shipmentId = record.get('id');
+                        shipmentRef = record.get('ref');
+                    });
+                    delete order;
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(testresult).toBe('connectortest');
+        });
+    });
+
+    it("create shipmentlines", function ()
+    {
+        runs(function ()
+        {
+            // create shipment lines from orderlines
+            var shipmentData, shipmentLine, shipmentLines = [],
+                shipmentLineStore = Ext.getStore('shipmentline'),
+                orderLineStore = Ext.getStore('orderline');
+
+            flag = false;
+            orderLineStore.each(function (orderLine)
+            {
+                shipmentData = {
+                    origin_id: shipmentId,
+                    warehouse_id: orderLine.get('warehouse_id'),
+                    origin_line_id: orderLine.get('origin_line_id'),
+                    sellby: orderLine.get('sellby'),
+                    eatby: orderLine.get('eatby'),
+                    batch: orderLine.get('batch'),
+                    batch_id: orderLine.get('batch_id'),
+                    qty_toship: 2
+                };
+                if (orderLine.get('batch_id') > 0)
+                {
+                    // ship 1 of each batch
+                    shipmentData.qty_toship = 1;
+                }
+                shipmentLine = Ext.create('ConnectorTest.model.OrderLine', shipmentData);
+                shipmentLines.push(shipmentLine);
+            });
+            Ext.getStore('shipmentline').add(shipmentLines);
+            Ext.getStore('shipmentline').sync();
+            Ext.getStore('shipmentline').clearFilter();
+            Ext.getStore('shipmentline').filter([Ext.create('Ext.util.Filter', { property: "origin_id", value: shipmentId })]);
+            Ext.getStore('shipmentline').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record, index)
+                    {
+                        testresults[index] = record.get('description');
+                        shipmentLineIds[index] = record.get('origin_line_id');
+                    });
+                    delete shipmentLines;
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            Ext.Array.each(testresults, function (testresult, index)
+            {
+                if (index == 0)
                 {
                     expect(testresult).toBe('connectortest update');
                 } else
                 {
                     expect(testresult).toBe('connectortest');
                 }
-			});
-		});
-	});
-	
-	it("read shipment by Id", function() {
-	
-		runs(function() {
-			flag = false;
-			Ext.getStore('shipment').clearFilter();
-			Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter',{property:"id",value:shipmentId})]);
-			Ext.getStore('shipment').load({
-				callback: function (records) {
-					Ext.Array.each(records,function (record) {
-						testresult = record.get('ref');
-					});
-					flag = true;
-				}
-			});
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(testresult).toBe(shipmentRef);
-		});
-	});
-	
-	it("update shipment", function() {
-		var record = Ext.getStore('shipment').find('ref',shipmentRef);
-		
-		runs(function() {
-			flag = false;
-			Ext.getStore('shipment').getAt(record).set('orderstatus_id',1);
-			Ext.getStore('shipment').sync();
-			Ext.getStore('shipment').load({
-				callback: function (records) {
-					Ext.Array.each(records,function (record) {
-						testresult = record.get('orderstatus_id');
-						shipmentRef = record.get('ref');
-					});
-					flag = true;
-				}
-			});
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(record).toBe(0);
-			expect(testresult).toBe(1);
-		});
-	});
-	
-	it("read shipment by ref", function() {
-		
-		runs(function() {
-			flag = false;
-			Ext.getStore('shipment').clearFilter();
-			Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter',{property:"ref",value:shipmentRef})]);
-			Ext.getStore('shipment').load({
-				callback: function (records) {
-					Ext.Array.each(records,function (record) {
-						testresult = record.get('ref');
-					});
-					flag = true;
-				}
-			});
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(testresult).toBe(shipmentRef);
-		});
-	});	
-	
-	it("read shipmentline by origin Id", function() {
-		var shipped=0,
-			asked=0;
-		
-		runs(function() {
-			flag = false;
-			Ext.getStore('shipmentline').clearFilter();
-			Ext.getStore('shipmentline').filter([Ext.create('Ext.util.Filter',{property:"origin_id",value:shipmentId})]);
-			Ext.getStore('shipmentline').load({
-				callback: function (records) {
-					Ext.Array.each(records,function (record) {
-						testresults.push(record.get('warehouse_id'));
-						shipped+=record.get('qty_shipped');
-						asked+=record.get('qty_asked');
-					});
-					flag = true;
-				}
-			});
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(testresults).toContain(1);
-			expect(testresults.length).toBe(3);
-			expect(shipped).toBe(6);
-			expect(asked).toBe(8);
-		});
-	});
+            });
+        });
+    });
+
+    it("read shipment by Id", function ()
+    {
+        runs(function ()
+        {
+            flag = false;
+            Ext.getStore('shipment').clearFilter();
+            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "id", value: shipmentId })]);
+            Ext.getStore('shipment').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record)
+                    {
+                        testresult = record.get('ref');
+                    });
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(testresult).toBe(shipmentRef);
+        });
+    });
+
+    it("update shipment", function ()
+    {
+        var record = Ext.getStore('shipment').find('ref', shipmentRef);
+
+        runs(function ()
+        {
+            flag = false;
+            Ext.getStore('shipment').getAt(record).set('orderstatus_id', 1);
+            Ext.getStore('shipment').sync();
+            Ext.getStore('shipment').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record)
+                    {
+                        testresult = record.get('orderstatus_id');
+                        shipmentRef = record.get('ref');
+                    });
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(record).toBe(0);
+            expect(testresult).toBe(1);
+        });
+    });
+
+    it("read shipment by ref", function ()
+    {
+
+        runs(function ()
+        {
+            flag = false;
+            Ext.getStore('shipment').clearFilter();
+            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "ref", value: shipmentRef })]);
+            Ext.getStore('shipment').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record)
+                    {
+                        testresult = record.get('ref');
+                    });
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(testresult).toBe(shipmentRef);
+        });
+    });
+
+    it("read shipmentline by origin Id", function ()
+    {
+        var shipped = 0,
+			asked = 0;
+
+        runs(function ()
+        {
+            flag = false;
+            Ext.getStore('shipmentline').clearFilter();
+            Ext.getStore('shipmentline').filter([Ext.create('Ext.util.Filter', { property: "origin_id", value: shipmentId })]);
+            Ext.getStore('shipmentline').load({
+                callback: function (records)
+                {
+                    Ext.Array.each(records, function (record)
+                    {
+                        testresults.push(record.get('warehouse_id'));
+                        shipped += record.get('qty_shipped');
+                        asked += record.get('qty_asked');
+                        if (record.get('batch_id') > 0)
+                        {
+                            testresult = record.get('batch');
+                        }
+                    });
+                    flag = true;
+                }
+            });
+        });
+
+        waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+        runs(function ()
+        {
+            expect(testresults).toContain(1);
+            expect(testresults.length).toBe(4);
+            expect(shipped).toBe(6);
+            expect(asked).toBe(10);
+            expect(testresult).toBe('batch2');
+        });
+    });
 });
 
 describe("delete shipments and orders", function () {
