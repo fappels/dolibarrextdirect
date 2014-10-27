@@ -23,6 +23,7 @@
  */
 
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/core/modules/modExtDirect.class.php');
 
@@ -93,6 +94,8 @@ class ExtDirectAuthenticate extends ExtDirect
      */
     public function readAuthentication(stdClass $param) 
     {
+        global $conf;
+        
         if (!isset($this->db)) return CONNECTERROR;
         
         $result = new stdClass;
@@ -100,6 +103,8 @@ class ExtDirectAuthenticate extends ExtDirect
         $app_id = '';
         
         $moduleInfo = new modExtDirect($this->db);
+        $mysoc = new Societe($this->db);
+        $mysoc->setMysoc($conf);
         
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -142,6 +147,9 @@ class ExtDirectAuthenticate extends ExtDirect
             $result->connector_name = $moduleInfo->name;
             $result->connector_description = $moduleInfo->description;
             $result->connector_version = $moduleInfo->version;
+            $result->dolibarr_version = ExtDirect::checkDolVersion();
+            $result->home_country_id = $mysoc->country_id;
+            $result->home_state_id = $mysoc->state_id;
             return $result;
         }
     }
