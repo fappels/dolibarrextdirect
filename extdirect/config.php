@@ -37,6 +37,12 @@ $API = array(
             ),
             'readPaymentTypes'=>array(
                     'len'=>1
+            ),
+            'readCountryConstants'=>array(
+                    'len'=>1
+            ),
+            'readStateConstants'=>array(
+                    'len'=>1
             )
         )
     ),
@@ -115,6 +121,9 @@ $API = array(
                     'len'=>1
             ),
             'readProductList'=>array(
+                    'len'=>1
+            ),
+            'readProductBatchList'=>array(
                     'len'=>1
             )
         )
