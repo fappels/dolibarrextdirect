@@ -129,8 +129,6 @@ class ExtDirectCommande extends Commande
                         }
                     }
                 }
-            } else {
-                return 0;
             }
         }
         
@@ -451,9 +449,11 @@ class ExtDirectCommande extends Commande
      */
     public function readOrderLine(stdClass $params)
     {
+        global $conf;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
-        require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+        dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
         
     
         $results = array();
@@ -474,7 +474,7 @@ class ExtDirectCommande extends Commande
             if (($result = $this->fetch_lines(1)) < 0)  return $result;
             if (!$this->error) {
                 foreach ($this->lines as $line) {
-                    $myprod = new Product($this->db);
+                    $myprod = new ExtDirectProduct($this->_user->login);
                     if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                     if (ExtDirect::checkDolVersion() >= 3.5) {
                         if (($result = $myprod->load_stock()) < 0) return $result;
@@ -541,9 +541,13 @@ class ExtDirectCommande extends Commande
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                             $row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
-                            array_push($results, $row);
-                        }
-                        
+                            // split orderlines by batch
+                            if (empty($conf->productbatch->enabled)) {
+                                array_push($results, $row);
+                            } else {
+                                if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id)) < 0) return $res;
+                            }
+                        }                        
                     } else {
                         $qtyToAsk=$line->qty;
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
@@ -582,7 +586,12 @@ class ExtDirectCommande extends Commande
                                 $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                                 $row->qty_stock = $stock_warehouse->real;
                                 $row->warehouse_id = $warehouse;
-                                array_push($results, $row);
+                                // split orderlines by batch
+                                if (empty($conf->productbatch->enabled)) {
+                                    array_push($results, $row);
+                                } else {
+                                    if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
+                                }
                             }
                         }
                     }
@@ -593,7 +602,6 @@ class ExtDirectCommande extends Commande
         }
         return $results;
     }
-    
     
     /**
      * Ext.direct method to Create Orderlines
