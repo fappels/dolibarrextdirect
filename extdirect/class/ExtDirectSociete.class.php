@@ -54,6 +54,7 @@ class ExtDirectSociete extends Societe
                 }
                 $langs->load("companies");
                 $langs->load("bills");
+                $langs->load("dict");
                 $this->db = $db;
             }
         }
@@ -99,6 +100,110 @@ class ExtDirectSociete extends Societe
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readStComm ".$error, LOG_ERR);
+            return -1;
+        }
+    }
+    
+    /**
+     *    Load country constants
+     *
+     *    @return   stdClass                result data or -1
+     */
+    public function readCountryConstants()
+    {
+        global $langs;
+    
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();        
+    
+        $sql = "SELECT rowid, code, libelle as label";
+        if (ExtDirect::checkDolVersion() >= 3.7) {
+            $sql = "SELECT rowid, code, label";
+            $sql.= " FROM ".MAIN_DB_PREFIX."c_country";
+        } else {
+            $sql = "SELECT rowid, code, libelle as label";
+            $sql.= " FROM ".MAIN_DB_PREFIX."c_pays";
+        }
+        $sql.= " WHERE active = 1";
+    
+        dol_syslog(__METHOD__." sql=".$sql, LOG_DEBUG);
+        $resql=$this->db->query($sql);
+    
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
+                $row->id 		= $obj->rowid;
+                $row->code     	= $obj->code;
+                $row->label		= ($obj->code && $langs->transnoentitiesnoconv("Country".$obj->code)!="Country".$obj->code?$langs->transnoentitiesnoconv("Country".$obj->code):($obj->label!='-'?$obj->label:''));
+                array_push($results, $row);
+            }
+            $this->db->free($resql);
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(__METHOD__.$error, LOG_ERR);
+            return -1;
+        }
+    }
+    
+    /**
+     *    Load state constants
+     *
+     *    @param    stdClass    $param  filter with country_id
+     *    @return   stdClass                result data or -1
+     */
+    public function readStateConstants(stdClass $param)
+    {
+        global $langs;
+    
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'country_id') $country_id=$filter->value;
+            }
+        }
+
+        $row = new stdClass;
+        $row->id 		    = null;
+        $row->code     	    = '';
+        $row->label		    = '';
+        $row->country_id    = null;
+        array_push($results, $row);
+    
+        $sql = "SELECT d.rowid, d.code_departement as code , d.nom as label, p.rowid as country_id FROM";
+        if (ExtDirect::checkDolVersion() >= 3.7) {
+            $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_country as p";
+        } else {
+            $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_pays as p";
+        }		
+		$sql .= " WHERE d.fk_region=r.code_region and r.fk_pays=p.rowid";
+		$sql .= " AND d.active = 1 AND r.active = 1 AND p.active = 1";
+		if ($country_id) $sql .= " AND p.rowid = ".$country_id;
+		$sql .= " ORDER BY p.code, d.code_departement";
+    
+        dol_syslog(__METHOD__." sql=".$sql, LOG_DEBUG);
+        $resql=$this->db->query($sql);
+        
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
+                $row->id 		    = $obj->rowid;
+                $row->code     	    = $obj->code;
+                $row->label		    = $obj->code.' - '.$obj->label;
+                $row->country_id    = $obj->country_id;
+                array_push($results, $row);
+            }
+            $this->db->free($resql);
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(__METHOD__.$error, LOG_ERR);
             return -1;
         }
     }
@@ -408,128 +513,126 @@ class ExtDirectSociete extends Societe
                 else if ($filter->property == 'idprof2') $idprof2=$filter->value;
                 else if ($filter->property == 'idprof3') $idprof3=$filter->value;
                 else if ($filter->property == 'idprof4') $idprof4=$filter->value;
-                else if ($filter->property == 'barcode') $barcode=$filter->value;
+                else if ($filter->property == 'barcode') $id = $this->fetchIdFromBarcode($filter->value);
             }
         }
-        if (empty($id) && empty($ref) && empty($ref_ext) && empty($ref_int)) return PARAMETERERROR;
-        
-        if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int, $idprof1, $idprof2, $idprof3, $idprof4)) < 0) {
-            if ($result == -2) {
-                return array(); // no results       
-            } else {
-                return $result;
-            }
-        } 
-        
-        if (!$this->error) {
-            $row = null;
-            $row->id            = (int) $this->id;
-            $row->entity        = (int) $this->entity;
-            
-            $row->ref           = $this->ref;
-            $row->name          = $this->name;
-            $row->ref_ext       = $this->ref_ext;
-            
-            $row->date_create   = $this->datec;
-            $row->date_update   = $this->date_update;
-            
-            $row->address       = $this->address;
-            $row->zip           = $this->zip;
-            $row->town          = $this->town;
-            
-            $row->country_id    = $this->country_id;
-            $row->country_code  = $this->country_code;
-            $row->country       = $this->country;
-            
-            $row->state_id      = $this->state_id;
-            $row->state_code    = $this->state_code;
-            $row->state         = $this->state;
-            
-            $row->stcomm_id     = (int) $this->stcomm_id;     // id statut commercial
-            $row->commercial_status = $this->statut_commercial;    // libelle statut commercial
-            
-            $row->email         = $this->email;
-            $row->url           = $this->url;
-            $row->phone         = $this->phone;
-            $row->fax           = $this->fax;
-            
-            $row->parent        = $this->parent;
-            
-            $row->idprof1       = $this->idprof1;
-            $row->idprof2       = $this->idprof2;
-            $row->idprof3       = $this->idprof3;
-            $row->idprof4       = $this->idprof4;
-            $row->idprof5       = $this->idprof5;
-            $row->idprof6       = $this->idprof6;
-            
-            $row->capital       = $this->capital;
-            
-            $row->code_client   = $this->code_client;
-            $row->code_supplier = $this->code_fournisseur;
-            
-            $row->code_compta   = $this->code_compta;
-            $row->code_compta_supplier = $this->code_compta_fournisseur;
-            
-            $row->barcode       = $this->barcode;
-            
-            $row->tva_assuj     = $this->tva_assuj;
-            $row->tva_intra     = $this->tva_intra;
-            
-            $row->status = $this->status;
-            
-            // Local Taxes
-            $row->localtax1_assuj= $this->localtax1_assuj;
-            $row->localtax2_assuj= $this->localtax2_assuj;
-            
-            
-            $row->typent_id      = $this->typent_id;
-            $row->typent_code    = $this->typent_code;
-            
-            $row->effectif_id    = $this->effectif_id;
-            $row->effectif       = $this->effectif_id?$this->effectif:'';
-            
-            $row->legal_form_code= $this->forme_juridique_code;
-            $row->legal_form= $this->forme_juridique;
-            
-            $row->fk_prospectlevel= $this->fk_prospectlevel;
-            
-            $row->prefix_comm    = $this->prefix_comm;
-            
-            $row->reduction_percent = $this->remise_percent;
-            $row->payment_condition_id = $this->cond_reglement_id;
-            $row->payment_type_id = $this->mode_reglement_id;
-            
-            $row->client         = (int) $this->client;
-            $row->supplier    = (int) $this->fournisseur;
-            if (ExtDirect::checkDolVersion() >= 3.4) {
-                $row->note_private   = $this->note_private;
-                $row->note_public    = $this->note_public;
-            } else {
-                $row->note_public    = $this->note;
+        if (!empty($id) || !empty($ref) || !empty($ref_ext) || !empty($ref_int)) {
+            if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int, $idprof1, $idprof2, $idprof3, $idprof4)) < 0) {
+                if ($result == -2) {
+                    return array(); // no results
+                } else {
+                    return $result;
+                }
             }
             
-            $row->default_lang   = $this->default_lang;
-            if (!empty($this->logo)) {
-                $dir = $conf->societe->multidir_output[(int) $this->entity]."/".$this->id."/logos/thumbs";
-                $logo_parts = pathinfo($this->logo);
-                $filename=$dir.'/'.$logo_parts['filename'].'_small.'.$logo_parts['extension'];
-                // Read image path, convert to base64 encoding
-                $imgData = base64_encode(file_get_contents($filename));
-                // Format the image SRC:  data:{mime};base64,{data};
-                $row->logo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
-            }
+            if (!$this->error) {
+                $row = null;
+                $row->id            = (int) $this->id;
+                $row->entity        = (int) $this->entity;
             
-            // multiprix
-            $row->price_level    = $this->price_level;
+                $row->ref           = $this->ref;
+                $row->name          = $this->name;
+                $row->ref_ext       = $this->ref_ext;
             
-            $row->import_key     = $this->import_key;
-            if ((!isset($barcode)) || ($barcode == $row->barcode)) {
+                $row->date_create   = $this->datec;
+                $row->date_update   = $this->date_update;
+            
+                $row->address       = $this->address;
+                $row->zip           = $this->zip;
+                $row->town          = $this->town;
+            
+                $row->country_id    = $this->country_id;
+                $row->country_code  = $this->country_code;
+                $row->country       = $this->country;
+            
+                $row->state_id      = $this->state_id;
+                $row->state_code    = $this->state_code;
+                $row->state         = $this->state;
+            
+                $row->stcomm_id     = (int) $this->stcomm_id;     // id statut commercial
+                $row->commercial_status = $this->statut_commercial;    // libelle statut commercial
+            
+                $row->email         = $this->email;
+                $row->url           = $this->url;
+                $row->phone         = $this->phone;
+                $row->fax           = $this->fax;
+            
+                $row->parent        = $this->parent;
+            
+                $row->idprof1       = $this->idprof1;
+                $row->idprof2       = $this->idprof2;
+                $row->idprof3       = $this->idprof3;
+                $row->idprof4       = $this->idprof4;
+                $row->idprof5       = $this->idprof5;
+                $row->idprof6       = $this->idprof6;
+            
+                $row->capital       = $this->capital;
+            
+                $row->code_client   = $this->code_client;
+                $row->code_supplier = $this->code_fournisseur;
+            
+                $row->code_compta   = $this->code_compta;
+                $row->code_compta_supplier = $this->code_compta_fournisseur;
+            
+                $row->barcode       = $this->barcode;
+            
+                $row->tva_assuj     = $this->tva_assuj;
+                $row->tva_intra     = $this->tva_intra;
+            
+                $row->status = $this->status;
+            
+                // Local Taxes
+                $row->localtax1_assuj= $this->localtax1_assuj;
+                $row->localtax2_assuj= $this->localtax2_assuj;
+            
+            
+                $row->typent_id      = $this->typent_id;
+                $row->typent_code    = $this->typent_code;
+            
+                $row->effectif_id    = $this->effectif_id;
+                $row->effectif       = $this->effectif_id?$this->effectif:'';
+            
+                $row->legal_form_code= $this->forme_juridique_code;
+                $row->legal_form= $this->forme_juridique;
+            
+                $row->fk_prospectlevel= $this->fk_prospectlevel;
+            
+                $row->prefix_comm    = $this->prefix_comm;
+            
+                $row->reduction_percent = $this->remise_percent;
+                $row->payment_condition_id = $this->cond_reglement_id;
+                $row->payment_type_id = $this->mode_reglement_id;
+            
+                $row->client         = (int) $this->client;
+                $row->supplier    = (int) $this->fournisseur;
+                if (ExtDirect::checkDolVersion() >= 3.4) {
+                    $row->note_private   = $this->note_private;
+                    $row->note_public    = $this->note_public;
+                } else {
+                    $row->note_public    = $this->note;
+                }
+            
+                $row->default_lang   = $this->default_lang;
+                if (!empty($this->logo)) {
+                    $dir = $conf->societe->multidir_output[(int) $this->entity]."/".$this->id."/logos/thumbs";
+                    $logo_parts = pathinfo($this->logo);
+                    $filename=$dir.'/'.$logo_parts['filename'].'_small.'.$logo_parts['extension'];
+                    // Read image path, convert to base64 encoding
+                    $imgData = base64_encode(file_get_contents($filename));
+                    // Format the image SRC:  data:{mime};base64,{data};
+                    $row->logo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                }
+            
+                // multiprix
+                $row->price_level    = $this->price_level;
+            
+                $row->import_key     = $this->import_key;
+                
                 array_push($results, $row);
+            } else {
+                return SQLERROR;
             }
-        } else {
-            return SQLERROR;
         }
-
         return $results;
     }
 
@@ -564,7 +667,11 @@ class ExtDirectSociete extends Societe
         
         $sql .= ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_effectif as e ON s.fk_effectif = e.id';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_pays as p ON s.fk_pays = p.rowid';
+        if (ExtDirect::checkDolVersion() >= 3.7) {
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_country as p ON s.fk_pays = p.rowid';
+        } else {
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_pays as p ON s.fk_pays = p.rowid';
+        }        
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_forme_juridique as fj ON s.fk_forme_juridique = fj.code';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_departements as d ON s.fk_departement = d.rowid';
@@ -861,6 +968,27 @@ class ExtDirectSociete extends Societe
             $this->db->rollback();
             return -1;
         }
+    }
+    
+    /**
+     * private method to fetch id from given barcode
+     *
+     * @param string $barcode barcode to fetch id from
+     * @return integer $id rowid of element
+     */
+    private function fetchIdFromBarcode($barcode)
+    {
+        $id =0;
+        dol_syslog(__METHOD__.' : '.$barcode);
+        $sql = "SELECT rowid FROM ".MAIN_DB_PREFIX.$this->table_element." WHERE barcode ='".$barcode."'";
+        $resql = $this->db->query($sql);
+        if ( $resql ) {
+            if ($this->db->num_rows($resql) > 0) {
+                $obj = $this->db->fetch_object($resql);
+                $id = (int) $obj->rowid;
+            }
+        }
+        return $id;
     }
     
     /**

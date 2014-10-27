@@ -87,7 +87,9 @@ class ExtDirectContact extends Contact
                         $row->zip               = $this->zip;
                         $row->town              = $this->town;
                         $row->state             = $this->state;
+                        $row->state_id          = $this->state_id;
                         $row->country           = $this->country;
+                        $row->country_id        = $this->country_id;
                         $row->company_id        = (int) $this->socid;
                         $row->companyname       = $this->socname;
                         $row->poste             = $this->poste;
@@ -351,7 +353,9 @@ class ExtDirectContact extends Contact
         ($params->skype) ? ($this->skype = $params->skype) : null;
         ($params->email) ? ($this->email = $params->email) : null;
         ($params->state) ? ($this->state=$params->state) : null;
+        ($params->state_id) ? ($this->state_id=$params->state_id) : null;
         ($params->country) ? ($this->country=$params->country) : null;
+        ($params->country_id) ? ($this->country_id=$params->country_id) : null;
         ($params->company_id) ? ($this->socid=$params->company_id) : null;
         ($params->companyname) ? ($this->socname=$params->companyname) :  null;
         ($params->poste) ? ($this->poste=$params->poste) : null;
