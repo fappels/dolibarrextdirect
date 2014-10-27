@@ -76,11 +76,13 @@ class ExtDirectProduct extends Product
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+        if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
         $results = array();
         $row = new stdClass;
         $id = 0;
         $ref = '';
         $ref_ext = '';
+        $batch = '';
 
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -89,6 +91,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'warehouse_id') $warehouse=$filter->value;
                 else if ($filter->property == 'multiprices_index' ) $multiprices_index=$filter->value;
                 else if ($filter->property == 'barcode' ) $id = $this->fetchIdFromBarcode($filter->value);
+                else if ($filter->property == 'batch') $batch = $filter->value;
             }
         }
         
@@ -126,14 +129,29 @@ class ExtDirectProduct extends Product
                 //! Spanish local taxes
                 $row->localtax1_tx= $this->localtax1_tx;
                 $row->localtax2_tx= $this->localtax2_tx;
+                
+                // batch managed product
+                $row->has_batch = $this->status_batch;
                     
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
                     if (ExtDirect::checkDolVersion() >= 3.5) {
                         $this->load_stock();
                     } 
-                    $row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
+                    
                     $row->pmp= $this->stock_warehouse[$warehouse]->pmp;
+                    if (!empty($conf->productbatch->enabled) && !empty($batch)) {
+                        $productBatch = new Productbatch($this->db);                        
+                        $productBatch->find($this->stock_warehouse[$warehouse]->id,'','',$batch);
+                        $row->batch_id = $productBatch->id;
+                        $row->sellby = $productBatch->sellby;
+                        $row->eatby = $productBatch->eatby;
+                        $row->batch = $productBatch->batch;
+                        $row->stock_reel= (float) $productBatch->qty;
+                    } else {
+                        $row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
+                    }
+                    
                 } else {
                     $row->stock_reel= (float) $this->stock_reel;
                     //! Average price value for product entry into stock (PMP)
@@ -185,9 +203,13 @@ class ExtDirectProduct extends Product
                 $row->date_creation= $this->date_creation;
                 $row->date_modification= $this->date_modification;
 
-                array_push($results, $row);
-            } else {
-                return 0;
+                if (!empty($batch)) {
+                    if (isset($row->batch_id)) {
+                        array_push($results, $row);
+                    }
+                } else {
+                    array_push($results, $row);
+                }                
             }
         }
         
@@ -203,7 +225,8 @@ class ExtDirectProduct extends Product
      */
     public function createProduct($params) 
     {
-
+        global $conf;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
         $notrigger=0;
@@ -213,10 +236,15 @@ class ExtDirectProduct extends Product
             // prepare fields
             $this->prepareFields($param);
             if (($result = $this->create($this->_user, $notrigger)) < 0) return $result;
-            
+            if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
+                $correctStockFunction = 'correct_stock_batch';
+                
+            } else {
+                $correctStockFunction = 'correct_stock';
+            }
             //! Stock
             if (!empty($param->correct_stock_nbpiece)) {
-                $result = $this->correct_stock(
+                $result = $this->$correctStockFunction(
                     $this->_user,
                     $param->warehouse_id,
                     // nb of units
@@ -226,9 +254,15 @@ class ExtDirectProduct extends Product
                     // Label of stock movement
                     $param->correct_stock_label,
                     // Price to use for stock eval
-                    $param->correct_stock_price
+                    $param->correct_stock_price,
+                    // sellBy date
+                    $param->sellby,
+                    // eatBy date
+                    $param->eatby,
+                    // batch number
+                    $param->batch
                 );
-            if ($result < 0) return $result;
+                if ($result < 0) return $result;
             }   
             // barcode
             if (!empty($this->barcode)) {
@@ -253,6 +287,8 @@ class ExtDirectProduct extends Product
      */
     public function updateProduct($params) 
     {
+        global $conf;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
         // dolibarr update settings
@@ -270,11 +306,16 @@ class ExtDirectProduct extends Product
                 // update
                 if (($result = $this->update($id, $this->_user, $notrigger)) < 0)   return $result;
                 //! Stock
+                if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
+                    $correctStockFunction = 'correct_stock_batch';
+                } else {
+                    $correctStockFunction = 'correct_stock';
+                }
                 if (!empty($param->correct_stock_dest_warehouseid)) {
                     // transfer stock
                     if (!empty($param->correct_stock_nbpiece)) {
                         $movement = 1;
-                        $result = $this->correct_stock(
+                        $result = $this->$correctStockFunction(
                             $this->_user,
                             $param->warehouse_id,
                             // nb of units
@@ -284,12 +325,18 @@ class ExtDirectProduct extends Product
                             // Label of stock movement
                             $param->correct_stock_label,
                             // Price to use for stock eval
-                            $param->correct_stock_price
+                            $param->correct_stock_price,
+                            // sellBy date
+                            $param->eatby,
+                            // eatBy date
+                            $param->sellby,
+                            // batch number
+                            $param->batch
                         );
                         if ($result < 0) return $result;
                         $movement = 0;
                         $wharehouseid=$param->correct_stock_dest_warehouseid;
-                        $result = $this->correct_stock(
+                        $result = $this->$correctStockFunction(
                             $this->_user,
                             $wharehouseid,
                             // nb of units
@@ -299,12 +346,18 @@ class ExtDirectProduct extends Product
                             // Label of stock movement
                             $param->correct_stock_label,
                             // Price to use for stock eval
-                            $param->correct_stock_price
+                            $param->correct_stock_price,
+                            // sellBy date
+                            $param->eatby,
+                            // eatBy date
+                            $param->sellby,
+                            // batch number
+                            $param->batch
                         );
                         if ($result < 0) return $result;
                     }
                 } else if (!empty($param->correct_stock_nbpiece)) {
-                    $result = $this->correct_stock(
+                    $result = $this->$correctStockFunction(
                         $this->_user,
                         $param->warehouse_id,
                         // nb of units
@@ -314,7 +367,13 @@ class ExtDirectProduct extends Product
                         // Label of stock movement
                         $param->correct_stock_label,
                         // Price to use for stock eval
-                        $param->correct_stock_price
+                        $param->correct_stock_price,
+                        // sellBy date
+                        $param->eatby,
+                        // eatBy date
+                        $param->sellby,
+                        // batch number
+                        $param->batch
                     );
                     if ($result < 0) return $result;
                 }
@@ -499,6 +558,65 @@ class ExtDirectProduct extends Product
             return SQLERROR;
         }
     }
+    
+    /**
+     * public method to read a list of productbatches of a product
+     *
+     * @param stdClass $param
+     *       required property filter to filter on:
+     *              warehouse_id
+     *              product_id
+     *              
+     *       property sort with properties field names and directions:
+     *       property limit for paging with sql LIMIT and START values
+     *
+     * @return     stdClass result data or -1
+     */
+    public function readProductBatchList(stdClass $param)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+        
+        $results = array();
+        $row = new stdClass;
+        $filterSize = 0;
+        $id = null;
+        $warehouseId = null;
+        $limit=null;
+        $start=0;
+    
+        if (isset($param->limit)) {
+            $limit = $param->limit;
+            $start = $param->start;
+        }
+        if (isset($param->filter)) {
+            $filterSize = count($param->filter);
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'product_id') $id=$filter->value;
+                else if ($filter->property == 'warehouse_id') $warehouseId=$filter->value;
+            }
+        }
+        
+        if (empty($conf->productbatch->enabled) || empty($id) || !isset($warehouseId)) return PARAMETERERROR;
+        
+        $this->id = $id;
+        if (($res = $this->load_stock()) < 0) return $res; 
+               
+        if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
+            require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
+            $formProduct = new FormProduct($this->db);
+            $formProduct->loadWarehouses($id);
+            foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
+                if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id)) < 0) return $res;
+            }
+        } else {
+            if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id)) < 0) return $res;
+        }
+
+        return $results;
+    }
         
     /**
      * private method to copy fields into dolibarr object
@@ -587,7 +705,9 @@ class ExtDirectProduct extends Product
         isset($param->import_key) ? ( $this->import_key =$param->import_key) : null;
         isset($param->date_creation) ? ( $this->date_creation =$param->date_creation) : null;
         isset($param->date_modification) ? ( $this->date_modification =$param->date_modification) : null;
-    } 
+        // has batch
+        isset($param->has_batch) ? ( $this->status_batch = $param->has_batch ) : null;
+    }
     
     /**
      * private method to fetch id from given barcode
@@ -608,5 +728,42 @@ class ExtDirectProduct extends Product
             }
         }
         return $id;
+    }
+    
+    /**
+     * public method to fetch batch results
+     * 
+     * @param array &$results array to store batches
+     * @param object $row object with product data to add to results
+     * @param int $id product id
+     * @param int $warehouseId warehouse id
+     * @param int $productStockId produc stock id
+     * @return int < 0 if error > 0 if OK
+     */
+    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId) {
+        require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
+        $batches = array();
+        
+        if (!empty($productStockId) && ($batches = Productbatch::findAll($this->db, $productStockId)) < 0 ) return $batches;
+        
+        if (!empty($batches)) {
+            foreach ($batches as $batch) {
+                $row->id = $id.'_'.$batch->id;
+                $row->product_id = $this->id;
+                $row->warehouse_id = $warehouseId;
+                $row->batch_id = $batch->id;
+                $row->stock_id = $batch->fk_product_stock;
+                $row->sellby = $batch->sellby;
+                $row->eatby = $batch->eatby;
+                $row->batch = $batch->batch;
+                $row->stock_reel= (float) $batch->qty;
+                $row->qty_stock = (int) $batch->qty;
+                array_push($results, clone $row);
+            }
+        } else {
+            // no batch
+            array_push($results, $row);
+        }        
+        return 1;
     }
 }
