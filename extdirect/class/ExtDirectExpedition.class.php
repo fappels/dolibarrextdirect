@@ -77,7 +77,7 @@ class ExtDirectExpedition extends Expedition
         $ref = '';
         $ref_ext = '';
         $ref_int = '';
-
+        
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
@@ -122,7 +122,6 @@ class ExtDirectExpedition extends Expedition
                 $row->trueDepth = $this->trueDepth;
                 $row->trueWidth = $this->trueWidth;
                 $row->trueHeight = $this->trueHeight;
-                
                 array_push($results, $row);
             } else {
                 return 0;
@@ -150,7 +149,6 @@ class ExtDirectExpedition extends Expedition
             $this->prepareFields($params);
             
             if (($result = $this->create($this->_user)) < 0)    return $result;
-            
             $params->id=$this->id;
         }
 
@@ -219,7 +217,7 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
-
+        
         foreach ($paramArray as &$params) {
             // prepare fields
             if ($params->id) {
@@ -270,6 +268,8 @@ class ExtDirectExpedition extends Expedition
      */
     public function readShipmentLine(stdClass $params)
     {
+        global $conf;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
         $results = array();
@@ -286,19 +286,25 @@ class ExtDirectExpedition extends Expedition
             $this->id=$origin_id;
             if (($result = $this->fetch_lines()) < 0)   return $result;
             if (!$this->error) {
-                foreach ($this->lines as $line) {
-                    $row->id = $line->rowid ;
+                foreach ($this->lines as $key => $line) {
+                    $row->id = $key;
                     $row->description = $line->description;
                     $row->product_id = $line->fk_product;
                     $row->product_ref = $line->product_ref;
                     $row->product_label = $line->product_label;
                     $row->product_desc = '';
                     $row->origin_id = $origin_id;
+                    $row->origin_line_id = $line->fk_origin_line;
                     $row->qty_asked = $line->qty_asked;
                     $row->qty_shipped = $line->qty_shipped;
                     $row->warehouse_id = $line->entrepot_id;
-                    
-                    array_push($results, $row);
+                    // read related batch info
+                    if (empty($conf->productbatch->enabled)) {
+                        array_push($results, clone $row);
+                    } else {
+                        $row->id = $line->line_id;
+                        if (($res = $this->fetchBatches($results, $row, $line->line_id)) < 0) return $res;
+                    }
                 }
             } else {
                 return SQLERROR;
@@ -310,26 +316,59 @@ class ExtDirectExpedition extends Expedition
     
     /**
      * Ext.direct method to Create shipmentline
+     * 
+     * !!deliver $param sorted by origin_line_id
      *
      * @param unknown_type $param object or object array with shipmentline record
      * @return result data or -1
      */
     public function createShipmentLine($param) 
     {
+        global $conf;
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
-        
-        foreach ($paramArray as &$params) {
+        $batches = array();
+        $qtyShipped = 0;
+        foreach ($paramArray as $params) {
             $this->id=$params->origin_id;
-            dol_syslog(get_class($this)."::shipment id=".$this->id, LOG_DEBUG);
+            dol_syslog(__METHOD__." line id=".$params->origin_line_id, LOG_DEBUG);
             if ($params->origin_id > 0) {
-                if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id, $params->qty_toship)) < 0)  return $result;
+                if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {                    
+                    if (count($batches) > 0) {
+                        $finishBatch = false;
+                        foreach ($batches as $batch) {
+                            if ($batch->origin_line_id != $params->origin_line_id) {
+                                $finishBatch = true;
+                            }
+                        }
+                        if ($finishBatch) {
+                            if (($res = $this->finishBatches($batches, $qtyShipped)) < 0) return $res;
+                            unset($batches);
+                            $batches = array();
+                            $qtyShipped = $params->qty_toship;
+                            array_push($batches, $params);
+                        } else {
+                            $qtyShipped += $params->qty_toship;
+                            array_push($batches, $params);
+                        }
+                    } else {
+                        $qtyShipped = $params->qty_toship;
+                        array_push($batches, $params);
+                    }                    
+                } else {
+                    // no batch
+                    if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return $result;
+                }                
             } else {
                 return PARAMETERERROR;
-            }
-            
+            }            
+        }
+
+        if (!empty($conf->productbatch->enabled) && !empty($batches)) {
+            if (($res = $this->finishBatches($batches, $qtyShipped)) < 0) return $res;
         }
     
         if (is_array($param)) {
@@ -351,6 +390,40 @@ class ExtDirectExpedition extends Expedition
     }
     
     /**
+     * private method to update shipment line
+     *
+     * @param array $batches array with batch objects
+     * @param int $qtyShipped qty items of batch to ship
+     * @return int > 0 OK < 0 KO
+     * 
+     */
+
+    private function finishBatches($batches,$qtyShipped)
+    {
+        // write related batch info
+        require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
+        if (($result = $this->create_line($batches[0]->warehouse_id, $batches[0]->origin_line_id,  $qtyShipped)) < 0)  return $result;
+        // fetch line id
+        if (($result = $this->fetch_lines()) < 0)   return $result;
+        foreach ($this->lines as $line) {
+            if ($line->fk_origin_line == $batches[0]->origin_line_id) {
+                $shipmentLineId = $line->line_id;
+            }
+        }
+        // store colleted batches
+        foreach ($batches as $batch) {
+            $expeditionLigneBatch = new ExpeditionLigneBatch($this->db);
+            $expeditionLigneBatch->sellby = $batch->sellby;
+            $expeditionLigneBatch->eatby = $batch->eatby;
+            $expeditionLigneBatch->batch = $batch->batch;
+            $expeditionLigneBatch->dluo_qty = $batch->qty_toship;
+            $expeditionLigneBatch->fk_origin_stock = $batch->batch_id;
+            $expeditionLigneBatch->create($shipmentLineId);
+        }
+        return 1;
+    }
+    
+    /**
      * Ext.direct method to destroy shipment line
      *
      * @param unknown_type $param object or object array with shipment record
@@ -359,5 +432,36 @@ class ExtDirectExpedition extends Expedition
     public function destroyShipmentLine($param) 
     {
         return PARAMETERERROR;// no destroy possible, will be destroyed when shipment is destroyed
+    }
+    
+    /**
+     * public method to fetch batch results
+     *
+     * @param array &$results array to store batches
+     * @param object $row object with line data to add to results
+     * @param int $lineId expedition line id
+     * @return int < 0 if error > 0 if OK
+     */
+    private function fetchBatches(&$results,$row,$lineId) {
+        require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
+        $batches = array();
+        
+        if (($batches = ExpeditionLigneBatch::FetchAll($this->db, $lineId)) < 0 ) return $batches;
+        if (!empty($batches)) {
+             foreach ($batches as $batch) {
+                $row->id = $lineId.'_'.$batch->id;
+                $row->batch_id = $batch->id;
+                $row->sellby = $batch->sellby;
+                $row->eatby = $batch->eatby;
+                $row->batch = $batch->batch;
+                $row->qty_shipped = (float) $batch->dluo_qty;
+                array_push($results, clone $row);
+            }
+        } else {
+            // no batch
+            array_push($results, clone $row);
+        }
+       
+        return 1;
     }
 }
