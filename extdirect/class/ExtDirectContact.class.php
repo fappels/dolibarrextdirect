@@ -24,6 +24,7 @@
 
 require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectContact class
  * 
@@ -51,7 +52,11 @@ class ExtDirectContact extends Contact
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("companies");
-                $this->db = $db;
+                if (ExtDirect::checkDolVersion() >= 3.3) {
+                    parent::__construct($db);
+                } else {
+                    $this->db = $db;
+                }
             }
         }   
     }
@@ -69,7 +74,7 @@ class ExtDirectContact extends Contact
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
         
         $results = array();
-        $row = new stdClass();
+        $row = new stdClass;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') {
@@ -152,7 +157,11 @@ class ExtDirectContact extends Contact
             $filterSize = count($params->filter);
         }
         if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
+            if (ExtDirect::checkDolVersion() >= 3.5) {
+                $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
+            } else {
+                $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
+            }            
         } else {
             $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.name as lastname, c.firstname,c.cp as zip, c.ville as town';
         }
@@ -213,6 +222,9 @@ class ExtDirectContact extends Contact
                 $row->companyname   = $obj->companyname;
                 $row->zip           = $obj->zip;
                 $row->town          = $obj->town;
+                if (isset($obj->statut)) {
+                    $row->enabled    = $obj->statut;
+                }                
     
                 array_push($results, $row);
             }
