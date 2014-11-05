@@ -45,7 +45,7 @@ class ExtDirectAuthenticate extends ExtDirect
         // clear session
         $_SESSION['dol_login'] = null;
         $this->_user = new User($db);
-        $this->db = $db;
+        parent::__construct($db);
     }
 
     /**
@@ -103,8 +103,11 @@ class ExtDirectAuthenticate extends ExtDirect
         $app_id = '';
         
         $moduleInfo = new modExtDirect($this->db);
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            $mysoc = new Societe($this->db);
+            $mysoc->setMysoc($conf);
+        }
+        
         
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -148,8 +151,10 @@ class ExtDirectAuthenticate extends ExtDirect
             $result->connector_description = $moduleInfo->description;
             $result->connector_version = $moduleInfo->version;
             $result->dolibarr_version = ExtDirect::checkDolVersion();
-            $result->home_country_id = $mysoc->country_id;
-            $result->home_state_id = $mysoc->state_id;
+            if (ExtDirect::checkDolVersion() >= 3.4) {
+                $result->home_country_id = $mysoc->country_id;
+                $result->home_state_id = $mysoc->state_id;
+            }            
             return $result;
         }
     }
