@@ -52,7 +52,11 @@ class ExtDirectCommande extends Commande
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("orders");
-                $this->db = $db;
+                if (ExtDirect::checkDolVersion() >= 3.3) {
+                    parent::__construct($db);
+                } else {
+                    $this->db = $db;
+                }
             }
         }
     }

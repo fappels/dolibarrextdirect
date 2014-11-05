@@ -23,6 +23,7 @@
  *  \brief      Sencha Ext.Direct product helpers remoting class
  */
 require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectFormProduct class
  * Class with product helpers methods to connect to Extjs or sencha touch using Ext.direct connector
@@ -51,7 +52,11 @@ class ExtDirectFormProduct extends FormProduct
                 }
                 $langs->load("products");
                 $langs->load("extdirect@extdirect");
-                $this->db = $db;
+                if (ExtDirect::checkDolVersion() >= 3.3) {
+                    parent::__construct($db);
+                } else {
+                    $this->db = $db;
+                }
             }
         }
     }

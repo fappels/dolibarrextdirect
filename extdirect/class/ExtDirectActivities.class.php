@@ -50,7 +50,7 @@ class ExtDirectActivities extends ExtDirectActivity
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("extdirect");
-                $this->db = $db;
+                parent::__construct($db);
             }
         }
     }

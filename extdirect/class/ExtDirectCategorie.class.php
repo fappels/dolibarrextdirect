@@ -24,6 +24,7 @@
  */
 
 require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectCategorie class
  * 
@@ -50,7 +51,11 @@ class ExtDirectCategorie extends Categorie
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("categories");
-                $this->db = $db;
+                if (ExtDirect::checkDolVersion() >= 3.3) {
+                    parent::__construct($db);
+                } else {
+                    $this->db = $db;
+                }
             }
         }
     }
