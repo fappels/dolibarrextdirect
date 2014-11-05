@@ -24,6 +24,7 @@
 require_once DOL_DOCUMENT_ROOT."/comm/action/class/actioncomm.class.php";
 require_once DOL_DOCUMENT_ROOT."/societe/class/societe.class.php";// for add and get societe_commercial
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
 
 /**
  * ExtDirectActionComm Class
@@ -52,7 +53,11 @@ class ExtDirectActionComm extends ActionComm
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
-                $this->db = $db;
+                if (ExtDirect::checkDolVersion() >= 3.3) {
+                    parent::__construct($db);
+                } else {
+                    $this->db = $db;
+                }
                 $this->_societe = new Societe($db);
             }
         }
@@ -95,10 +100,26 @@ class ExtDirectActionComm extends ActionComm
                         $row->transparency      = (int) $this->transparency;
                         $row->priority          = $this->priority;
                         $row->note              = $this->note;
-                        $row->usertodo_id       = (int) $this->usertodo->id;
-                        $row->userdone_id       = (int) $this->userdone->id;
-                        $row->company_id        = (int) $this->societe->id;
-                        $row->contact_id        = (int) $this->contact->id;
+                        if (isset($this->usertodo->id)) {
+                            $row->usertodo_id   = (int) $this->usertodo->id; // deprecated
+                        } else {
+                            $row->usertodo_id   = (int) $this->userownerid;
+                        }
+                        if (isset($this->userdone->id)) {
+                            $row->userdone_id   = (int) $this->userdone->id; // deprecated
+                        } else {
+                            $row->userdone_id   = (int) $this->userdoneid;
+                        }
+                        if (isset($this->societe->id)) {
+                            $row->company_id    = (int) $this->societe->id; // deprecated
+                        } else {
+                            $row->company_id    = (int) $this->socid;
+                        }
+                        if (isset($this->contact->id)) {
+                            $row->contact_id    = (int) $this->contact->id; // deprecated
+                        } else {
+                            $row->contact_id    = (int) $this->contactid;
+                        }
                         $row->project_id        = (int) $this->fk_project;
                 
                         array_push($results, $row);
@@ -150,6 +171,7 @@ class ExtDirectActionComm extends ActionComm
         $sql .= ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_actioncomm as ac ON a.fk_action = ac.id';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
             $sql .= ' WHERE (';
@@ -162,6 +184,8 @@ class ExtDirectActionComm extends ActionComm
                     $sql .= "(c.rowid = ".$filter->value.")";
                 else if ($filter->property == 'user_id') 
                     $sql.= '(fk_user_action = '.$filter->value.' OR fk_user_done = '.$filter->value.')';
+                else if ($filter->property == 'type')
+                    $sql.= "(ac.type = '".$this->db->escape($filter->value)."')";
                 else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);
                     $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
@@ -246,7 +270,7 @@ class ExtDirectActionComm extends ActionComm
             if (($result = $this->add($this->_user, $notrigger)) < 0)    return $result;
            
             $param->id=$this->id;
-            $this->_societe->id=$this->societe->id;
+            $this->_societe->id=$this->socid;
             $this->_societe->add_commercial($this->_user, $this->usertodo->id);
         }
         
@@ -285,7 +309,7 @@ class ExtDirectActionComm extends ActionComm
                      return $result;
                 }  
                 $this->_societe->id=$this->societe->id;
-                $this->_societe->add_commercial($this->_user, $this->usertodo->id);
+                $this->_societe->add_commercial($this->_user, $this->userdoneid);
             } else {
                 return PARAMETERERROR;
             }
@@ -317,12 +341,14 @@ class ExtDirectActionComm extends ActionComm
             // prepare fields
             if ($param->id) {
                 $this->id = $param->id;   
-                if ($param->usertodo_id) $this->usertodo->id = $param->usertodo_id;
-                if ($param->company_id) $this->societe->id=$param->company_id;
+                if ($param->usertodo_id) $this->usertodo->id = $param->usertodo_id; // deprecated
+                if ($param->usertodo_id) $this->userdoneid = $param->usertodo_id;
+                if ($param->company_id) $this->societe->id=$param->company_id; // deprecated
+                if ($param->company_id) $this->socid=$param->company_id;
                 // delete
                 if (($result = $this->delete($notrigger)) < 0) return $result;
-                $this->_societe->id=$this->societe->id;
-                $this->_societe->del_commercial($this->_user, $this->usertodo->id);
+                $this->_societe->id=$this->socid;
+                $this->_societe->del_commercial($this->_user, $this->userdoneid);
             } else {
                 return PARAMETERERROR;
             }            
@@ -397,11 +423,15 @@ class ExtDirectActionComm extends ActionComm
         isset($params->type_code) ? $this->type_code = $params->type_code : $this->type_code = 'AC_OTH';
         isset($params->label) ? $this->label = $params->label : null;
         isset($params->note) ? $this->note = $params->note : null;
-        isset($params->usertodo_id) ? $this->usertodo->id = $params->usertodo_id : null;
-        isset($params->userdone_id) ? $this->userdone->id = $params->userdone_id : null;
+        isset($params->usertodo_id) ? $this->usertodo->id = $params->usertodo_id : null; // deprecated
+        isset($params->userdone_id) ? $this->userdone->id = $params->userdone_id : null; // deprecated
+        isset($params->usertodo_id) ? $this->userownerid = $params->usertodo_id : null;
+        isset($params->userdone_id) ? $this->userdoneid = $params->userdone_id : null;
         isset($params->location) ? $this->location = $params->location : null;
-        isset($params->company_id) ? $this->societe->id=$params->company_id : null;
-        isset($params->contact_id) ? $this->contact->id=$params->contact_id : null;
+        isset($params->company_id) ? $this->societe->id=$params->company_id : null; // deprecated
+        isset($params->contact_id) ? $this->contact->id=$params->contact_id : null; // deprecated
+        isset($params->company_id) ? $this->socid=$params->company_id : null;
+        isset($params->contact_id) ? $this->contactid=$params->contact_id : null;
         isset($params->durationp) ? $this->durationp=$params->durationp : null;
         isset($params->percentage) ? $this->percentage=$params->percentage : null;
         isset($params->code) ? $this->code=$params->code : null;
