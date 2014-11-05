@@ -52,7 +52,11 @@ class ExtDirectExpedition extends Expedition
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("sendings");
-                $this->db = $db;
+                if (ExtDirect::checkDolVersion() >= 3.3) {
+                    parent::__construct($db);
+                } else {
+                    $this->db = $db;
+                }
             }
         }
     }
@@ -68,7 +72,7 @@ class ExtDirectExpedition extends Expedition
     public function readShipment(stdClass $params)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $myUser = new User($this->db);
         $mySociete = new Societe($this->db);
         $results = array();
@@ -141,7 +145,7 @@ class ExtDirectExpedition extends Expedition
     public function createShipment($param) 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
         
         foreach ($paramArray as &$params) {
@@ -168,7 +172,7 @@ class ExtDirectExpedition extends Expedition
     public function updateShipment($param) 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->valider)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->valider)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {
@@ -215,7 +219,7 @@ class ExtDirectExpedition extends Expedition
     public function destroyShipment($param) 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->supprimer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
         
         foreach ($paramArray as &$params) {
@@ -271,7 +275,7 @@ class ExtDirectExpedition extends Expedition
         global $conf;
         
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
         $row = new stdClass;
         $origin_id = 0;
@@ -327,14 +331,14 @@ class ExtDirectExpedition extends Expedition
         global $conf;
 
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
         $batches = array();
         $qtyShipped = 0;
         foreach ($paramArray as $params) {
             $this->id=$params->origin_id;
-            dol_syslog(__METHOD__." line id=".$params->origin_line_id, LOG_DEBUG);
+            dol_syslog(get_class($this).'::'.__FUNCTION__." line id=".$params->origin_line_id, LOG_DEBUG);
             if ($params->origin_id > 0) {
                 if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {                    
                     if (count($batches) > 0) {
