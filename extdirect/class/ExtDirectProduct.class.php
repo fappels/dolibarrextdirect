@@ -195,8 +195,12 @@ class ExtDirectProduct extends Product
                     
                 //! barcode
                 $row->barcode= $this->barcode?$this->barcode:'';               // value
-                $row->barcode_type= (int) $this->barcode_type;          // id
-                    
+                if (empty($this->barcode_type) && ! empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
+                    $row->barcode_type= (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
+                } else {
+                    $row->barcode_type= (int) $this->barcode_type;
+                }
+                                   
                 // no links to offers in this version
                 // no multilangs in this version
                     

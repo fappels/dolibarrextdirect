@@ -89,14 +89,13 @@ class ExtDirectFormProduct extends FormProduct
         $row->id = self::ALLWAREHOUSE_ID;
         $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
         
-        array_push($results, $row);
+        array_push($results, clone $row);
         
         if (!$this->error) {
             foreach ($this->cache_warehouses as $warehouseId => $warehouse) {
-                unset($row);
                 $row->id = $warehouseId;
                 isset($warehouse['label'])?$row->label= $warehouse['label']:$row->label='';
-                array_push($results, $row);
+                array_push($results, clone $row);
             }
         } else {
             die ($this->error);
@@ -122,15 +121,14 @@ class ExtDirectFormProduct extends FormProduct
 
         if (! empty($conf->global->PRODUIT_MULTIPRICES)) {
             for ($i=1; $i <= $conf->global->PRODUIT_MULTIPRICES_LIMIT; $i++) {
-                $row=null;
                 $row->id = $i;
                 $row->name = "Level ".$i;//lang
-                array_push($results, $row);
+                array_push($results, clone $row);
             }
         } else {
             $row->id = 0;
             $row->name = "No multiprices";//lang
-            array_push($results, $row);
+            array_push($results, clone $row);
         }
         return $results;
     }    
@@ -150,18 +148,62 @@ class ExtDirectFormProduct extends FormProduct
         $results = array();
         $row = new stdClass;
         if (! empty($conf->product->enabled)) {
-            $row=null;
             $row->id = 0;
             $row->label = $langs->trans("Product") ? $langs->trans("Product") : "Product";//lang
-            array_push($results, $row);
+            array_push($results, clone $row);
         }
         if (! empty($conf->service->enabled)) {
-            $row=null;
             $row->id = 1;
             $row->label = $langs->trans("Service") ? $langs->trans("Service") : "Service";//lang
-            array_push($results, $row);
+            array_push($results, clone $row);
         }
         
         return $results;
     }  
+    
+    /**
+     *    Load available barcodetypes
+     *
+     *    @param    stdClass    $params     not used
+     *
+     *    @return     stdClass result data
+     */
+    public function readBarcodeType(stdClass $params)
+    {
+        global $conf;
+    
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        if (! empty($conf->barcode->enabled)) {
+            $sql = "SELECT rowid, code, libelle as label, coder";
+            $sql.= " FROM ".MAIN_DB_PREFIX."c_barcode_type";
+            dol_syslog(get_class($this).'::readBarcodeType', LOG_DEBUG);
+            $resql=$this->db->query($sql);
+        
+            if ($resql) {
+                $num=$this->db->num_rows($resql);
+                $row->id    = 0;
+                $row->code  = 'NONE';
+                $row->label = '';
+                $row->coder = '0';
+                array_push($results, clone $row);
+                for ($i = 0;$i < $num; $i++) {
+                    $obj = $this->db->fetch_object($resql);
+                    if ($obj->coder != '0') {
+                        $row->id    = $obj->rowid;
+                        $row->code  = $obj->code;
+                        $row->label = $obj->label;
+                        $row->coder = $obj->coder;
+                        array_push($results, clone $row);
+                    }
+                }
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readBarcodeType ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+        return $results;
+    }
 }
