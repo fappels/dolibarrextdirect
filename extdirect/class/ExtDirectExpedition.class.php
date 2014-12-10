@@ -294,7 +294,8 @@ class ExtDirectExpedition extends Expedition
                     $row->id = $key;
                     $row->description = $line->description;
                     $row->product_id = $line->fk_product;
-                    $row->product_ref = $line->product_ref;
+                    $row->product_ref = $line->product_ref; // deprecated
+                    $row->ref = $line->product_ref;
                     $row->product_label = $line->product_label;
                     $row->product_desc = '';
                     $row->origin_id = $origin_id;

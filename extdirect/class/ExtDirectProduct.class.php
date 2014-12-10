@@ -96,6 +96,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'multiprices_index' ) $multiprices_index=$filter->value;
                 else if ($filter->property == 'barcode' ) $id = $this->fetchIdFromBarcode($filter->value);
                 else if ($filter->property == 'batch') $batch = $filter->value;
+                else if ($filter->property == 'batch_id') $batchId = $filter->value;
             }
         }
         
@@ -144,13 +145,22 @@ class ExtDirectProduct extends Product
                     } 
                     
                     $row->pmp= $this->stock_warehouse[$warehouse]->pmp;
-                    if (!empty($conf->productbatch->enabled) && !empty($batch)) {
-                        $productBatch = new Productbatch($this->db);                        
-                        $productBatch->find($this->stock_warehouse[$warehouse]->id,'','',$batch);
-                        $row->batch_id = $productBatch->id;
+                    if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
+                        $productBatch = new Productbatch($this->db);
+                        if (isset($batchId)) {
+                            $productBatch->fetch($batchId);
+                        } else {
+                            $productBatch->find($this->stock_warehouse[$warehouse]->id,'','',$batch);
+                        }    
+                        if (!isset($productBatch->id)) {
+                            $row->batch_id = 0; // for adding new batch when batch not found
+                        } else {
+                            $row->batch_id = $productBatch->id;
+                        }
                         $row->sellby = $productBatch->sellby;
                         $row->eatby = $productBatch->eatby;
                         $row->batch = $productBatch->batch;
+                        $row->batch_info = $productBatch->import_key;
                         $row->stock_reel= (float) $productBatch->qty;
                     } else {
                         $row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
@@ -343,10 +353,9 @@ class ExtDirectProduct extends Product
                         );
                         if ($result < 0) return $result;
                         $movement = 0;
-                        $wharehouseid=$param->correct_stock_dest_warehouseid;
                         $result = $this->$correctStockFunction(
                             $this->_user,
-                            $wharehouseid,
+                            $param->correct_stock_dest_warehouseid,
                             // nb of units
                             $param->correct_stock_nbpiece,
                             // 0 = add, 1 = remove
@@ -389,6 +398,16 @@ class ExtDirectProduct extends Product
                 if (!empty($this->barcode)) {
                     $this->setValueFrom('barcode', $this->barcode);
                     $this->setValueFrom('fk_barcode_type', $this->fk_barcode_type);
+                }
+                // update product batch 
+                if (!empty($param->batch_id) && !(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
+                    $productBatch = new Productbatch($this->db);
+                    $productBatch->fetch($param->batch_id);
+                    isset($param->batch) ? $productBatch->batch = $param->batch : null;
+                    isset($param->sellby) ? $productBatch->sellby = $param->sellby : null;
+                    isset($param->eatby) ? $productBatch->eatby = $param->eatby : null;
+                    isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
+                    if (($result = $productBatch->update($this->_user)) < 0)   return $result;
                 }
             } else {
                 return PARAMETERERROR;
@@ -459,7 +478,9 @@ class ExtDirectProduct extends Product
         $row = new stdClass;
         $filterSize = 0;
         $limit=null;
-        $start=0;        
+        $start=0;
+        $dataComplete=false;
+        $dataNotComplete=false;        
         
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -506,7 +527,11 @@ class ExtDirectProduct extends Product
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
                         $sql.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
-                    }                   
+                    } else if ($filter->property == 'complete' && !empty($value)) {
+                        $dataComplete = true;
+                    } else if ($filter->property == 'notcomplete' && !empty($value)) {
+                        $dataNotComplete = true;
+                    }
                 }    
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $param->filter[$key+1]->property) $sql .= ' OR ';
@@ -556,7 +581,17 @@ class ExtDirectProduct extends Product
                     $row->stock = (float) $obj->reel;
                 }
                 $row->stock     = (float) $obj->reel;
-                array_push($results, $row);
+                if ($dataComplete) {
+                    if (!empty($row->barcode)) {
+                        array_push($results, $row);
+                    }                 
+                } else if ($dataNotComplete) {
+                    if (empty($row->barcode)) {
+                        array_push($results, $row);
+                    }
+                } else {
+                    array_push($results, $row);
+                }                
             }
             $this->db->free($resql);
             return $results;
@@ -766,9 +801,10 @@ class ExtDirectProduct extends Product
                 $row->batch = $batch->batch;
                 $row->stock_reel= (float) $batch->qty;
                 $row->qty_stock = (int) $batch->qty;
+                $row->batch_info = $batch->import_key;
                 array_push($results, clone $row);
             }
-        } else {
+        } else if(isset($row->id)) {
             // no batch
             array_push($results, $row);
         }        
