@@ -121,4 +121,4 @@ At least two warehouses, 2 multiprice indexes and one customer with rowid 1 must
 **Supported Dolibarr Versions:**
 
 - Min version:	3.2
-- Max version:	3.6
+- Max version:	3.7 beta
