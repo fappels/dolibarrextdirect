@@ -400,14 +400,25 @@ class ExtDirectProduct extends Product
                     $this->setValueFrom('fk_barcode_type', $this->fk_barcode_type);
                 }
                 // update product batch 
-                if (!empty($param->batch_id) && !(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
+                if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id)) && !(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
                     $productBatch = new Productbatch($this->db);
-                    $productBatch->fetch($param->batch_id);
-                    isset($param->batch) ? $productBatch->batch = $param->batch : null;
-                    isset($param->sellby) ? $productBatch->sellby = $param->sellby : null;
-                    isset($param->eatby) ? $productBatch->eatby = $param->eatby : null;
-                    isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
-                    if (($result = $productBatch->update($this->_user)) < 0)   return $result;
+                    if (!empty($param->batch_id)) {
+                        $productBatch->fetch($param->batch_id);
+                    } else {
+                        if (ExtDirect::checkDolVersion() >= 3.5) {
+                            $this->load_stock();
+                        }
+                        if (isset($this->stock_warehouse[$param->warehouse_id]->id)) {
+                            $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id,$param->eatby,$param->sellby,$param->batch);
+                        }                        
+                    }
+                    if (isset($productBatch->id)) {
+                        isset($param->batch) ? $productBatch->batch = $param->batch : null;
+                        isset($param->sellby) ? $productBatch->sellby = $param->sellby : null;
+                        isset($param->eatby) ? $productBatch->eatby = $param->eatby : null;
+                        isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
+                        if (($result = $productBatch->update($this->_user)) < 0)   return $result;
+                    }
                 }
             } else {
                 return PARAMETERERROR;
@@ -529,8 +540,24 @@ class ExtDirectProduct extends Product
                         $sql.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
                     } else if ($filter->property == 'complete' && !empty($value)) {
                         $dataComplete = true;
+                        if (! empty($conf->productbatch->enabled)) {
+                            $sql .= " ps.rowid NOT IN (";
+                            $sql .= " SELECT fk_product_stock FROM ".MAIN_DB_PREFIX."product_batch";
+                            $sql .= " WHERE ((batch = '' ) OR (batch IS NULL) OR (import_key = '' ) OR (import_key IS NULL)))";
+                            $sql .= " AND (p.barcode <> '' OR p.barcode IS NOT NULL)";
+                        } else {
+                            $sql .= "p.barcode <> '' OR p.barcode IS NOT NULL";
+                        }                        
                     } else if ($filter->property == 'notcomplete' && !empty($value)) {
                         $dataNotComplete = true;
+                        if (! empty($conf->productbatch->enabled)) {
+                            $sql .= " ps.rowid IN (";
+                            $sql .= " SELECT fk_product_stock FROM ".MAIN_DB_PREFIX."product_batch";
+                            $sql .= " WHERE ((batch = '' ) OR (batch IS NULL) OR (import_key = '' ) OR (import_key IS NULL)))";
+                            $sql .= " OR p.barcode = '' OR p.barcode IS NULL";
+                        } else {
+                            $sql .= "p.barcode = '' OR p.barcode IS NULL";
+                        } 
                     }
                 }    
                 if ($key < ($filterSize-1)) {
@@ -581,17 +608,7 @@ class ExtDirectProduct extends Product
                     $row->stock = (float) $obj->reel;
                 }
                 $row->stock     = (float) $obj->reel;
-                if ($dataComplete) {
-                    if (!empty($row->barcode)) {
-                        array_push($results, $row);
-                    }                 
-                } else if ($dataNotComplete) {
-                    if (empty($row->barcode)) {
-                        array_push($results, $row);
-                    }
-                } else {
-                    array_push($results, $row);
-                }                
+                array_push($results, $row);
             }
             $this->db->free($resql);
             return $results;
