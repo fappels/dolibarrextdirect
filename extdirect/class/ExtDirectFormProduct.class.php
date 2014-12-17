@@ -187,6 +187,8 @@ class ExtDirectFormProduct extends FormProduct
                 $row->code  = 'NONE';
                 $row->label = '';
                 $row->coder = '0';
+                $row->product_default = false;
+                $row->company_default = false;
                 array_push($results, clone $row);
                 for ($i = 0;$i < $num; $i++) {
                     $obj = $this->db->fetch_object($resql);
@@ -195,6 +197,13 @@ class ExtDirectFormProduct extends FormProduct
                         $row->code  = $obj->code;
                         $row->label = $obj->label;
                         $row->coder = $obj->coder;
+                        $row->product_default = false;
+                        $row->company_default = false;
+                        if ($row->id == $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE) {
+                            $row->product_default = true;
+                        } else if ($row->id == $conf->global->GENBARCODE_BARCODETYPE_THIRDPARTY) {
+                            $row->company_default = true;
+                        }
                         array_push($results, clone $row);
                     }
                 }
