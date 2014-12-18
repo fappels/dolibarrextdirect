@@ -717,7 +717,7 @@ class ExtDirectProduct extends Product
                     $row->batch = $langs->trans('BatchDefaultNumber');
                     $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                     $row->warehouse_id = $warehouseId;
-                } else 
+                }
                 if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id)) < 0) return $res;
             }
         } else {
