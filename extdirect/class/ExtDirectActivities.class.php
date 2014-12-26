@@ -107,7 +107,7 @@ class ExtDirectActivities extends ExtDirectActivity
                 else if ($filter->property == 'activity_name') {
                     $listfilter .= " AND `activity_name` = '".$filter->value."'";
                 }
-                else if ($filter->property == 'activity_id') {
+                else if (($filter->property == 'activity_id') && is_numeric($filter->value)) {
                     $listfilter .= " AND `activity_id` = ".$filter->value;
                 }
             }           
