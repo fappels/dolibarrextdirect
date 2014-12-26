@@ -349,7 +349,7 @@ class ExtDirectProduct extends Product
                     $batchesQty = 0;
                     if (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$param->warehouse_id]->id)) < 0 ) return $batchesQty;
                     
-                    if (($param->correct_stock_movement == 0) && (($batchesQty + $param->correct_stock_nbpiece) <= $stockQty)) {
+                    if (($param->correct_stock_movement == 0) && ($param->correct_stock_nbpiece > 0) && (($batchesQty + $param->correct_stock_nbpiece) <= $stockQty)) {
                         // only create batch when non batched stock available
                         $productBatch = new Productbatch($this->db);
                         $productBatch->batch = $param->batch;
