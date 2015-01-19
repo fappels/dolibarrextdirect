@@ -101,6 +101,7 @@ Client CRUD calls:
 - Contacts
 - Categories
 - Agenda
+- Supplier orders
 
 
 > New classes will be added.
@@ -116,7 +117,7 @@ Can be used to track when client app is started, when the app started editing or
 **Usage:**
 
 For more details on how to use the Classes in your client side code, you can examine the provided jasmine unit tests in file extdirect/testing/test.js. You can run the test with URL "http://your.server.net/.../htdocs/extdirect/testing/", enable auto superAdmin assignment for this and set admin language to en_US.
-At least two warehouses, 2 multiprice indexes and one customer with rowid 1 must be available to succeed the test.
+At least two warehouses, 2 multiprice indexes and one customer-supplier with rowid 1 must be available to succeed the test.
 
 **Supported Dolibarr Versions:**
 

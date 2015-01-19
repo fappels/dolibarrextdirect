@@ -226,6 +226,46 @@ $API = array(
             )
         )
     ),
+    'ExtDirectCommandeFournisseur'=>array(
+        'methods'=>array(
+            'readOrder'=>array(
+                    'len'=>1
+            ),
+            'createOrder'=>array(
+                    'len'=>1
+            ),
+            'updateOrder'=>array(
+                    'len'=>1
+            ),
+            'destroyOrder'=>array(
+                    'len'=>1
+            ),
+            'readContactTypes'=>array(
+                    'len'=>1
+            ),
+            'readOrderList'=>array(
+                    'len'=>1
+            ),
+            'readOrderStatus'=>array(
+                    'len'=>1
+            ),
+            'readOrderLine'=>array(
+                    'len'=>1
+            ),
+            'createOrderLine'=>array(
+                    'len'=>1
+            ),
+            'updateOrderLine'=>array(
+                    'len'=>1
+            ),
+            'destroyOrderLine'=>array(
+                    'len'=>1
+            ),
+            'readAvailabilityCodes'=>array(
+                    'len'=>1
+            )
+        )
+    ),
     'ExtDirectExpedition'=>array(
         'methods'=>array(
             'readShipment'=>array(
