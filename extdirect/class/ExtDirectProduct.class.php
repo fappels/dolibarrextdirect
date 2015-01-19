@@ -23,7 +23,8 @@
  *  \brief      Sencha Ext.Direct products remoting class
  */
 
-require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
+require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
@@ -31,6 +32,13 @@ dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
 /** ExtDirectProduct class
  * 
  * Class to access products with CRUD(L) methods to connect to Extjs or sencha touch using Ext.direct connector
+ * 
+ * @category External_Module
+ * @package  Extdirect
+ * @author   Francis Appels <francis.appels@z-application.com>
+ * @license  http://www.gnu.org/licenses/ GPLV3
+ * @version  Release: 1.0
+ * @link     https://github.com/fappels/dolibarrextdirect/blob/master/extdirect/class/ExtDirectProduct.class.php
  */
 class ExtDirectProduct extends Product
 {
@@ -98,6 +106,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'barcode' ) $id = $this->fetchIdFromBarcode($filter->value);
                 else if ($filter->property == 'batch') $batch = $filter->value;
                 else if ($filter->property == 'batch_id') $batchId = $filter->value;
+                else if ($filter->property == 'ref_supplier') $refSupplier = $filter->value;
             }
         }
         
@@ -208,6 +217,7 @@ class ExtDirectProduct extends Product
                     
                 $row->accountancy_code_buy= $this->accountancy_code_buy;
                 $row->accountancy_code_sell= $this->accountancy_code_sell;
+                //$row->productinfo= $this->array_options['options_productinfo'];
                     
                 //! barcode
                 $row->barcode= $this->barcode?$this->barcode:'';               // value
@@ -226,6 +236,28 @@ class ExtDirectProduct extends Product
                 $row->import_key= $this->import_key;
                 $row->date_creation= $this->date_creation;
                 $row->date_modification= $this->date_modification;
+                
+                // supplier fields
+                $supplierProduct = new ProductFournisseur($this->db);
+                if (! isset($refSupplier)) {
+                    $supplierProduct->find_min_price_product_fournisseur($this->id);
+                } else {
+                    $supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
+                    foreach ($supplierProducts as $prodsupplier) {
+                        if ($prodsupplier->fourn_ref == $refSupplier){
+                            $supplierProduct = $prodsupplier;
+                        }
+                    }
+                }
+                $row->ref_supplier = $supplierProduct->fourn_ref;
+                $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                $row->price_supplier = $supplierProduct->fourn_price;
+                $row->qty_supplier = $supplierProduct->fourn_qty;
+                $row->reduction_percent_supplier = $supplierProduct->fourn_remise_percent;
+                $row->reduction_supplier = $supplierProduct->fourn_remise;
+                $row->pu_supplier = $supplierProduct->fourn_unitprice;
+                $row->supplier_id = $supplierProduct->fourn_id;
+                $row->vat_supplier = $supplierProduct->tva_tx;
 
                 if (!empty($batch)) {
                     if (isset($row->batch_id)) {
@@ -233,7 +265,8 @@ class ExtDirectProduct extends Product
                     }
                 } else {
                     array_push($results, $row);
-                }                
+                }   
+                             
             }
         }
         
@@ -255,6 +288,7 @@ class ExtDirectProduct extends Product
         if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($params);
+        $supplier = new Societe($this->db);
         
         foreach ($paramArray as &$param) {
             // prepare fields
@@ -293,16 +327,23 @@ class ExtDirectProduct extends Product
                 $this->setValueFrom('barcode', $this->barcode);
                 $this->setValueFrom('fk_barcode_type', $this->fk_barcode_type);
             }
-            // workaround to remove auto created product batch
-            if (!empty($conf->productbatch->enabled) && !empty($this->status_batch)) {
-                $productBatch = new Productbatch($this->db);
-                $this->load_stock();
-                if (isset($this->stock_warehouse[$param->warehouse_id]->id)) {
-                    $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id);
-                }
-                if (isset($productBatch->id)) {
-                    if (($result = $productBatch->delete($this->_user)) < 0)   return $result;
-                }
+            
+            // supplier fields
+            if (!empty($this->fourn_price)) {
+                $supplierProduct = new ProductFournisseur($this->db);
+                $supplier = new Societe($this->db);
+                if (($result = $supplier->fetch($this->fourn_id)) < 0) return $result;
+                $supplierProduct->id = $this->id;
+                if (($result = $supplierProduct->update_buyprice(
+                                $this->fourn_qty, 
+                                $this->fourn_price, 
+                                $this->_user, 
+                                'HT', 
+                                $supplier, 
+                                0, 
+                                $this->fourn_ref, 
+                                $this->fourn_tva_tx
+                )) < 0) return $result;
             }
             $param->id=$this->id;
         }
@@ -329,14 +370,40 @@ class ExtDirectProduct extends Product
         // dolibarr update settings
         $allowmodcodeclient=0;
         $notrigger=false;
-        $allowmodcodefournisseur=0;
-
+        $supplierProducts = array();
+        
         $paramArray = ExtDirect::toArray($params);
         foreach ($paramArray as &$param) {
             // prepare fields
             if ($param->id) {
                 $id = $param->id;
                 if (($result = $this->fetch($id, '', '')) < 0)    return $result;
+                // supplier fields
+                $supplierProduct = new ProductFournisseur($this->db);
+                if (! empty($params->ref_supplier_id)) {
+                    if (($result = $supplierProduct->fetch_product_fournisseur_price($params->ref_supplier_id)) < 0) return $result;
+                    $supplierProducts[] = $supplierProduct;
+                } else {
+                    $supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
+                }                
+                foreach ($supplierProducts as $prodsupplier) {
+                    if ($prodsupplier->fourn_ref == $param->ref_supplier){
+                        $this->fourn_ref = $prodsupplier->fourn_ref;
+                        $this->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
+                        $this->fourn_price = $prodsupplier->fourn_price;
+                        $this->fourn_qty = $prodsupplier->fourn_qty;
+                        $this->fourn_remise_percent = $prodsupplier->fourn_remise_percent;
+                        $this->fourn_remise = $prodsupplier->fourn_remise;
+                        $this->fourn_unitprice = $prodsupplier->fourn_unitprice;
+                        $this->fourn_id = $prodsupplier->fourn_id;
+                        if (isset($prodsupplier->fourn_tva_tx)) { // workaround
+                            $this->fourn_tva_tx = $prodsupplier->fourn_tva_tx;
+                        } else {
+                            $this->fourn_tva_tx = $prodsupplier->tva_tx;
+                        }
+                        
+                    }
+                }
                 $this->prepareFields($param);
                 // update
                 if (($result = $this->update($id, $this->_user, $notrigger)) < 0)   return $result;
@@ -456,6 +523,24 @@ class ExtDirectProduct extends Product
                             if (($result = $productBatch->update($this->_user)) < 0) return $result;
                         }        
                     }                    
+                }
+                // supplier fields
+                if (!empty($this->fourn_price) && !empty($this->fourn_ref)) {
+                    $supplierProduct = new ProductFournisseur($this->db);
+                    $supplier = new Societe($this->db);
+                    if (($result = $supplier->fetch($this->fourn_id)) < 0) return $result;
+                    $supplierProduct->id = $this->id;
+                    $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
+                    if (($result = $supplierProduct->update_buyprice(
+                                    $this->fourn_qty, 
+                                    $this->fourn_price, 
+                                    $this->_user, 
+                                    'HT', 
+                                    $supplier, 
+                                    0, 
+                                    $this->fourn_ref, 
+                                    $this->fourn_tva_tx
+                    )) < 0) return $result;
                 }
             } else {
                 return PARAMETERERROR;
@@ -775,9 +860,6 @@ class ExtDirectProduct extends Product
         //! Spanish local taxes
         isset($param->localtax1_tx) ? ( $this->localtax1_tx =$param->localtax1_tx) : null;
         isset($param->localtax2_tx) ? ( $this->localtax2_tx =$param->localtax2_tx) : null;
-        
-        
-            
         //! Stock alert
         isset($param->seuil_stock_alerte) ? ( $this->seuil_stock_alerte =$param->seuil_stock_alerte) : null;
         
@@ -824,6 +906,16 @@ class ExtDirectProduct extends Product
         isset($param->date_modification) ? ( $this->date_modification =$param->date_modification) : null;
         // has batch
         isset($param->has_batch) ? ( $this->status_batch = $param->has_batch ) : null;
+        //isset($param->productinfo) ? ( $this->array_options['options_productinfo'] = $param->productinfo) : null;
+        isset($param->ref_supplier) ? ( $this->fourn_ref = $param->ref_supplier) : null;
+        isset($param->ref_supplier_id) ? ( $this->product_fourn_price_id = $param->ref_supplier_id) : null;
+        isset($param->price_supplier) ? ( $this->fourn_price = $param->price_supplier) : null;
+        isset($param->qty_supplier) ? ( $this->fourn_qty = $param->qty_supplier) : null;
+        isset($param->reduction_percent_supplier) ? ( $this->fourn_remise_percent = $param->reduction_percent_supplier) : null;
+        isset($param->reduction_supplier) ? ( $this->fourn_remise = $param->reduction_supplier) : null;
+        isset($param->pu_supplier) ? ( $this->fourn_unitprice = $param->pu_supplier) : null;
+        isset($param->vat_supplier) ? ( $this->fourn_tva_tx = $param->vat_supplier) : null;
+        isset($param->supplier_id) ? ( $this->fourn_id = $param->supplier_id) : null;
     }
     
     /**
