@@ -29,6 +29,13 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 /** ExtDirectCategorie class
  * 
  * Class to access categories with CRUD(L) methods to connect to Extjs or sencha touch using Ext.direct connector
+ * 
+ * @category External_Module
+ * @package  Extdirect
+ * @author   Francis Appels <francis.appels@z-application.com>
+ * @license  http://www.gnu.org/licenses/ GPLV3
+ * @version  Release: 1.0
+ * @link     https://github.com/fappels/dolibarrextdirect/blob/master/extdirect/class/ExtDirectCategorie.class.php
  */
 class ExtDirectCategorie extends Categorie
 {
@@ -89,20 +96,38 @@ class ExtDirectCategorie extends Categorie
         }
         
         if (($id > 0) || ($label != '')) {
-            if (($result = $this->fetch($id, $label)) < 0)    return $result;
-            if (!$this->error) {
-                $row->id           = $this->id ;
-                $row->fk_parent    = $this->fk_parent;
-                $row->label        = $this->label;
-                $row->description  = $this->description?$this->description:'';
-                $row->company_id   = $this->socid; 
-                // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
-                $row->type= $this->type;
-                $row->entity= $this->entity;
-                array_push($results, $row);
+            if (ExtDirect::checkDolVersion() >= 3.4) {
+                if (($result = $this->fetch($id, $label)) < 0)    return $result;
+                if (!$this->error) {
+                    $row->id           = $this->id ;
+                    $row->fk_parent    = $this->fk_parent;
+                    $row->label        = $this->label;
+                    $row->description  = $this->description?$this->description:'';
+                    $row->company_id   = $this->socid;
+                    // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
+                    $row->type= $this->type;
+                    $row->entity= $this->entity;
+                    array_push($results, $row);
+                } else {
+                    return 0;
+                }
             } else {
-                return 0;
-            }
+                for ($type = 0; $type < 4; $type++) {
+                    if (($result = $this->rechercher($id, $label, $type)) < 0)    return $result;
+                    if (! empty($result)) {
+                        $cat = $result[0];
+                        $row->id           = $cat->id ;
+                        $row->fk_parent    = $cat->fk_parent;
+                        $row->label        = $cat->label;
+                        $row->description  = $cat->description?$cat->description:'';
+                        $row->company_id   = $cat->socid;
+                        // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
+                        $row->type= $cat->type;
+                        $row->entity= $cat->entity;
+                        array_push($results, $row);
+                    }
+                }                
+            }            
         }
         
         return $results;

@@ -175,12 +175,23 @@ class ExtDirectContact extends Contact
                     $sql .= 'c.rowid = '.$filter->value;
                 else if ($filter->property == 'company_id')
                     $sql .= "(s.rowid = ".$filter->value." AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'town')
-                    $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'town') {
+                    if (ExtDirect::checkDolVersion() >= 3.4) {
+                        $sql .= "(c.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                    } else {
+                        $sql .= "(c.ville = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                    }      
+                }              
                 else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);
-                    $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    $sql.= " OR LOWER(c.town) like '%".$contentValue."%')" ;
+                    if (ExtDirect::checkDolVersion() >= 3.4) {
+                        $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(c.town) like '%".$contentValue."%')" ;
+                    } else {
+                        $sql.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(c.ville) like '%".$contentValue."%')" ;
+                    }
+                    
                 } else break;
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
