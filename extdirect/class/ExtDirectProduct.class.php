@@ -796,7 +796,7 @@ class ExtDirectProduct extends Product
             $formProduct->loadWarehouses($id);
             foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
                 if ($includeNoBatch && $this->stock_warehouse[$warehouseId]->real > 0) {
-                    $row->id = $id.'_'.$warehouseId;
+                    $row->id = 'X';
                     $row->product_id = $id;
                     $row->batch_id = 0;
                     $row->batch = $langs->trans('BatchDefaultNumber');
@@ -807,7 +807,7 @@ class ExtDirectProduct extends Product
             }
         } else {
             if ($includeNoBatch && $this->stock_warehouse[$warehouseId]->real > 0) {
-                $row->id = $id.'_'.$warehouseId;
+                $row->id = 'X';
                 $row->product_id = $id;
                 $row->batch_id = 0;
                 $row->batch = $langs->trans('BatchDefaultNumber');
