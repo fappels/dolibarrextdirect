@@ -209,6 +209,9 @@ $API = array(
             'readOrderStatus'=>array(
                     'len'=>1
             ),
+            'readContactTypes'=>array(
+                    'len'=>1
+            ),
             'readOrderLine'=>array(
                     'len'=>1
             ),
@@ -259,9 +262,6 @@ $API = array(
                     'len'=>1
             ),
             'destroyOrderLine'=>array(
-                    'len'=>1
-            ),
-            'readAvailabilityCodes'=>array(
                     'len'=>1
             )
         )

@@ -311,15 +311,19 @@ class ExtDirectCommande extends Commande
         $row = new stdClass;
         $statusFilterCount = 0;
         $ref = null;
+        $contactTypeId = 0;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
                 if ($filter->property == 'ref') $ref=$filter->value;
+                if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+                if ($filter->property == 'contact_id') $contactId = $filter->value;
             }
         }
         
         $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande as c";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
         $sql.= "   FROM (";
@@ -343,6 +347,10 @@ class ExtDirectCommande extends Commande
         }
         if ($ref) {
             $sql.= " AND c.ref = '".$ref."'";
+        }
+        if ($contactTypeId > 0) {
+            $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sql.= " AND ec.fk_socpeople = ".$contactId;
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
@@ -389,6 +397,30 @@ class ExtDirectCommande extends Commande
             $row = null;
             $row->id = $statut++;
             $row->status = $result;
+            array_push($results, $row);
+        }
+        return $results;
+    }
+    
+    /**
+     * public method to read a list of contac types
+     *
+     * @return     stdClass result data or error number
+     */
+    public function readContactTypes()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        if (! is_array($result = $this->liste_type_contact())) return $result;
+        // add empty type
+        $row->id = 0;
+        $row->label = '';
+        array_push($results, $row);
+        foreach ($result as $id => $label) {
+            $row = null;
+            $row->id = $id;
+            $row->label = $label;
             array_push($results, $row);
         }
         return $results;
