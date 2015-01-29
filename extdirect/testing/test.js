@@ -2257,7 +2257,7 @@ describe("Purchase Order", function () {
 								purchaseOrderId = record.getId();
 							}
 						} else {
-							if (record.get('customer_id') == customerId) {
+							if (record.get('supplier_id') == customerId) {
 								orderRef = record.get('ref');
 								purchaseOrderId = record.getId();
 							}
@@ -2475,9 +2475,8 @@ describe("Purchase Order", function () {
 		
 		runs(function() {
 			flag = false;
-			Ext.getStore('PurchaseOrder').getAt(record).set('orderstatus_id',orderstatusIds[4]);
+			Ext.getStore('PurchaseOrder').getAt(record).set('orderstatus_id',orderstatusIds[5]);
 			Ext.getStore('PurchaseOrder').getAt(record).set('comment','received');
-			Ext.getStore('PurchaseOrder').getAt(record).set('order_method_id','tot')
 			Ext.getStore('PurchaseOrder').getAt(record).set('deliver_date',Ext.Date.format(new Date(),'U'));
 			Ext.getStore('PurchaseOrder').sync();
 			Ext.getStore('PurchaseOrder').load({
@@ -2570,7 +2569,7 @@ describe("Purchase Order", function () {
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresults.push(record.get('warehouse_id'));
-						stock+=record.get('qty_stock');
+						stock+=record.get('stock');
 					});
 					flag = true;
 				}

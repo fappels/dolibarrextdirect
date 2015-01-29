@@ -125,8 +125,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->user_valid_id = $this->user_valid_id;
                 $row->user_approve_id = $this->user_approve_id;
                 $row->create_date = $this->date;
-                $row->valid_date = $this->date;
-                $row->approve_date = $this->date;
+                $row->valid_date = $this->date_valid;
+                $row->approve_date = $this->date_approve;
                 $row->order_date = $this->date_commande;
                 $row->deliver_date= $this->date_livraison;
                 $row->order_method_id = $this->methode_commande_id;
@@ -240,14 +240,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         break;
                     case 4:
                         if (isset($this->_user->rights->fournisseur->commande->receptionner)) {
-                            $result = $this->Livraison($this->_user, $this->date_livraison, $this->methode_commande_id, $params->comment);
+                            $result = $this->Livraison($this->_user, $this->date_livraison, 'par', $params->comment);
                         } else {
                             return PERMISSIONERROR;
                         }
                         break;
                     case 5:
                         if (isset($this->_user->rights->fournisseur->commande->receptionner)) {
-                            $result = $this->Livraison($this->_user, $this->date_livraison, $this->methode_commande_id, $params->comment);
+                            $result = $this->Livraison($this->_user, $this->date_livraison, 'tot', $params->comment);
                         } else {
                             return PERMISSIONERROR;
                         }
@@ -255,6 +255,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     case 6:
                         if (isset($this->_user->rights->fournisseur->commande->commander)) {
                             $result = $this->Cancel($this->_user);
+                        } else {
+                            return PERMISSIONERROR;
+                        }
+                        break;
+                    case 7:
+                        if (isset($this->_user->rights->fournisseur->commande->receptionner)) {
+                            $result = $this->Livraison($this->_user, $this->date_livraison, 'nev', $params->comment);
                         } else {
                             return PERMISSIONERROR;
                         }
@@ -357,14 +364,17 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $row = new stdClass;
         $statusFilterCount = 0;
         $ref = null;
+        $contactTypeId = 0;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
                 if ($filter->property == 'ref') $ref=$filter->value;
+                if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+                if ($filter->property == 'contact_id') $contactId = $filter->value;
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, ec.fk_c_type_contact, ec.fk_socpeople";
+        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -389,7 +399,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sql.= ")";
         }
         if ($ref) {
-            $sql.= " AND c.ref = '".$ref."'";
+            $sql.= " AND c.ref = '".$this->db->escape($ref)."'";
+        }
+        if ($contactTypeId > 0) {
+            $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sql.= " AND ec.fk_socpeople = ".$contactId;
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
@@ -402,15 +416,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $obj = $this->db->fetch_object($resql);
                 $row = null;
                 $row->id            = (int) $obj->rowid;
-                $row->customer      = $obj->nom;
-                $row->customer_id   = (int) $obj->socid;
+                $row->supplier      = $obj->nom;
+                $row->supplier_id   = (int) $obj->socid;
                 $row->ref           = $obj->ref;
                 $row->ref_supplier  = $obj->ref_supplier;
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
                 $row->status        = $obj->status;
-                $row->type_contact_id = (int) $obj->fk_c_type_contact;
-                $row->contact_id = (int) $obj->fk_socpeople;
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -454,6 +466,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $results = array();
         $row = new stdClass;
         if (! is_array($result = $this->liste_type_contact())) return $result;
+        // add empty type
+        $row->id = 0;
+        $row->label = '';
+        array_push($results, $row);
         foreach ($result as $id => $label) {
             $row = null;
             $row->id = $id;
@@ -485,10 +501,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $results = array();
         $row = new stdClass;
         $order_id = 0;
+        $dispatchedProducts = array();
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'id') $order_id=$filter->value; // deprecated
+                if ($filter->property == 'id') $id=$filter->value;
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
             }
@@ -499,106 +516,43 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if (($result = $this->fetch($this->id)) < 0)  return $result;
             if (!$this->error) {
                 foreach ($this->lines as $line) {
-                    $myprod = new ExtDirectProduct($this->_user->login);
-                    if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                    if (ExtDirect::checkDolVersion() >= 3.5) {
-                        if (($result = $myprod->load_stock()) < 0) return $result;
-                    } 
-                    if (isset($warehouse_id) || ($myprod->stock_reel == 0)) {
-                        if ($warehouse_id == -1) {
-                            // get orderline with complete stock
-                            $row = null;
-                            $row->id = $line->id;
-                            $row->origin_id = $this->id;
-                            $row->origin_line_id = $line->id;
-                            $row->label = $line->product_label;
-                            $row->description = $line->description;
-                            $row->product_id = $line->fk_product;
-                            $row->product_ref = $line->product_ref;
-                            $row->product_label = $line->product_label;
-                            $row->product_desc = $line->product_desc;
-                            $row->product_type = $line->product->type;
-                            $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
-                            $row->qty_asked = $line->qty;
-                            $row->tax_tx = $line->tva_tx;
-                            $row->localtax1_tx = $line->localtax1_tx;
-                            $row->localtax2_tx = $line->localtax2_tx;
-                            $row->total_net = $line->total_ht;
-                            $row->total_inc = $line->total_ttc;
-                            $row->total_tax = $line->total_tva;
-                            $row->total_localtax1 = $line->total_localtax1;
-                            $row->total_localtax2 = $line->total_localtax2;
-                            $row->product_price = $line->pu_ht;
-                            $row->rang = $line->id;
-                            $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                            $row->reduction_percent = $line->remise_percent;
-                            $row->ref_supplier = $line->ref_fourn;
-                            $row->date_start = $line->date_start;
-                            $row->date_end = $line->date_end;
-                            $row->qty_shipped = $this->getDispatched($line->fk_product);
-                            $row->qty_stock = (int) $myprod->stock_reel; //deprecated
-                            $row->stock = (int) $myprod->stock_reel;
-                            $row->warehouse_id = $warehouse_id;
-                            array_push($results, $row);
+                    // accept lines with same product
+                    if (!array_key_exists($line->fk_product, $dispatchedProducts)) {
+                        $qtyShipped = $this->getDispatched($line->fk_product);
+                        if ($qtyShipped > $line->qty) {
+                            $dispatchedProducts[$line->fk_product]=$qtyShipped - $line->qty;
+                            $qtyShipped = $line->qty;
                         } else {
-                            // get orderline with stock of warehouse
-                            $row = null;
-                            $row->id = $line->id.'_'.$warehouse_id;
-                            $row->origin_id = $this->id;
-                            $row->origin_line_id = $line->id;
-                            $row->label = $line->product_label;
-                            $row->description = $line->description;
-                            $row->product_id = $line->fk_product;
-                            $row->product_ref = $line->product_ref;
-                            $row->product_label = $line->product_label;
-                            $row->product_desc = $line->product_desc;
-                            $row->product_type = $line->product->type;
-                            $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
-                            $row->qty_asked = $line->qty;
-                            $row->tax_tx = $line->tva_tx;
-                            $row->localtax1_tx = $line->localtax1_tx;
-                            $row->localtax2_tx = $line->localtax2_tx;
-                            $row->total_net = $line->total_ht;
-                            $row->total_inc = $line->total_ttc;
-                            $row->total_tax = $line->total_tva;
-                            $row->total_localtax1 = $line->total_localtax1;
-                            $row->total_localtax2 = $line->total_localtax2;
-                            $row->product_price = $line->pu_ht;
-                            $row->rang = $line->id;
-                            $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                            $row->reduction_percent = $line->remise_percent;
-                            $row->ref_supplier = $line->ref_fourn;
-                            $row->date_start = $line->date_start;
-                            $row->date_end = $line->date_end;
-                            $row->qty_shipped = $this->getDispatched($line->fk_product);
-                            $row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real; //deprecated
-                            $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
-                            $row->warehouse_id = $warehouse_id;
-                            array_push($results, $row);
-                        }                        
+                            $dispatchedProducts[$line->fk_product]=0;
+                        }
                     } else {
-                        $qtyToAsk=$line->qty;
-                        foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-                            if (($stockReal = (int) $stock_warehouse->real > 0)) {
+                        if ($dispatchedProducts[$line->fk_product]) {
+                            $qtyShipped = $dispatchedProducts[$line->fk_product];
+                        }
+                    }
+                    if (!isset($id) || ($id == $line->id)) {
+                        $myprod = new ExtDirectProduct($this->_user->login);
+                        if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+                        if (ExtDirect::checkDolVersion() >= 3.5) {
+                            if (($result = $myprod->load_stock()) < 0) return $result;
+                        }
+                        if (!empty($warehouse_id) || ($myprod->stock_reel == 0)) {
+                            if ($warehouse_id == -1) {
+                                // get orderline with complete stock
                                 $row = null;
-                                $row->id = $line->id.'_'.$warehouse;
+                                $row->id = $line->id;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;
                                 $row->label = $line->product_label;
                                 $row->description = $line->description;
                                 $row->product_id = $line->fk_product;
-                                $row->product_ref = $line->product_ref;
+                                $row->ref = $line->product_ref;
                                 $row->product_label = $line->product_label;
                                 $row->product_desc = $line->product_desc;
                                 $row->product_type = $line->product->type;
-                                $row->product_barcode= $myprod->barcode?$myprod->barcode:'';
-                                // limit qty asked to stock qty
-                                if ($qtyToAsk > $stockReal) {
-                                    $row->qty_asked = $stockReal;
-                                    $qtyToAsk = $line->qty - $stockReal;
-                                } else {
-                                    $row->qty_asked = $qtyToAsk;
-                                }
+                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
                                 $row->localtax2_tx = $line->localtax2_tx;
@@ -611,14 +565,96 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->rang = $line->id;
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
-                                $row->ref_supplier = $line->ref_fourn;
+                                $row->ref_supplier = $line->ref_supplier;
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
-                                $row->qty_shipped = $this->getDispatched($line->fk_product);
-                                $row->qty_stock = $stock_warehouse->real; //deprecated
-                                $row->stock = $stock_warehouse->real;
-                                $row->warehouse_id = $warehouse;
+                                $row->qty_shipped = $qtyShipped;
+                                $row->stock = (int) $myprod->stock_reel;
+                                $row->warehouse_id = $warehouse_id;
+                                $row->has_batch = $myprod->status_batch;
                                 array_push($results, $row);
+                            } else {
+                                // get orderline with stock of warehouse
+                                $row = null;
+                                $row->id = $line->id;
+                                $row->origin_id = $this->id;
+                                $row->origin_line_id = $line->id;
+                                $row->label = $line->product_label;
+                                $row->description = $line->description;
+                                $row->product_id = $line->fk_product;
+                                $row->ref = $line->product_ref;
+                                $row->product_label = $line->product_label;
+                                $row->product_desc = $line->product_desc;
+                                $row->product_type = $line->product->type;
+                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->qty_asked = $line->qty;
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                $row->product_price = $line->pu_ht;
+                                $row->rang = $line->id;
+                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                                $row->reduction_percent = $line->remise_percent;
+                                $row->ref_supplier = $line->ref_supplier;
+                                $row->date_start = $line->date_start;
+                                $row->date_end = $line->date_end;
+                                $row->qty_shipped = $qtyShipped;
+                                $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
+                                $row->warehouse_id = $warehouse_id;
+                                $row->has_batch = $myprod->status_batch;
+                                array_push($results, $row);
+                            }
+                        } else {
+                            $qtyToAsk=$line->qty;
+                            foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
+                                if (($stockReal = (int) $stock_warehouse->real > 0)) {
+                                    $row = null;
+                                    $row->id = $line->id.'_'.$warehouse;
+                                    $row->origin_id = $this->id;
+                                    $row->origin_line_id = $line->id;
+                                    $row->label = $line->product_label;
+                                    $row->description = $line->description;
+                                    $row->product_id = $line->fk_product;
+                                    $row->ref = $line->product_ref;
+                                    $row->product_label = $line->product_label;
+                                    $row->product_desc = $line->product_desc;
+                                    $row->product_type = $line->product->type;
+                                    $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                    $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                    // limit qty asked to stock qty
+                                    if ($qtyToAsk > $stockReal) {
+                                        $row->qty_asked = $stockReal;
+                                        $qtyToAsk = $line->qty - $stockReal;
+                                    } else {
+                                        $row->qty_asked = $qtyToAsk;
+                                    }
+                                    $row->tax_tx = $line->tva_tx;
+                                    $row->localtax1_tx = $line->localtax1_tx;
+                                    $row->localtax2_tx = $line->localtax2_tx;
+                                    $row->total_net = $line->total_ht;
+                                    $row->total_inc = $line->total_ttc;
+                                    $row->total_tax = $line->total_tva;
+                                    $row->total_localtax1 = $line->total_localtax1;
+                                    $row->total_localtax2 = $line->total_localtax2;
+                                    $row->product_price = $line->pu_ht;
+                                    $row->rang = $line->id;
+                                    $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                                    $row->reduction_percent = $line->remise_percent;
+                                    $row->ref_supplier = $line->ref_supplier;
+                                    $row->date_start = $line->date_start;
+                                    $row->date_end = $line->date_end;
+                                    $row->qty_shipped = $qtyShipped;
+                                    $row->stock = $stock_warehouse->real;
+                                    $row->warehouse_id = $warehouse;
+                                    $row->has_batch = $myprod->status_batch;
+                                    array_push($results, $row);
+                                }
                             }
                         }
                     }
@@ -783,6 +819,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      * @return int qty
      */
     private function getDispatched($productId) {
+        $dispatched = 0;
         if ($productId) {
             $sql = "SELECT sum(cfd.qty) as qty";
             $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur_dispatch as cfd";
@@ -792,11 +829,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if ($resql)
             {
                 $obj = $this->db->fetch_object($resql);
+                if (!empty($obj->qty)) {
+                    $dispatched = $obj->qty;
+                }
                 $this->db->free($resql);
-                return $obj->qty;
             }
         }       
-        return 0;
+        return $dispatched;
     }
     
     /**
