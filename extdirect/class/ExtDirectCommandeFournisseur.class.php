@@ -365,17 +365,21 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
+        $barcode = null;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
                 if ($filter->property == 'ref') $ref=$filter->value;
                 if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
+                if ($filter->property == 'barcode') $barcode = $filter->value;
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status";
+        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande_fournisseur as c";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
@@ -404,6 +408,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if ($contactTypeId > 0) {
             $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
             $sql.= " AND ec.fk_socpeople = ".$contactId;
+        }
+        if ($barcode) {
+            $sql.= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_supplier = '".$this->db->escape($barcode)."')";
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
@@ -473,7 +480,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         foreach ($result as $id => $label) {
             $row = null;
             $row->id = $id;
-            $row->label = $label;
+            $row->label = html_entity_decode($label);
             array_push($results, $row);
         }
         return $results;
@@ -530,7 +537,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $qtyShipped = $dispatchedProducts[$line->fk_product];
                         }
                     }
-                    if (!isset($id) || ($id == $line->id)) {
+                    if ((!isset($id) || ($id == $line->id)) && ($line->fk_product > 0)) {
                         $myprod = new ExtDirectProduct($this->_user->login);
                         if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                         if (ExtDirect::checkDolVersion() >= 3.5) {
