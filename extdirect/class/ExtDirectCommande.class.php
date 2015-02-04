@@ -420,7 +420,7 @@ class ExtDirectCommande extends Commande
         foreach ($result as $id => $label) {
             $row = null;
             $row->id = $id;
-            $row->label = $label;
+            $row->label = html_entity_decode($label);
             array_push($results, $row);
         }
         return $results;
