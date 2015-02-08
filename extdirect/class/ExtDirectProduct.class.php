@@ -609,7 +609,7 @@ class ExtDirectProduct extends Product
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
+
         $filterSize = 0;
         $limit=null;
         $start=0;
@@ -716,7 +716,7 @@ class ExtDirectProduct extends Product
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
                 $row->id        = $obj->rowid.'_'.$obj->fk_entrepot;
                 $row->product_id= (int) $obj->rowid;
                 $row->ref       = $obj->ref;
@@ -796,7 +796,7 @@ class ExtDirectProduct extends Product
             $formProduct = new FormProduct($this->db);
             $formProduct->loadWarehouses($id);
             foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
-                if ($includeNoBatch && $this->stock_warehouse[$warehouseId]->real > 0) {
+                if ($includeNoBatch) {
                     $row->id = 'X';
                     $row->product_id = $id;
                     $row->batch_id = 0;
@@ -807,7 +807,7 @@ class ExtDirectProduct extends Product
                 if (($res = $this->fetchBatches($results, clone $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id)) < 0) return $res;
             }
         } else {
-            if ($includeNoBatch && $this->stock_warehouse[$warehouseId]->real > 0) {
+            if ($includeNoBatch) {
                 $row->id = 'X';
                 $row->product_id = $id;
                 $row->batch_id = 0;
