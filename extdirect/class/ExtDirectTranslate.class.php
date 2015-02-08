@@ -32,6 +32,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/translate.class.php';
 class ExtDirectTranslate
 {
     private $_translate;
+    private $_user;
     
     /** Constructor
      *
@@ -45,6 +46,7 @@ class ExtDirectTranslate
         
         if (!empty($login)) {
             if ($user->fetch('', $login)>0) {
+                $this->_user = $user;
                 $this->_translate = true;
             }
         }
@@ -62,7 +64,6 @@ class ExtDirectTranslate
         
         if (!isset($this->_translate)) return CONNECTERROR;
         
-        $row = new stdClass;
         $results = array();
         
         $domain = '';
@@ -77,8 +78,8 @@ class ExtDirectTranslate
         
         if (($dir != '') && ($domain != '')) {
             $this->_translate = new Translate($conf->file->dol_document_root['main'].'/'.$dir, $conf);
-            if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
-                $this->_translate->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
+            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+                $this->_translate->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
             } else {
                 $this->_translate->setDefaultLang($langs->getDefaultLang());
             }
@@ -92,14 +93,14 @@ class ExtDirectTranslate
             return -1;
         } else {
             foreach ($this->_translate->tab_translate as $key => $value) {
-                $row = null;
+                $row = new stdClass;
                 $row->name=$key;
                 if ($value != null) {
                     $row->value=$value;
                 } else {
                     $row->value="";
                 }
-                array_push($results, $row);
+                $results[] = $row;
             }
             return $results;
         }
