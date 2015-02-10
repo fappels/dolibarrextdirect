@@ -508,7 +508,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $results = array();
         $row = new stdClass;
         $order_id = 0;
-        $dispatchedProducts = array();
+        $productAskedQty = array();
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -523,20 +523,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if (($result = $this->fetch($this->id)) < 0)  return $result;
             if (!$this->error) {
                 foreach ($this->lines as $line) {
-                    // accept lines with same product
-                    if (!array_key_exists($line->fk_product, $dispatchedProducts)) {
-                        $qtyShipped = $this->getDispatched($line->fk_product);
-                        if ($qtyShipped > $line->qty) {
-                            $dispatchedProducts[$line->fk_product]=$qtyShipped - $line->qty;
-                            $qtyShipped = $line->qty;
-                        } else {
-                            $dispatchedProducts[$line->fk_product]=0;
-                        }
+                    if (!array_key_exists($line->fk_product, $productAskedQty)) {
+                        $productAskedQty[$line->fk_product] = $line->qty;
                     } else {
-                        if ($dispatchedProducts[$line->fk_product]) {
-                            $qtyShipped = $dispatchedProducts[$line->fk_product];
-                        }
+                        $productAskedQty[$line->fk_product] += $line->qty;
                     }
+                }
+                foreach ($this->lines as $line) {   
                     if ((!isset($id) || ($id == $line->id)) && ($line->fk_product > 0)) {
                         $myprod = new ExtDirectProduct($this->_user->login);
                         if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
@@ -544,81 +537,45 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             if (($result = $myprod->load_stock()) < 0) return $result;
                         }
                         if (!empty($warehouse_id) || ($myprod->stock_reel == 0)) {
-                            if ($warehouse_id == -1) {
-                                // get orderline with complete stock
-                                $row = null;
-                                $row->id = $line->id;
-                                $row->origin_id = $this->id;
-                                $row->origin_line_id = $line->id;
-                                $row->label = $line->product_label;
-                                $row->description = $line->description;
-                                $row->product_id = $line->fk_product;
-                                $row->ref = $line->product_ref;
-                                $row->product_label = $line->product_label;
-                                $row->product_desc = $line->product_desc;
-                                $row->product_type = $line->product->type;
-                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
-                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                                $row->qty_asked = $line->qty;
-                                $row->tax_tx = $line->tva_tx;
-                                $row->localtax1_tx = $line->localtax1_tx;
-                                $row->localtax2_tx = $line->localtax2_tx;
-                                $row->total_net = $line->total_ht;
-                                $row->total_inc = $line->total_ttc;
-                                $row->total_tax = $line->total_tva;
-                                $row->total_localtax1 = $line->total_localtax1;
-                                $row->total_localtax2 = $line->total_localtax2;
-                                $row->product_price = $line->pu_ht;
-                                $row->rang = $line->id;
-                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                                $row->reduction_percent = $line->remise_percent;
-                                $row->ref_supplier = $line->ref_supplier;
-                                $row->date_start = $line->date_start;
-                                $row->date_end = $line->date_end;
-                                $row->qty_shipped = $qtyShipped;
-                                $row->stock = (int) $myprod->stock_reel;
-                                $row->warehouse_id = $warehouse_id;
-                                $row->has_batch = $myprod->status_batch;
-                                array_push($results, $row);
-                            } else {
-                                // get orderline with stock of warehouse
-                                $row = null;
-                                $row->id = $line->id;
-                                $row->origin_id = $this->id;
-                                $row->origin_line_id = $line->id;
-                                $row->label = $line->product_label;
-                                $row->description = $line->description;
-                                $row->product_id = $line->fk_product;
-                                $row->ref = $line->product_ref;
-                                $row->product_label = $line->product_label;
-                                $row->product_desc = $line->product_desc;
-                                $row->product_type = $line->product->type;
-                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
-                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                                $row->qty_asked = $line->qty;
-                                $row->tax_tx = $line->tva_tx;
-                                $row->localtax1_tx = $line->localtax1_tx;
-                                $row->localtax2_tx = $line->localtax2_tx;
-                                $row->total_net = $line->total_ht;
-                                $row->total_inc = $line->total_ttc;
-                                $row->total_tax = $line->total_tva;
-                                $row->total_localtax1 = $line->total_localtax1;
-                                $row->total_localtax2 = $line->total_localtax2;
-                                $row->product_price = $line->pu_ht;
-                                $row->rang = $line->id;
-                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                                $row->reduction_percent = $line->remise_percent;
-                                $row->ref_supplier = $line->ref_supplier;
-                                $row->date_start = $line->date_start;
-                                $row->date_end = $line->date_end;
-                                $row->qty_shipped = $qtyShipped;
-                                $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
-                                $row->warehouse_id = $warehouse_id;
-                                $row->has_batch = $myprod->status_batch;
-                                array_push($results, $row);
-                            }
+                            // get orderline with stock of warehouse 
+                            $row = null;
+                            $row->id = $line->id;
+                            $row->origin_id = $this->id;
+                            $row->origin_line_id = $line->id;
+                            $row->label = $line->product_label;
+                            $row->description = $line->description;
+                            $row->product_id = $line->fk_product;
+                            $row->ref = $line->product_ref;
+                            $row->product_label = $line->product_label;
+                            $row->product_desc = $line->product_desc;
+                            $row->product_type = $line->product->type;
+                            $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                            $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                            //  total qty asked for all same products
+                            $row->qty_asked = $productAskedQty[$line->fk_product];
+                            $row->tax_tx = $line->tva_tx;
+                            $row->localtax1_tx = $line->localtax1_tx;
+                            $row->localtax2_tx = $line->localtax2_tx;
+                            $row->total_net = $line->total_ht;
+                            $row->total_inc = $line->total_ttc;
+                            $row->total_tax = $line->total_tva;
+                            $row->total_localtax1 = $line->total_localtax1;
+                            $row->total_localtax2 = $line->total_localtax2;
+                            $row->product_price = $line->pu_ht;
+                            $row->rang = $line->id;
+                            $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                            $row->reduction_percent = $line->remise_percent;
+                            $row->ref_supplier = $line->ref_supplier;
+                            $row->date_start = $line->date_start;
+                            $row->date_end = $line->date_end;
+                            // qty shipped for product line
+                            $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty);
+                            $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
+                            $row->warehouse_id = $warehouse_id;
+                            $row->has_batch = $myprod->status_batch;
+                            array_push($results, $row);
                         } else {
-                            $qtyToAsk=$line->qty;
+                            // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
                             foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                                 if (($stockReal = (int) $stock_warehouse->real > 0)) {
                                     $row = null;
@@ -634,13 +591,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->product_type = $line->product->type;
                                     $row->barcode = $myprod->barcode?$myprod->barcode:'';
                                     $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                                    // limit qty asked to stock qty
-                                    if ($qtyToAsk > $stockReal) {
-                                        $row->qty_asked = $stockReal;
-                                        $qtyToAsk = $line->qty - $stockReal;
-                                    } else {
-                                        $row->qty_asked = $qtyToAsk;
-                                    }
+                                    $row->qty_asked = $line->qty;
                                     $row->tax_tx = $line->tva_tx;
                                     $row->localtax1_tx = $line->localtax1_tx;
                                     $row->localtax2_tx = $line->localtax2_tx;
@@ -656,7 +607,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->ref_supplier = $line->ref_supplier;
                                     $row->date_start = $line->date_start;
                                     $row->date_end = $line->date_end;
-                                    $row->qty_shipped = $qtyShipped;
+                                    // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
+                                    $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty, $warehouse);
                                     $row->stock = $stock_warehouse->real;
                                     $row->warehouse_id = $warehouse;
                                     $row->has_batch = $myprod->status_batch;
@@ -823,15 +775,25 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      * private method the get qty dispatched for product
      * 
      * @param int $productId product to get qty ditpatched
+     * @param int $qtyAsked ordered line qty
+     * @param int $warehouseId warehouse id
+     * 
      * @return int qty
      */
-    private function getDispatched($productId) {
+    private function getDispatched($productId, $qtyAsked, $warehouseId = 0) {
+        static $dispatchedProducts = array();
+        
         $dispatched = 0;
+        $qtyShipped = 0;
+        
         if ($productId) {
             $sql = "SELECT sum(cfd.qty) as qty";
             $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur_dispatch as cfd";
             $sql.= " WHERE cfd.fk_commande = ".$this->id;
             $sql.= " AND cfd.fk_product = ".$productId;
+            if ($warehouseId > 0) {
+                $sql.= " AND cfd.fk_entrepot = ".$warehouseId;
+            }
             $resql=$this->db->query($sql);
             if ($resql)
             {
@@ -841,8 +803,27 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 }
                 $this->db->free($resql);
             }
-        }       
-        return $dispatched;
+            // accept lines with same product for orderline list
+            if ($warehouseId > 0) {
+                if (!array_key_exists($productId, $dispatchedProducts[$warehouseId])) {
+                    $qtyShipped = $dispatched;
+                    if ($qtyShipped > $qtyAsked) {
+                        $dispatchedProducts[$warehouseId][$productId]=$qtyShipped - $qtyAsked;
+                        $qtyShipped = $qtyAsked;
+                    } else {
+                        $dispatchedProducts[$warehouseId][$productId]=0;
+                    }
+                } else {
+                    if ($dispatchedProducts[$warehouseId][$productId]) {
+                        $qtyShipped = $dispatchedProducts[$warehouseId][$productId];
+                    }
+                }
+            } else {
+                $qtyShipped = $dispatched;
+            }
+        }   
+        
+        return $qtyShipped;
     }
     
     /**
