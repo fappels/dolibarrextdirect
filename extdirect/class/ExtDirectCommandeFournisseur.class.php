@@ -703,9 +703,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $params->sellby,
                                         $params->batch
                         )) < 0)  return $result;
-                    } else {
-                        foreach ($this->lines as $orderLine) {
-                            if ($orderLine->id == $params->origin_line_id) {
+                    }
+                    foreach ($this->lines as $orderLine) {
+                        if ($orderLine->id == $params->origin_line_id) {
+                            if ($this->statut == 0) {
                                 // update fields
                                 $this->prepareOrderLineFields($params, $orderLine);
                                 if (($result = $this->updateline(
@@ -724,11 +725,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                                 $orderLine->date_start,
                                                 $orderLine->date_end
                                 )) < 0)  return $result;
-                                $orderlineUpdated = true;
+                            }                            
+                            $product = new Product($this->db);
+                            if (($result = $product->fetch($orderLine->fk_product)) <0) return $result;
+                            // update barcode
+                            if (! empty($params->barcode) && empty($product->barcode)) {
+                                $product->setValueFrom('barcode', $params->barcode);
+                                $product->setValueFrom('fk_barcode_type', $params->barcode_type);
                             }
                         }
-                        if (!$orderlineUpdated) return UPTADEERROR;
-                    }            
+                    }
                 }           
             } else {
                 return PARAMETERERROR;
@@ -782,6 +788,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     private function getDispatched($productId, $qtyAsked, $warehouseId = 0) {
         static $dispatchedProducts = array();
+        static $totalDispatchedProducts = array(); // in case of orderlines of same product
         
         $dispatched = 0;
         $qtyShipped = 0;
@@ -809,18 +816,27 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     $qtyShipped = $dispatched;
                     if ($qtyShipped > $qtyAsked) {
                         $dispatchedProducts[$warehouseId][$productId]=$qtyShipped - $qtyAsked;
+                       
                         $qtyShipped = $qtyAsked;
                     } else {
                         $dispatchedProducts[$warehouseId][$productId]=0;
                     }
+                    
                 } else {
                     if ($dispatchedProducts[$warehouseId][$productId]) {
                         $qtyShipped = $dispatchedProducts[$warehouseId][$productId];
+                        if ($qtyShipped > $qtyAsked) {
+                            $qtyShipped = $qtyAsked;
+                        }
+                        if ($totalDispatchedProducts[$warehouseId][$productId] > $qtyShipped) {
+                            $qtyShipped = $dispatched - $totalDispatchedProducts[$warehouseId][$productId];
+                        }
                     }
-                }
+                }                
             } else {
                 $qtyShipped = $dispatched;
             }
+            $totalDispatchedProducts[$warehouseId][$productId] += $qtyShipped;
         }   
         
         return $qtyShipped;
