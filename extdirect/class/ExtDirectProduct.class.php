@@ -160,13 +160,15 @@ class ExtDirectProduct extends Product
                         if (isset($batchId)) {
                             $productBatch->fetch($batchId);
                         } else {
-                            $productBatch->find($this->stock_warehouse[$warehouse]->id,'','',$batch);
+                            if (! empty($this->stock_warehouse[$warehouse]->id)) {
+                                $productBatch->find($this->stock_warehouse[$warehouse]->id,'','',$batch);
+                            }                            
                         }    
                         if (!isset($productBatch->id)) {
                             $row->batch_id = 0; // for adding new batch when batch not found
                             $batchesQty = 0;
                             $stockQty = $this->stock_warehouse[$warehouse]->real;
-                            if (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$warehouse]->id)) < 0 ) return $batchesQty;
+                            if ((! empty($this->stock_warehouse[$warehouse]->id)) && (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$warehouse]->id)) < 0 )) return $batchesQty;
                             dol_syslog(get_class($this)."::batchesQty=".$batchesQty." stockQty=".$stockQty);
                             $row->stock_reel = $stockQty - $batchesQty;
                         } else {
