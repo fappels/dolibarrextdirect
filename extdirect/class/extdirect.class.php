@@ -103,7 +103,7 @@ class ExtDirect
         
         if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
             $this->fk_user = $conf->global->DIRECTCONNECT_AUTO_USER;
-            $this->ack_id = uniqid('llx',true);     
+            $this->ack_id = uniqid('llx',true);
         }
         
         // Clean parameters

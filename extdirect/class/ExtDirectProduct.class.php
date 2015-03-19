@@ -181,12 +181,36 @@ class ExtDirectProduct extends Product
                         }                        
                     } else {
                         $row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
-                    }
-                    
-                } else {
-                    $row->stock_reel= (float) $this->stock_reel;
+                    }                    
+                } else {                    
                     //! Average price value for product entry into stock (PMP)
                     $row->pmp= $this->pmp;
+                    if (! empty($conf->productbatch->enabled) && ! empty($batch)) {
+                        // fetch total qty of batch in all warehouses
+                        $formProduct = new FormProduct($this->db);                        
+                        if (ExtDirect::checkDolVersion() >= 3.5) {
+                            $this->load_stock();
+                        }
+                        $warehouses = $formProduct->loadWarehouses();
+                        $qty = 0;
+                        foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
+                            if (! empty($this->stock_warehouse[$warehouseId]->id)) {
+                                $productBatch = new Productbatch($this->db);
+                                $productBatch->find($this->stock_warehouse[$warehouseId]->id,'','',$batch);
+                                if (isset($productBatch->id)) {
+                                    $row->batch_id = $productBatch->id;
+                                    $row->sellby = $productBatch->sellby;
+                                    $row->eatby = $productBatch->eatby;
+                                    $row->batch = $productBatch->batch;
+                                    $row->batch_info = $productBatch->import_key;
+                                    $qty = $qty + (float) $productBatch->qty;
+                                }
+                            }
+                        }
+                        $row->stock_reel = $qty;
+                    } else {
+                        $row->stock_reel = (float) $this->stock_reel;
+                    }
                 }
                     
                 //! Stock alert

@@ -66,7 +66,7 @@ class ExtDirectAuthenticate extends ExtDirect
         foreach ($paramArray as &$param) {
             $this->prepareAuthenticationFields($param);
             
-            // check if already acknowledged, return -1 if so
+            // check if already acknowledged, return PARAMETERERROR if so
             if (($resql = $this->fetch(0, $this->app_id)) < 0) return $resql;
             if (!empty($this->ack_id)) return PARAMETERERROR;
             if (empty($this->id)) {
