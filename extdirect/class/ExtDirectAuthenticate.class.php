@@ -103,12 +103,7 @@ class ExtDirectAuthenticate extends ExtDirect
         $app_id = '';
         
         $moduleInfo = new modExtDirect($this->db);
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $mysoc = new Societe($this->db);
-            $mysoc->setMysoc($conf);
-        }
-        
-        
+                
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'ack_id') $ack_id=$filter->value;
@@ -135,6 +130,13 @@ class ExtDirectAuthenticate extends ExtDirect
             if ($ack_id == $this->ack_id) {
                 $_SESSION['dol_login'] = $this->_user->login;
             }
+            if (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+                $_SESSION['dol_entity'] = $this->_user->entity;
+                $conf->entity = $this->_user->entity;           
+            } else {
+                $_SESSION['dol_entity'] = 1;
+                $conf->entity = 1;
+            }
             $result->id = (int) $this->id;
             $result->ack_id = $this->ack_id;
             $result->app_id = $this->app_id;
@@ -152,8 +154,12 @@ class ExtDirectAuthenticate extends ExtDirect
             $result->connector_version = $moduleInfo->version;
             $result->dolibarr_version = ExtDirect::checkDolVersion();
             if (ExtDirect::checkDolVersion() >= 3.4) {
+                $mysoc = new Societe($this->db);
+                $conf->setValues($this->db);//update $conf globals
+                $mysoc->setMysoc($conf);
                 $result->home_country_id = $mysoc->country_id;
                 $result->home_state_id = $mysoc->state_id;
+                $result->home_name = $mysoc->name;
             }            
             return $result;
         }

@@ -657,7 +657,7 @@ class ExtDirectProduct extends Product
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
-            $sql .= ' WHERE (';
+            $sql .= ' WHERE ( p.entity = ' . $conf->entity . ' AND ';
             foreach ($param->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value)) {
