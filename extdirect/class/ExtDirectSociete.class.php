@@ -264,22 +264,31 @@ class ExtDirectSociete extends Societe
      */
     public function readPaymentConditions()
     {
+        global $langs;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
 
-        require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
-
         $results = array();
-        $row = new stdClass;
-        $formHelpers = new Form($this->db);
-
-        if ($formHelpers->load_cache_conditions_paiements() > 0) {
-            foreach ($formHelpers->cache_conditions_paiements as $id => $values) {
-                $row = null;
-                $row->id = $id;
-                $row->code = $values['code'];
-                $row->label = htmlspecialchars_decode($values['label'], ENT_QUOTES);
+        
+        $sql = "SELECT rowid, code, libelle";
+        $sql.= " FROM ".MAIN_DB_PREFIX.'c_payment_term';
+        $sql.= " WHERE active=1";
+        $sql.= " ORDER BY sortorder";
+        dol_syslog(get_class($this)."::readPaymentConditions", LOG_DEBUG);
+        $resql = $this->db->query($sql);
+        if ($resql) {
+            $num = $this->db->num_rows($resql);
+            $i = 0;
+            while ($i < $num) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
+                $row->id = $obj->rowid;
+                $row->code = $obj->code;
+                $label=($langs->transnoentities("PaymentConditionShort".$obj->code)!=("PaymentConditionShort".$obj->code)?$langs->transnoentities("PaymentConditionShort".$obj->code):($obj->libelle!='-'?$obj->libelle:''));
+                $row->label = $label;
                 array_push($results, $row);
+                $i++;
             }
             return $results;
         } else {
@@ -296,23 +305,32 @@ class ExtDirectSociete extends Societe
      */
     public function readPaymentTypes()
     {
+        global $langs;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
     
-        require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
-    
         $results = array();
-        $row = new stdClass;
-        $formHelpers = new Form($this->db);
-    
-        if ($formHelpers->load_cache_types_paiements() > 0) {
-            foreach ($formHelpers->cache_types_paiements as $id => $values) {
-                $row = null;
-                $row->id = $id;
-                $row->code = $values['code'];
-                $row->label = htmlspecialchars_decode($values['label'], ENT_QUOTES);
-                $row->type = $values['type'];
+        
+        $sql = "SELECT id, code, libelle, type";
+        $sql.= " FROM ".MAIN_DB_PREFIX."c_paiement";
+        $sql.= " WHERE active > 0";
+        $sql.= " ORDER BY id";
+        dol_syslog(get_class($this)."::readPaymentTypes", LOG_DEBUG);
+        $resql = $this->db->query($sql);
+        if ($resql) {
+            $num = $this->db->num_rows($resql);
+            $i = 0;
+            while ($i < $num) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
+                $row->id = $obj->id;
+                $row->code = $obj->code;
+                $label=($langs->transnoentities("PaymentTypeShort".$obj->code)!=("PaymentTypeShort".$obj->code)?$langs->transnoentities("PaymentTypeShort".$obj->code):($obj->libelle!='-'?$obj->libelle:''));
+                $row->label = $label;
+                $row->type = $obj->type;
                 array_push($results, $row);
+                $i++;
             }
             return $results;
         } else {
@@ -369,31 +387,32 @@ class ExtDirectSociete extends Societe
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
+        $sql .= ' WHERE s.entity IN ('.getEntity('societe', 1).')';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
-            $sql .= ' WHERE (';
+            $sql .= ' AND (';
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') 
                     $sql .= 's.rowid = '.$filter->value;
                 else if ($filter->property == 'ref') 
-                    $sql .= "(s.nom = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                    $sql .= "s.nom = '".$this->db->escape($filter->value)."'";
                 else if ($filter->property == 'client') 
-                    $sql .= "(s.client = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                    $sql .= "s.client = ".$filter->value;
                 else if ($filter->property == 'town') {
                     if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                        $sql .= "s.town = '".$this->db->escape($filter->value)."'";
                     } else {
-                        $sql .= "(s.ville = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                        $sql .= "s.ville = '".$this->db->escape($filter->value)."'";
                     }
                 } 
                 else if ($filter->property == 'stcomm_id') 
-                    $sql .= "(s.fk_stcomm = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                    $sql .= "s.fk_stcomm = ".$filter->value;
                 else if ($filter->property == 'categorie_id') {
                     //allow filtering on non categorized societe
                     if ($filter->value == 0) {
-                        $sql .= "(c.rowid IS NULL AND s.entity = ".$conf->entity.")";
+                        $sql .= "c.rowid IS NULL";
                     } else {
-                        $sql .= "(c.rowid = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                        $sql .= "c.rowid = ".$filter->value;
                     }
                 } else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);

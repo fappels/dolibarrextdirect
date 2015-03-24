@@ -174,12 +174,12 @@ class ExtDirectContact extends Contact
                 if ($filter->property == 'id')
                     $sql .= 'c.rowid = '.$filter->value;
                 else if ($filter->property == 'company_id')
-                    $sql .= "(s.rowid = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                    $sql .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
                 else if ($filter->property == 'town') {
                     if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql .= "(c.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                        $sql .= "c.town = '".$this->db->escape($filter->value)."'";
                     } else {
-                        $sql .= "(c.ville = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                        $sql .= "c.ville = '".$this->db->escape($filter->value)."'";
                     }      
                 }              
                 else if ($filter->property == 'content') {

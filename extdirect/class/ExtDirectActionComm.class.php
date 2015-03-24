@@ -179,7 +179,7 @@ class ExtDirectActionComm extends ActionComm
                 if ($filter->property == 'id')
                     $sql .= 'a.id = '.$filter->value;
                 else if ($filter->property == 'company_id')
-                    $sql .= "(s.rowid = ".$filter->value." AND s.entity = ".$conf->entity.")";
+                    $sql .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
                 else if ($filter->property == 'contact_id')
                     $sql .= "(c.rowid = ".$filter->value.")";
                 else if ($filter->property == 'user_id') 
