@@ -1,4 +1,4 @@
-/**
+function _7efef631e720cce063e064075587d67a3c398c16(){};/**
  * jasmine unit tests for extdirect connector
  */
 
@@ -1320,6 +1320,7 @@ describe("products", function () {
 					Ext.Array.each(records,function (record) {
 						testresults.push(record.get('label'));
 						testresults.push(record.get('stock_reel'));
+						testresults.push(record.get('pmp'));
 					});
 					flag = true;
 				}
@@ -1331,7 +1332,8 @@ describe("products", function () {
 		runs(function () {
 			expect(recordIndex).toBe(0);
 			expect(testresults).toContain('connectortested');
-			expect(testresults).toContain(5);
+			expect(testresults).toContain(5);//stock
+			expect(testresults).toContain(10);//pmp
 		});
 	});
 	
@@ -1414,6 +1416,7 @@ describe("products", function () {
 						Ext.Array.each(records,function (record) {
 							testresults.push(record.get('label'));
 							testresults.push(record.get('stock_reel'));
+							testresults.push(record.get('pmp'));
 						});
 						flag = true;
 					}
@@ -1424,7 +1427,8 @@ describe("products", function () {
 			runs(function () {
 				expect(recordIndex).toBe(0);
 				expect(testresults).toContain('connectortested');
-				expect(testresults).toContain(5);
+				expect(testresults).toContain(5);//stock
+				expect(testresults).toContain(12.5);//pmp
 			});
 		}		
 	});
@@ -1454,6 +1458,7 @@ describe("products", function () {
 						Ext.Array.each(records,function (record) {
 							testresults.push(record.get('label'));
 							testresults.push(record.get('stock_reel'));
+							testresults.push(record.get('pmp'));
 						});
 						flag = true;
 					}
@@ -1464,7 +1469,8 @@ describe("products", function () {
 			runs(function () {
 				expect(recordIndex).toBe(0);
 				expect(testresults).toContain('movetested');
-				expect(testresults).toContain(2);
+				expect(testresults).toContain(2);//stock
+				expect(testresults).toContain(15);//pmp
 			});
 		}		
 	});
