@@ -544,7 +544,7 @@ class ExtDirectSociete extends Societe
                 if ($result == -2) {
                     return array(); // no results
                 } else {
-                    return $result;
+                    return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             }
             
@@ -869,7 +869,7 @@ class ExtDirectSociete extends Societe
             $this->prepareFields($param);
             // create
                 
-            if (($result = $this->create($this->_user)) < 0)    return $result;
+            if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 
             $param->id=$this->id;
         }
@@ -901,14 +901,14 @@ class ExtDirectSociete extends Societe
             if ($param->id) {
                 $id = $param->id;
                 $this->id = $id;
-                if (($result = $this->fetch($id)) < 0)  return $result;
+                if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 
                 $this->prepareFields($param);
                 
                 // update
-                if (($result = $this->update($id, $this->_user, $call_trigger, $allowmodcodeclient, $allowmodcodefournisseur)) < 0) return $result;
+                if (($result = $this->update($id, $this->_user, $call_trigger, $allowmodcodeclient, $allowmodcodefournisseur)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if ($param->stcomm_id || $param->fk_prospectlevel) {
-                    if ($this->updateProspectStatLevel($id, $param->stcomm_id, $param->fk_prospectlevel) < 0) die ($this->error);
+                    if ($this->updateProspectStatLevel($id, $param->stcomm_id, $param->fk_prospectlevel) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 if (isset($param->reduction_percent)) {
                     $this->set_remise_client($param->reduction_percent, 'Mobilid', $this->_user);
@@ -951,7 +951,7 @@ class ExtDirectSociete extends Societe
                 $id = $param->id;
                 $this->id = $id;
                 // delete societe
-                if (($result = $this->delete($id)) < 0) return $result;
+                if (($result = $this->delete($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }

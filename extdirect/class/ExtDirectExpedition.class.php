@@ -95,7 +95,7 @@ class ExtDirectExpedition extends Expedition
                 if ($result = -2) {
                     return 0;// return 0 whem not found
                 } else {
-                    return $result;
+                    return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             }
             if (!$this->error) {
@@ -152,7 +152,7 @@ class ExtDirectExpedition extends Expedition
             // prepare fields
             $this->prepareFields($params);
             
-            if (($result = $this->create($this->_user)) < 0)    return $result;
+            if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             $params->id=$this->id;
         }
 
@@ -198,7 +198,7 @@ class ExtDirectExpedition extends Expedition
                     default:
                         break;   
                 }
-                if ($result < 0) return $result;
+                if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -226,9 +226,9 @@ class ExtDirectExpedition extends Expedition
             // prepare fields
             if ($params->id) {
                 $this->id = $params->id;
-                if (($result = $this->fetch($this->id)) < 0)    return $result;
+                if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 // delete 
-                if (($result = $this->delete()) < 0)    return $result;
+                if (($result = $this->delete()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }

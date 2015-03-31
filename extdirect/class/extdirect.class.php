@@ -494,5 +494,37 @@ class ExtDirect
         {
             return $dolMajorMinorVersion;
         }
-    }   
+    }
+    
+    /**
+     * method to get dolibarr error detail info
+     *
+     * @param int $errorCode dolibarr error code
+     * @param Array $errors dolibarr errors array
+     * @param String $error dolibarr error string
+     *
+     * @return return String translated errorstring
+     */
+    
+    public static function getDolError($errorCode, $errors = null, $error = null)
+    {
+        global $langs;
+        $errorText = '';
+        
+        $langs->load("errors");
+        
+        if (is_array($errors) && (count($errors) > 0)) {
+            foreach ($errors as $error) {
+                $transError = $langs->trans($error);
+                $errorText = $errorText . ' ' . $transError ? $transError : $error;
+            }
+        } else if (is_string($error)) {
+            $transError = $langs->trans($error);
+            $errorText = $transError ? $transError : $error;
+        } else {
+            $errorText = strval($errorCode);
+        }
+        
+        return $errorText;
+    }
 }

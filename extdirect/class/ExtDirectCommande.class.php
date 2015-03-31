@@ -95,7 +95,7 @@ class ExtDirectCommande extends Commande
         }
         
         if (($id > 0) || ($ref != '') || ($ref_int != '')) {
-            if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int)) < 0)   return $result;
+            if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 $row->id = $this->id ;
                 //! Ref
@@ -156,7 +156,7 @@ class ExtDirectCommande extends Commande
         foreach ($paramArray as &$params) {
             // prepare fields
             $this->prepareOrderFields($params);
-            if (($result = $this->create($this->_user, $notrigger)) < 0) return $result;
+            if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             
             $params->id=$this->id;
         }
@@ -214,17 +214,17 @@ class ExtDirectCommande extends Commande
                     default:
                         break;   
                 }
-                if ($result < 0) return $result;
+                if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->set_date($this->_user, $this->date_commande)) < 0) return $result;
-                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return $result;
+                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($this->availability_id > 0) && 
-                    ($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return $result;
+                    ($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->remise_percent) && 
-                    ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return $result;
+                    ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->cond_reglement_id) &&
-                    ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return $result;
+                    ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->mode_reglement_id) &&
-                    ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return $result;
+                    ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 
             } else {
                 return PARAMETERERROR;
@@ -254,7 +254,7 @@ class ExtDirectCommande extends Commande
             if ($params->id) {
                 $this->id = $params->id;
                 // delete 
-                if (($result = $this->delete($this->_user)) < 0)    return $result;
+                if (($result = $this->delete($this->_user)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -298,10 +298,6 @@ class ExtDirectCommande extends Commande
      * @param stdClass $params to filter on order status and ref
      * @return     stdClass result data or error number
      */
-    public function readOrdelList(stdClass $params) { // deprecated
-        return $this->readOrderList($params);
-    }
-    
     public function readOrderList(stdClass $params) 
     {
         global $conf;
@@ -412,7 +408,7 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
-        if (! is_array($result = $this->liste_type_contact())) return $result;
+        if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
         // add empty type
         $row->id = 0;
         $row->label = '';
@@ -507,7 +503,7 @@ class ExtDirectCommande extends Commande
         if ($order_id > 0) {
             $this->id=$order_id;
             $this->loadExpeditions();
-            if (($result = $this->fetch_lines(1)) < 0)  return $result;
+            if (($result = $this->fetch_lines(1)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 foreach ($this->lines as $line) {
                     $myprod = new ExtDirectProduct($this->_user->login);
@@ -702,7 +698,7 @@ class ExtDirectCommande extends Commande
                     $orderLine->fk_fournprice,
                     $orderLine->pa_ht,
                     $orderLine->label
-                )) < 0) return $result;
+                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 if (($result = $this->addline(
                     $orderLine->fk_commande,
@@ -727,7 +723,7 @@ class ExtDirectCommande extends Commande
                     $orderLine->fk_fournprice,
                     $orderLine->pa_ht,
                     $orderLine->label
-                )) < 0) return $result;
+                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
             
         }
@@ -756,8 +752,8 @@ class ExtDirectCommande extends Commande
             
             if (($this->id=$params->origin_id) > 0) {
                 // get old orderline
-                if (($result = $this->fetch($this->id)) < 0)    return $result;
-                if (($result = $this->fetch_lines(1)) < 0)  return $result;
+                if (($result = $this->fetch($this->id)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (($result = $this->fetch_lines(1)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (!$this->error) {
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->rowid == $params->origin_line_id) {
@@ -784,7 +780,7 @@ class ExtDirectCommande extends Commande
                                 $orderLine->label, 
                                 $orderLine->special_code
                             )
-                            ) < 0)  return $result;
+                            ) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                             $orderlineUpdated = true;
                         }
                     }
@@ -818,7 +814,7 @@ class ExtDirectCommande extends Commande
             if ($params->origin_line_id) {
                 // delete 
                 $this->id = $params->origin_id;
-                if (($result = $this->deleteline($params->origin_line_id)) < 0)   return $result;
+                if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }

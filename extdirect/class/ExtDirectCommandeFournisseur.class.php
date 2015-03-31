@@ -276,12 +276,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     default:
                         break;   
                 }
-                if ($result < 0) return $result;
-                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return $result;
+                if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->cond_reglement_id) &&
-                    ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return $result;
+                    ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->mode_reglement_id) &&
-                    ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return $result;
+                    ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 
             } else {
                 return PARAMETERERROR;
@@ -311,7 +311,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if ($params->id) {
                 $this->id = $params->id;
                 // delete 
-                if (($result = $this->delete($this->_user)) < 0)    return $result;
+                if (($result = $this->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -662,7 +662,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 false,
                 $orderLine->date_start,
                 $orderLine->date_end
-            )) < 0) return $result;            
+            )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);            
         }
     
         if (is_array($param)) {
@@ -701,8 +701,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $params->comment,
                                         $params->eatby,
                                         $params->sellby,
-                                        $params->batch
-                        )) < 0)  return $result;
+                                        $params->batch,
+                                        $params->origin_line_id
+                        )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                     }
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->id == $params->origin_line_id) {
@@ -724,10 +725,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                                 false,
                                                 $orderLine->date_start,
                                                 $orderLine->date_end
-                                )) < 0)  return $result;
+                                )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                             }                            
                             $product = new Product($this->db);
-                            if (($result = $product->fetch($orderLine->fk_product)) <0) return $result;
+                            if (($result = $product->fetch($orderLine->fk_product)) <0) return ExtDirect::getDolError($result, $product->errors, $product->error);
                             // update barcode
                             if (! empty($params->barcode) && empty($product->barcode)) {
                                 $product->setValueFrom('barcode', $params->barcode);
@@ -764,7 +765,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if ($params->origin_line_id) {
                 // delete 
                 $this->id = $params->origin_id;
-                if (($result = $this->deleteline($params->origin_line_id)) < 0)   return $result;
+                if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
