@@ -172,7 +172,7 @@ class ExtDirectExpedition extends Expedition
     public function updateShipment($param) 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->expedition->valider)) return PERMISSIONERROR;
+        
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {
@@ -417,13 +417,17 @@ class ExtDirectExpedition extends Expedition
         }
         // store colleted batches
         foreach ($batches as $batch) {
-            $expeditionLigneBatch = new ExpeditionLigneBatch($this->db);
-            $expeditionLigneBatch->sellby = $batch->sellby;
-            $expeditionLigneBatch->eatby = $batch->eatby;
-            $expeditionLigneBatch->batch = $batch->batch;
-            $expeditionLigneBatch->dluo_qty = $batch->qty_toship;
-            $expeditionLigneBatch->fk_origin_stock = $batch->batch_id;
-            $expeditionLigneBatch->create($shipmentLineId);
+            if (ExtDirect::checkDolVersion() >= 3.8) {
+                $expeditionLineBatch = new ExpeditionLineBatch($this->db);
+            } else {
+                $expeditionLineBatch = new ExpeditionLigneBatch($this->db);
+            }            
+            $expeditionLineBatch->sellby = $batch->sellby;
+            $expeditionLineBatch->eatby = $batch->eatby;
+            $expeditionLineBatch->batch = $batch->batch;
+            $expeditionLineBatch->dluo_qty = $batch->qty_toship;
+            $expeditionLineBatch->fk_origin_stock = $batch->batch_id;
+            $expeditionLineBatch->create($shipmentLineId);
         }
         return 1;
     }
@@ -451,7 +455,12 @@ class ExtDirectExpedition extends Expedition
         require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
         $batches = array();
         
-        if (($batches = ExpeditionLigneBatch::FetchAll($this->db, $lineId)) < 0 ) return $batches;
+        if (ExtDirect::checkDolVersion() >= 3.8) {
+            if (($batches = ExpeditionLineBatch::FetchAll($this->db, $lineId)) < 0 ) return $batches;
+        } else {
+            if (($batches = ExpeditionLigneBatch::FetchAll($this->db, $lineId)) < 0 ) return $batches;
+        }
+        
         if (!empty($batches)) {
              foreach ($batches as $batch) {
                 $row->id = $lineId.'_'.$batch->id;

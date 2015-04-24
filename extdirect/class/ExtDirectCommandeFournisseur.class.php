@@ -218,60 +218,28 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         $result = $this->setStatus($user, $newstatus);
                         break;
                     case 1:
-                        if (isset($this->_user->rights->fournisseur->commande->valider)) {
-                            $result = $this->valid($this->_user);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->valid($this->_user);
                         break;
                     case 2:
-                        if (isset($this->_user->rights->fournisseur->commande->approuver)) {
-                            $result = $this->approve($this->_user,$params->warehouse_id);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->approve($this->_user,$params->warehouse_id);
                         break;                    
                     case 3:
-                        if (isset($this->_user->rights->fournisseur->commande->commander)) {
-                            $result = $this->commande($this->_user, $this->date_commande, $this->methode_commande_id, $params->comment);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->commande($this->_user, $this->date_commande, $this->methode_commande_id, $params->comment);
                         break;
                     case 4:
-                        if (isset($this->_user->rights->fournisseur->commande->receptionner)) {
-                            $result = $this->Livraison($this->_user, $this->date_livraison, 'par', $params->comment);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->Livraison($this->_user, $this->date_livraison, 'par', $params->comment);
                         break;
                     case 5:
-                        if (isset($this->_user->rights->fournisseur->commande->receptionner)) {
-                            $result = $this->Livraison($this->_user, $this->date_livraison, 'tot', $params->comment);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->Livraison($this->_user, $this->date_livraison, 'tot', $params->comment);
                         break;
                     case 6:
-                        if (isset($this->_user->rights->fournisseur->commande->commander)) {
-                            $result = $this->Cancel($this->_user);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->Cancel($this->_user);
                         break;
                     case 7:
-                        if (isset($this->_user->rights->fournisseur->commande->receptionner)) {
-                            $result = $this->Livraison($this->_user, $this->date_livraison, 'nev', $params->comment);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->Livraison($this->_user, $this->date_livraison, 'nev', $params->comment);
                         break;
                     case 9:
-                        if (isset($this->_user->rights->fournisseur->commande->approuver)) {
-                            $result = $this->refuse($this->_user);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->refuse($this->_user);
                         break;
                     default:
                         break;   

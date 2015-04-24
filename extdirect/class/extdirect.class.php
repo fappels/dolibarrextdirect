@@ -481,7 +481,7 @@ class ExtDirect
         
         if($validate) 
         {
-            if (($dolMajorMinorVersion >= 3.2) && ($dolMajorMinorVersion < 3.8))
+            if (($dolMajorMinorVersion >= 3.2) && ($dolMajorMinorVersion < 3.9))
             {
                 return 1;
             }
