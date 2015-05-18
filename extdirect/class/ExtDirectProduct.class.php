@@ -858,7 +858,11 @@ class ExtDirectProduct extends Product
     private function prepareFields($param) 
     {
         isset($param->ref) ? ( $this->ref = $param->ref ) : null;
-        isset($param->label) ? ( $this->libelle = $param->label) : null;
+        if (ExtDirect::checkDolVersion() >= 3.8) {
+            isset($param->label) ? ( $this->label = $param->label) : null;
+        } else {
+            isset($param->label) ? ( $this->libelle = $param->label) : null;
+        }        
         isset($param->description) ? ( $this->description = $param->description) : null;
         //! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
         isset($param->type) ? ( $this->type = $param->type) : null;
