@@ -662,7 +662,7 @@ class ExtDirectProduct extends Product
             $sql .= ' AND (';
             foreach ($param->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
-                if (empty($value)) {
+                if (empty($value) && ($filter->property != 'type')) {
                     if ($filter->property == 'categorie_id') {
                         $sql .= 'c.rowid IS NULL';
                     } else {
