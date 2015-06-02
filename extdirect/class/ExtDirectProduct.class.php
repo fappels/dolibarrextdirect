@@ -96,6 +96,7 @@ class ExtDirectProduct extends Product
         $ref = '';
         $ref_ext = '';
         $batch = '';
+        $includePhoto = false;
 
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -107,6 +108,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'batch') $batch = $filter->value;
                 else if ($filter->property == 'batch_id') $batchId = $filter->value;
                 else if ($filter->property == 'ref_supplier') $refSupplier = $filter->value;
+                else if ($filter->property == 'has_photo' && !empty($filter->value)) $includePhoto = true;
             }
         }
         
@@ -153,8 +155,12 @@ class ExtDirectProduct extends Product
                     if (ExtDirect::checkDolVersion() >= 3.5) {
                         $this->load_stock();
                     } 
+                    if (ExtDirect::checkDolVersion() >= 3.8) {
+                        $row->pmp = $this->pmp;
+                    } else {
+                        $row->pmp = $this->stock_warehouse[$warehouse]->pmp;
+                    }
                     
-                    $row->pmp= $this->stock_warehouse[$warehouse]->pmp;
                     if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
                         $productBatch = new Productbatch($this->db);
                         if (isset($batchId)) {
@@ -284,6 +290,10 @@ class ExtDirectProduct extends Product
                 $row->pu_supplier = $supplierProduct->fourn_unitprice;
                 $row->supplier_id = $supplierProduct->fourn_id;
                 $row->vat_supplier = $supplierProduct->tva_tx;
+                $row->has_photo = 0;
+                if ($includePhoto) {
+                    $this->fetchPhoto($row, 'small'); 
+                }
 
                 if (!empty($batch)) {
                     if (!empty($row->batch_id)) {
@@ -291,8 +301,7 @@ class ExtDirectProduct extends Product
                     }
                 } else {
                     array_push($results, $row);
-                }   
-                             
+                }                                
             }
         }
         
@@ -320,32 +329,45 @@ class ExtDirectProduct extends Product
             // prepare fields
             $this->prepareFields($param);
             if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
-                $correctStockFunction = 'correct_stock_batch';
-                
-            } else {
-                $correctStockFunction = 'correct_stock';
-            }
             //! Stock
             if (!empty($param->correct_stock_nbpiece)) {
-                $result = $this->$correctStockFunction(
-                    $this->_user,
-                    $param->warehouse_id,
-                    // nb of units
-                    $param->correct_stock_nbpiece,
-                    // 0 = add, 1 = remove
-                    $param->correct_stock_movement,
-                    // Label of stock movement
-                    $param->correct_stock_label,
-                    // Price to use for stock eval
-                    $param->correct_stock_price,
-                    // sellBy date
-                    $param->sellby,
-                    // eatBy date
-                    $param->eatby,
-                    // batch number
-                    $param->batch
-                );
+                if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
+                    $result = $this->correct_stock_batch(
+                                    $this->_user,
+                                    $param->warehouse_id,
+                                    // nb of units
+                                    $param->correct_stock_nbpiece,
+                                    // 0 = add, 1 = remove
+                                    $param->correct_stock_movement,
+                                    // Label of stock movement
+                                    $param->correct_stock_label,
+                                    // Price to use for stock eval
+                                    $param->correct_stock_price,
+                                    // sellBy date
+                                    $param->sellby,
+                                    // eatBy date
+                                    $param->eatby,
+                                    // batch number
+                                    $param->batch,
+                                    // inventorycode
+                                    $param->inventorycode
+                    );
+                } else {
+                    $result = $this->correct_stock(
+                                    $this->_user,
+                                    $param->warehouse_id,
+                                    // nb of units
+                                    $param->correct_stock_nbpiece,
+                                    // 0 = add, 1 = remove
+                                    $param->correct_stock_movement,
+                                    // Label of stock movement
+                                    $param->correct_stock_label,
+                                    // Price to use for stock eval
+                                    $param->correct_stock_price,
+                                    // inventorycode
+                                    $param->inventorycode
+                    );
+                }
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             }   
             // barcode
@@ -370,6 +392,10 @@ class ExtDirectProduct extends Product
                                 $this->fourn_ref, 
                                 $this->fourn_tva_tx
                 )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+            }
+            // add photo
+            if (!empty($param->has_photo) && !empty($param->photo)) {
+                if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
             $param->id=$this->id;
         }
@@ -464,66 +490,123 @@ class ExtDirectProduct extends Product
                     // transfer stock
                     if (!empty($param->correct_stock_nbpiece)) {
                         $movement = 1;
-                        $result = $this->$correctStockFunction(
-                            $this->_user,
-                            $param->warehouse_id,
-                            // nb of units
-                            $param->correct_stock_nbpiece,
-                            // 0 = add, 1 = remove
-                            $movement,
-                            // Label of stock movement
-                            $param->correct_stock_label,
-                            // Price to use for stock eval
-                            $param->correct_stock_price,
-                            // sellBy date
-                            $param->eatby,
-                            // eatBy date
-                            $param->sellby,
-                            // batch number
-                            $param->batch                            
-                        );
+                        if ($correctStockFunction == 'correct_stock_batch') {
+                            $result = $this->correct_stock_batch(
+                                            $this->_user,
+                                            $param->warehouse_id,
+                                            // nb of units
+                                            $param->correct_stock_nbpiece,
+                                            // 0 = add, 1 = remove
+                                            $movement,
+                                            // Label of stock movement
+                                            $param->correct_stock_label,
+                                            // Price to use for stock eval
+                                            $param->correct_stock_price,
+                                            // sellBy date
+                                            $param->eatby,
+                                            // eatBy date
+                                            $param->sellby,
+                                            // batch number
+                                            $param->batch,
+                                            // inventorycode
+                                            $param->inventorycode
+                            );
+                        } else {
+                            $result = $this->correct_stock(
+                                            $this->_user,
+                                            $param->warehouse_id,
+                                            // nb of units
+                                            $param->correct_stock_nbpiece,
+                                            // 0 = add, 1 = remove
+                                            $movement,
+                                            // Label of stock movement
+                                            $param->correct_stock_label,
+                                            // Price to use for stock eval
+                                            $param->correct_stock_price,
+                                            // inventorycode
+                                            $param->inventorycode
+                            );
+                        }
                         if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                         $movement = 0;
-                        $result = $this->$correctStockFunction(
-                            $this->_user,
-                            $param->correct_stock_dest_warehouseid,
-                            // nb of units
-                            $param->correct_stock_nbpiece,
-                            // 0 = add, 1 = remove
-                            $movement,
-                            // Label of stock movement
-                            $param->correct_stock_label,
-                            // Price to use for stock eval
-                            $param->correct_stock_price,
-                            // sellBy date
-                            $param->eatby,
-                            // eatBy date
-                            $param->sellby,
-                            // batch number
-                            $param->batch
-                        );
+                        if ($correctStockFunction == 'correct_stock_batch') {
+                            $result = $this->correct_stock_batch(
+                                            $this->_user,
+                                            $param->correct_stock_dest_warehouseid,
+                                            // nb of units
+                                            $param->correct_stock_nbpiece,
+                                            // 0 = add, 1 = remove
+                                            $movement,
+                                            // Label of stock movement
+                                            $param->correct_stock_label,
+                                            // Price to use for stock eval
+                                            $param->correct_stock_price,
+                                            // sellBy date
+                                            $param->eatby,
+                                            // eatBy date
+                                            $param->sellby,
+                                            // batch number
+                                            $param->batch,
+                                            // inventorycode
+                                            $param->inventorycode
+                            );
+                        } else {
+                            $result = $this->correct_stock(
+                                            $this->_user,
+                                            $param->correct_stock_dest_warehouseid,
+                                            // nb of units
+                                            $param->correct_stock_nbpiece,
+                                            // 0 = add, 1 = remove
+                                            $movement,
+                                            // Label of stock movement
+                                            $param->correct_stock_label,
+                                            // Price to use for stock eval
+                                            $param->correct_stock_price,
+                                            // inventorycode
+                                            $param->inventorycode
+                            );
+                        }
                         if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                     }
                 } else if (!empty($param->correct_stock_nbpiece)) {
                     // change stock
-                    $result = $this->$correctStockFunction(
-                        $this->_user,
-                        $param->warehouse_id,
-                        // nb of units
-                        $param->correct_stock_nbpiece,
-                        // 0 = add, 1 = remove
-                        $param->correct_stock_movement,
-                        // Label of stock movement
-                        $param->correct_stock_label,
-                        // Price to use for stock eval
-                        $param->correct_stock_price,
-                        // sellBy date
-                        $param->eatby,
-                        // eatBy date
-                        $param->sellby,
-                        // batch number
-                        $param->batch
-                    );
+                    if ($correctStockFunction == 'correct_stock_batch') {
+                        $result = $this->correct_stock_batch(
+                                        $this->_user,
+                                        $param->warehouse_id,
+                                        // nb of units
+                                        $param->correct_stock_nbpiece,
+                                        // 0 = add, 1 = remove
+                                        $param->correct_stock_movement,
+                                        // Label of stock movement
+                                        $param->correct_stock_label,
+                                        // Price to use for stock eval
+                                        $param->correct_stock_price,
+                                        // sellBy date
+                                        $param->eatby,
+                                        // eatBy date
+                                        $param->sellby,
+                                        // batch number
+                                        $param->batch,
+                                        // inventorycode
+                                        $param->inventorycode
+                        );
+                    } else {
+                        $result = $this->correct_stock(
+                                        $this->_user,
+                                        $param->warehouse_id,
+                                        // nb of units
+                                        $param->correct_stock_nbpiece,
+                                        // 0 = add, 1 = remove
+                                        $param->correct_stock_movement,
+                                        // Label of stock movement
+                                        $param->correct_stock_label,
+                                        // Price to use for stock eval
+                                        $param->correct_stock_price,
+                                        // inventorycode
+                                        $param->inventorycode
+                        );
+                    }
                     if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 // barcode
@@ -569,6 +652,10 @@ class ExtDirectProduct extends Product
                                     $this->fourn_ref, 
                                     $this->fourn_tva_tx
                     )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+                }
+                // add photo
+                if (!empty($param->has_photo) && !empty($param->photo)) {
+                    if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             } else {
                 return PARAMETERERROR;
@@ -642,6 +729,7 @@ class ExtDirectProduct extends Product
         $start=0;
         $dataComplete=false;
         $dataNotComplete=false;        
+        $includePhoto=false;
         
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -651,7 +739,7 @@ class ExtDirectProduct extends Product
             $filterSize = count($param->filter);
         }
         
-        $sql = 'SELECT p.rowid, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel';
+        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity';
         $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
@@ -711,6 +799,9 @@ class ExtDirectProduct extends Product
                         } else {
                             $sql .= "p.barcode = '' OR p.barcode IS NULL";
                         } 
+                    } else if ($filter->property == 'has_photo' && !empty($value)) {
+                        $sql .= '1';
+                        $includePhoto = true;
                     }
                 }    
                 if ($key < ($filterSize-1)) {
@@ -745,8 +836,8 @@ class ExtDirectProduct extends Product
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
                 $row = new stdClass;
-                $row->id        = $obj->rowid.'_'.$obj->fk_entrepot;
-                $row->product_id= (int) $obj->rowid;
+                $row->id        = $obj->id.'_'.$obj->fk_entrepot;
+                $row->product_id= (int) $obj->id;
                 $row->ref       = $obj->ref;
                 $row->label     = $obj->label;
                 $row->barcode   = $obj->barcode;
@@ -761,6 +852,11 @@ class ExtDirectProduct extends Product
                     $row->stock = (float) $obj->reel;
                 }
                 $row->stock     = (float) $obj->reel;
+                $row->has_photo = 0;
+                if ($includePhoto) {
+                    $this->fetchPhoto($row, 'mini', 0, $obj); 
+                }
+                
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -1037,5 +1133,115 @@ class ExtDirectProduct extends Product
             }
         }                    
         return $batchesQty;
+    }
+    
+    /**
+     * public method to fetch product photos
+     *
+     * @param object &$row object with product data to add to results
+     * @param string $format size of foto 'mini', 'small' or 'original'
+     * @param int $num num of photo to return
+     * @param object $productObj product object
+     * @return void
+     */
+    public function fetchPhoto(&$row,$format='',$num=0, $productObj=null) {
+        // get photo
+        global $conf;
+        
+        if (empty($productObj)) $productObj=$this;
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion() <= 3.6))
+        {
+            $pdir = get_exdir($productObj->id,2) . $productObj->id ."/photos/";
+        }
+        else
+        {
+            $pdir = $productObj->ref.'/';
+        }
+        $dir = $conf->product->multidir_output[(int) $productObj->entity] . '/'. $pdir;
+        
+        $photos = $this->liste_photos($dir,$maxNum);
+        
+        if (!empty($photos)) {
+            $row->has_photo = 1;
+            $photoFile = $photos[$num]['photo'];
+            $photo_parts = pathinfo($photoFile);
+            if ($format == 'mini') {
+                if (ExtDirect::checkDolVersion() <= 3.6) {
+                    $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
+                } else {
+                    $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
+                }                
+                $imgData = base64_encode(file_get_contents($filename));
+                $row->photo_mini = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+            } else if ($format == 'small') {
+                $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
+                $imgData = base64_encode(file_get_contents($filename));
+                $row->photo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+            } else {
+                $filename=$dir.$photoFile;
+                $imgData = base64_encode(file_get_contents($filename));
+                $row->photo_original = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+            }                
+        }
+    }
+    
+    /**
+     * public method to add base64 jpeg photo
+     *
+     * @param string $base64JpegUrl base64 encoded jpeg data
+     * 
+     * @return > 0 photo accepted < 0 photo not accepted
+     */
+    public function addBase64Jpeg($base64JpegUrl) {
+        // get photo
+        global $conf;
+        
+        require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+        // TODO add file upload permission to Dolibarr
+        if (empty($conf->global->MAIN_UPLOAD_DOC)) return PERMISSIONERROR;
+        
+        if (empty($conf->product->multidir_output[(int) $this->entity])) {
+            $dir = DOL_DOCUMENT_ROOT.'/documents/produit'; // for unit testing
+        } else {
+            $dir = $conf->product->multidir_output[(int) $this->entity];
+        }
+        
+        $tdir = $dir. '/temp';
+        
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion() <= 3.6)) $dir .= '/'. get_exdir($this->id,2) . $this->id ."/photos";
+        else $dir .= '/'.dol_sanitizeFileName($this->ref);
+        
+        dol_mkdir($tdir);
+        dol_mkdir($dir);
+        $base64 = explode(',', $base64JpegUrl);
+        $imgdata = base64_decode($base64[1]);
+        
+        if (substr($imgdata,0,3)=="\xff\xd8\xff") { // only jpeg
+            $filename = 'ExtDirectUpload'.$this->id.'.jpg';    
+            $i = 1;    
+            while (file_exists($tdir.$filename)) {
+                $filename = 'ExtDirectUpload'.$this->id.'('.$i.').jpg';
+                $i++;
+            }
+            if (is_dir($tdir) && (file_put_contents($tdir.$filename, $imgdata, LOCK_EX) > 0)) {
+                if (is_dir($dir)) {
+                    dol_move($tdir.$filename, $dir.'/'.$filename);
+                    if (file_exists(dol_osencode($dir.'/'.$filename)))
+                    {
+                        // Cree fichier en taille vignette
+                        $this->add_thumb($dir.'/'.$filename);
+                    }
+                } else {
+                    $this->error="ErrorFailToCreateDir";
+                    return -1;
+                }
+            } else {
+                $this->error="ErrorFailToCreateFile";
+                return -2;
+            }            
+        } else {
+            $this->error="ErrorBadImageFormat";
+            return -3;
+        }
     }
 }

@@ -477,12 +477,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $row = new stdClass;
         $order_id = 0;
         $productAskedQty = array();
+        $includePhoto = false;
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
+                if ($filter->property == 'has_photo' && !empty($filter->value)) $includePhoto = true;
             }
         }
     
@@ -504,6 +506,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         if (ExtDirect::checkDolVersion() >= 3.5) {
                             if (($result = $myprod->load_stock()) < 0) return $result;
                         }
+                        
                         if (!empty($warehouse_id) || ($myprod->stock_reel == 0)) {
                             // get orderline with stock of warehouse 
                             $row = null;
@@ -541,6 +544,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_batch = $myprod->status_batch;
+                            $row->has_photo = 0;
+                            if ($includePhoto) {
+                                if ($id == $line->id) {
+                                    $myprod->fetchPhoto($row, 'small'); // fetch line detail
+                                } else {
+                                    $myprod->fetchPhoto($row, 'mini');
+                                }                                
+                            }
                             array_push($results, $row);
                         } else {
                             // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
@@ -580,6 +591,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->stock = $stock_warehouse->real;
                                     $row->warehouse_id = $warehouse;
                                     $row->has_batch = $myprod->status_batch;
+                                    $row->has_photo = 0;
+                                    if ($includePhoto) {
+                                        if ($id == $line->id) {
+                                            $myprod->fetchPhoto($row, 'small'); // fetch line detail
+                                        } else {
+                                            $myprod->fetchPhoto($row, 'mini');
+                                        }                                
+                                    }
                                     array_push($results, $row);
                                 }
                             }
@@ -701,6 +720,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             if (! empty($params->barcode) && empty($product->barcode)) {
                                 $product->setValueFrom('barcode', $params->barcode);
                                 $product->setValueFrom('fk_barcode_type', $params->barcode_type);
+                            }
+                            // add photo
+                            if (!empty($params->has_photo) && !empty($params->photo)) {
+                                if (($result = $product->addBase64Jpeg($params->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                             }
                         }
                     }

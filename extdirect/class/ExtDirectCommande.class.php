@@ -186,34 +186,23 @@ class ExtDirectCommande extends Commande
                 $this->id = $params->id;
                 $this->prepareOrderFields($params);
                 // update
-                switch ($this->statut) {
+                switch ($params->orderstatus_id) {
                     case -1:
-                        if (isset($this->_user->rights->commande->annuler)) {
-                            $result = $this->cancel();
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->cancel();
                         break;
                     case 0:
                         $result = $this->set_draft($this->_user);
                         break;
                     case 1:
-                        if (isset($this->_user->rights->commande->valider)) {
-                            $result = $this->valid($this->_user);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->valid($this->_user);
                         break;
                     case 3:
-                        if (isset($this->_user->rights->commande->annuler)) {
-                            $result = $this->cloture($this->_user);
-                        } else {
-                            return PERMISSIONERROR;
-                        }
+                        $result = $this->cloture($this->_user);
                         break;
                     default:
                         break;   
                 }
+                
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->set_date($this->_user, $this->date_commande)) < 0) return $result;
                 if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -279,7 +268,7 @@ class ExtDirectCommande extends Commande
         isset($params->ref_int) ? ( $this->ref_int = $params->ref_int ) : ( $this->ref_int = null);
         isset($params->ref_customer) ? ( $this->ref_client = $params->ref_customer) : ( $this->ref_client = null);
         isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( $this->socid = null);
-        isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ($this->statut  = 0);
+        //isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ($this->statut  = 0);
         isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
         isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);      
         isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ($this->user_author_id = null); 
@@ -491,12 +480,14 @@ class ExtDirectCommande extends Commande
         $results = array();
         $row = new stdClass;
         $order_id = 0;
+        $includePhoto = false;
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $order_id=$filter->value; // deprecated
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
+                if ($filter->property == 'has_photo' && !empty($filter->value)) $includePhoto = true;
             }
         }
     
@@ -549,6 +540,10 @@ class ExtDirectCommande extends Commande
                             $row->qty_stock = (int) $myprod->stock_reel; //deprecated
                             $row->stock = (int) $myprod->stock_reel;
                             $row->warehouse_id = $warehouse_id;
+                            $row->has_photo = 0;
+                            if ($includePhoto) {
+                                $myprod->fetchPhoto($row, 'mini'); 
+                            }
                             array_push($results, $row);
                         } else {
                             // get orderline with stock of warehouse
@@ -587,7 +582,12 @@ class ExtDirectCommande extends Commande
                             $row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real; //deprecated
                             $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
+                            $row->has_photo = 0;
+                            if ($includePhoto) {
+                                $myprod->fetchPhoto($row, 'mini'); 
+                            }
                             // split orderlines by batch
+                            $row->has_batch = $myprod->status_batch;
                             if (empty($conf->productbatch->enabled)) {
                                 array_push($results, $row);
                             } else {
@@ -639,7 +639,12 @@ class ExtDirectCommande extends Commande
                                 $row->qty_stock = $stock_warehouse->real; //deprecated
                                 $row->stock = $stock_warehouse->real;
                                 $row->warehouse_id = $warehouse;
+                                $row->has_photo = 0;
+                                if ($includePhoto) {
+                                    $myprod->fetchPhoto($row, 'mini'); 
+                                }
                                 // split orderlines by batch
+                                $row->has_batch = $myprod->status_batch;
                                 if (empty($conf->productbatch->enabled)) {
                                     array_push($results, $row);
                                 } else {

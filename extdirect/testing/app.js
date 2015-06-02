@@ -1,4 +1,4 @@
-function _8771688f8b2af643e257aab5485efa9518f91905(){};//@tag foundation,core
+function _632b6d4b4a6dce1c4fd780688c900f8c6bd18af1(){};//@tag foundation,core
 //@define Ext
 /**
  * @class Ext
@@ -61845,6 +61845,19 @@ Ext.define('ConnectorTest.model.OrderLine', {
                 type: 'date'
             },
             {
+                name: 'photo_mini'
+            },
+            {
+                name: 'photo_small'
+            },
+            {
+                name: 'photo'
+            },
+            {
+                name: 'has_photo',
+                type: 'int'
+            },
+            {
                 name: 'app_id'
             }
         ]
@@ -62282,6 +62295,19 @@ Ext.define('ConnectorTest.model.Product', {
                 type: 'float'
             },
             {
+                name: 'photo_small'
+            },
+            {
+                name: 'photo'
+            },
+            {
+                name: 'has_photo',
+                type: 'int'
+            },
+            {
+                name: 'inventorycode'
+            },
+            {
                 name: 'local_id'
             },
             {
@@ -62358,7 +62384,11 @@ Ext.define('ConnectorTest.model.ProductList', {
                 type: 'int'
             },
             {
-                name: 'photo_small'
+                name: 'photo_mini'
+            },
+            {
+                name: 'has_photo',
+                type: 'int'
             }
         ]
     }
