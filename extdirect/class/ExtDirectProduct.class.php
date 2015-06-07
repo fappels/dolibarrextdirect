@@ -1198,7 +1198,10 @@ class ExtDirectProduct extends Product
         
         require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
         // TODO add file upload permission to Dolibarr
-        if (empty($conf->global->MAIN_UPLOAD_DOC)) return PERMISSIONERROR;
+        if (empty($conf->global->MAIN_UPLOAD_DOC)) {
+            $this->error="ErrorForbidden";
+            return -4;
+        }
         
         if (empty($conf->product->multidir_output[(int) $this->entity])) {
             $dir = DOL_DOCUMENT_ROOT.'/documents/produit'; // for unit testing

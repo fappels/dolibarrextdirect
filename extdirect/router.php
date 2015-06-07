@@ -32,9 +32,10 @@ class Action
 $isForm = false;
 $isUpload = false;
 
-if (isset($HTTP_RAW_POST_DATA)) {
+$rawData = file_get_contents("php://input");
+if (!empty($rawData)) {
     header('Content-Type: text/javascript');
-    $data = json_decode($HTTP_RAW_POST_DATA);
+    $data = json_decode($rawData);
 } else if (isset($_POST['extAction'])) {
     $isForm = true;
     $isUpload = $_POST['extUpload'] == 'true';
@@ -122,14 +123,17 @@ function doRpc($cdata)
                         $error->message = "Compatibility Error: $method on action $action";
                         break;
                     default:
-                        "Error $result from server: $method on action $action";
+                        $error->message = "Error $result from dolibarr: $method on action $action";
                         break;
                 }
-            }
-            
+            }            
             $r['result'] = $result;
             throw new Exception($error->message);
-        } else {
+        } else if (is_string($result)) {
+            $error->message = "Dolibarr: $result";
+            $r['result'] = $result;
+            throw new Exception($error->message);
+        } else {            
             $r['result'] = $result;
         }
 
