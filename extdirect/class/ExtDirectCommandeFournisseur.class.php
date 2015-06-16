@@ -463,6 +463,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      *                              warehouse_id x to get qty_stock of 
      *                              warehouse_id -1 will get total qty_stock
      *                              no warehouse_id will split lines in qty_stock by warehouse
+     *                          has_photo 1 to load mini thumbnail
      *    @return     stdClass result data or error number
      */
     public function readOrderLine(stdClass $params)

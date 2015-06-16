@@ -81,6 +81,10 @@ class ExtDirectProduct extends Product
      *      warehouse_id        filter product on a warehouse
      *      multiprices_index   filter product on a multiprice index
      *      barcode             barcode of product 
+     *      batch               batch code of product
+     *      batch_id            batch rowid of product
+     *      ref_supplier        supplier reference code
+     *      has_photo           1 to load small thumbnail
      *    @return     stdClass result data or -1
      */
     public function readProduct(stdClass $param)
@@ -237,7 +241,7 @@ class ExtDirectProduct extends Product
                 $row->country_id= $this->country_id;       // Country origin id
                 $row->country_code= $this->country_code;     // Country origin code (US, FR, ...)
                     
-                //! Unites de mesure
+                //measurements and units
                 $row->weight= $this->weight;
                 $row->weight_units= $this->weight_units;
                 $row->length= $this->length;

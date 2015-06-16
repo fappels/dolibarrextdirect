@@ -461,11 +461,15 @@ class ExtDirectCommande extends Commande
      *    Load orderlines from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
-     *                          Id of order to load lines from
-     *                          warehouse_id 
-     *                              warehouse_id x to get stock of 
-     *                              warehouse_id -1 will get total stock
-     *                              no warehouse_id will split lines in stock by warehouse
+     *                              order_id Id of order to load lines from
+     *                              warehouse_id 
+     *                                  warehouse_id x to get stock of 
+     *                                  warehouse_id -1 will get total stock
+     *                                  no warehouse_id will split lines in stock by warehouse
+     *                              has_photo
+     *                                  1 to load mini thumbnail
+     *                                  2 to load mini and small thumbnail
+     *                              
      *    @return     stdClass result data or error number
      */
     public function readOrderLine(stdClass $params)
@@ -480,14 +484,20 @@ class ExtDirectCommande extends Commande
         $results = array();
         $row = new stdClass;
         $order_id = 0;
-        $includePhoto = false;
+        $includePhotoMini = false;
+        $includePhotoSmall = false;
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $order_id=$filter->value; // deprecated
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
-                if ($filter->property == 'has_photo' && !empty($filter->value)) $includePhoto = true;
+                if ($filter->property == 'has_photo' && !empty($filter->value)) {
+                    $includePhotoMini = true;
+                    if ($filter->value == 2) {
+                        $includePhotoSmall = true;
+                    }
+                }
             }
         }
     
@@ -541,8 +551,11 @@ class ExtDirectCommande extends Commande
                             $row->stock = (int) $myprod->stock_reel;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
-                            if ($includePhoto) {
+                            if ($includePhotoMini) {
                                 $myprod->fetchPhoto($row, 'mini'); 
+                            }
+                            if ($includePhotoSmall) {
+                                $myprod->fetchPhoto($row, 'small');
                             }
                             array_push($results, $row);
                         } else {
@@ -583,8 +596,11 @@ class ExtDirectCommande extends Commande
                             $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
-                            if ($includePhoto) {
+                            if ($includePhotoMini) {
                                 $myprod->fetchPhoto($row, 'mini'); 
+                            }
+                            if ($includePhotoSmall) {
+                                $myprod->fetchPhoto($row, 'small');
                             }
                             // split orderlines by batch
                             $row->has_batch = $myprod->status_batch;
@@ -640,8 +656,11 @@ class ExtDirectCommande extends Commande
                                 $row->stock = $stock_warehouse->real;
                                 $row->warehouse_id = $warehouse;
                                 $row->has_photo = 0;
-                                if ($includePhoto) {
+                                if ($includePhotoMini) {
                                     $myprod->fetchPhoto($row, 'mini'); 
+                                }
+                                if ($includePhotoSmall) {
+                                    $myprod->fetchPhoto($row, 'small');
                                 }
                                 // split orderlines by batch
                                 $row->has_batch = $myprod->status_batch;
