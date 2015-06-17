@@ -620,24 +620,30 @@ class ExtDirectProduct extends Product
                 }
                 // update product batch 
                 if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id))) {
-                    if (!(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
+                    $productBatch = new Productbatch($this->db);
+                    $dest = $param->correct_stock_dest_warehouseid;
+                    if (empty($dest) && !(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
                         // update batch if not removed
-                        $productBatch = new Productbatch($this->db);
                         if (!empty($param->batch_id)) {
                             $productBatch->fetch($param->batch_id);
                         } else {                            
                             if (isset($this->stock_warehouse[$param->warehouse_id]->id)) {
                                 $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id,$param->eatby,$param->sellby,$param->batch);
                             }
+                        }                        
+                    } else if (!empty($dest)){
+                        // update destination batch
+                        if (isset($this->stock_warehouse[$dest]->id)) {
+                            $productBatch->find($this->stock_warehouse[$dest]->id,$param->eatby,$param->sellby,$param->batch);
                         }
-                        if (isset($productBatch->id)) {
-                            isset($param->batch) ? $productBatch->batch = $param->batch : null;
-                            isset($param->sellby) ? $productBatch->sellby = $param->sellby : null;
-                            isset($param->eatby) ? $productBatch->eatby = $param->eatby : null;
-                            isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
-                            if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
-                        }        
-                    }                    
+                    }  
+                    if (isset($productBatch->id)) {
+                        isset($param->batch) ? $productBatch->batch = $param->batch : null;
+                        isset($param->sellby) ? $productBatch->sellby = $param->sellby : null;
+                        isset($param->eatby) ? $productBatch->eatby = $param->eatby : null;
+                        isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
+                        if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
+                    }               
                 }
                 // supplier fields
                 if (!empty($this->fourn_price) && !empty($this->fourn_ref)) {
