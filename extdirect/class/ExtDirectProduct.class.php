@@ -84,7 +84,7 @@ class ExtDirectProduct extends Product
      *      batch               batch code of product
      *      batch_id            batch rowid of product
      *      ref_supplier        supplier reference code
-     *      has_photo           1 to load small thumbnail
+     *      photo_size          string with foto size 'mini', 'small' or 'full'
      *    @return     stdClass result data or -1
      */
     public function readProduct(stdClass $param)
@@ -100,7 +100,7 @@ class ExtDirectProduct extends Product
         $ref = '';
         $ref_ext = '';
         $batch = '';
-        $includePhoto = false;
+        $photoSize = '';
 
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -112,7 +112,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'batch') $batch = $filter->value;
                 else if ($filter->property == 'batch_id') $batchId = $filter->value;
                 else if ($filter->property == 'ref_supplier') $refSupplier = $filter->value;
-                else if ($filter->property == 'has_photo' && !empty($filter->value)) $includePhoto = true;
+                else if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
             }
         }
         
@@ -295,8 +295,8 @@ class ExtDirectProduct extends Product
                 $row->supplier_id = $supplierProduct->fourn_id;
                 $row->vat_supplier = $supplierProduct->tva_tx;
                 $row->has_photo = 0;
-                if ($includePhoto) {
-                    $this->fetchPhoto($row, 'small'); 
+                if (!empty($photoSize)) {
+                    $this->fetchPhoto($row, $photoSize);
                 }
 
                 if (!empty($batch)) {
@@ -739,7 +739,7 @@ class ExtDirectProduct extends Product
         $start=0;
         $dataComplete=false;
         $dataNotComplete=false;        
-        $includePhoto=false;
+        $photoSize = '';
         
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -809,9 +809,9 @@ class ExtDirectProduct extends Product
                         } else {
                             $sql .= "p.barcode = '' OR p.barcode IS NULL";
                         } 
-                    } else if ($filter->property == 'has_photo' && !empty($value)) {
+                    } else if ($filter->property == 'photo_size' && !empty($value)) {
                         $sql .= '1';
-                        $includePhoto = true;
+                        $photoSize = $value;
                     }
                 }    
                 if ($key < ($filterSize-1)) {
@@ -863,8 +863,8 @@ class ExtDirectProduct extends Product
                 }
                 $row->stock     = (float) $obj->reel;
                 $row->has_photo = 0;
-                if ($includePhoto) {
-                    $this->fetchPhoto($row, 'mini', 0, $obj); 
+                if (!empty($photoSize)) {
+                    $this->fetchPhoto($row, $photoSize, 0, $obj); 
                 }
                 
                 array_push($results, $row);
@@ -1149,7 +1149,7 @@ class ExtDirectProduct extends Product
      * public method to fetch product photos
      *
      * @param object &$row object with product data to add to results
-     * @param string $format size of foto 'mini', 'small' or 'original'
+     * @param string $format size of foto 'mini', 'small' or 'full'
      * @param int $num num of photo to return
      * @param object $productObj product object
      * @return void
@@ -1173,6 +1173,7 @@ class ExtDirectProduct extends Product
         
         if (!empty($photos)) {
             $row->has_photo = 1;
+            $row->photo_size = $format;
             $photoFile = $photos[$num]['photo'];
             $photo_parts = pathinfo($photoFile);
             if ($format == 'mini') {
@@ -1182,15 +1183,15 @@ class ExtDirectProduct extends Product
                     $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
                 }                
                 $imgData = base64_encode(file_get_contents($filename));
-                $row->photo_mini = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                $row->photo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
             } else if ($format == 'small') {
                 $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
                 $imgData = base64_encode(file_get_contents($filename));
-                $row->photo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                $row->photo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
             } else {
                 $filename=$dir.$photoFile;
                 $imgData = base64_encode(file_get_contents($filename));
-                $row->photo_original = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                $row->photo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
             }                
         }
     }

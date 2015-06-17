@@ -1,4 +1,4 @@
-function _340be29825e13d63c942d1a6bf72ad597520fa18(){};/**
+function _ad60febdf4658ad89793604116c2aa39996ba900(){};/**
  * jasmine unit tests for extdirect connector
  */
 
@@ -1256,7 +1256,7 @@ describe("products", function () {
 			                                    Ext.create('Ext.util.Filter',{property:"status",value:1}),
 			                                    Ext.create('Ext.util.Filter',{property:"status_buy",value:1}),
 			                                    Ext.create('Ext.util.Filter',{property:"finished",value:1}),
-			                                    Ext.create('Ext.util.Filter',{property:"has_photo",value:1})]);
+			                                    Ext.create('Ext.util.Filter',{property:"photo_size",value:'mini'})]);
 			Ext.getStore('productlist').load({
 				callback: function(records) {
 					Ext.Array.each(records, function (record,index) {
@@ -1266,7 +1266,7 @@ describe("products", function () {
 							productBarcodes[i] = record.get('barcode');
 							productRefs[i++] = record.get('ref');
 							if (record.get('has_photo')) {
-								photo = record.get('photo_mini');
+								photo = record.get('photo');
 							}							
 						}
 					});
@@ -1364,13 +1364,13 @@ describe("products", function () {
 			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
 			                     Ext.create('Ext.util.Filter',{property:"multiprices_index",value:priceIndex}),
 			                     Ext.create('Ext.util.Filter',{property:"ref",value:productRefs[1]}),
-                                 Ext.create('Ext.util.Filter',{property:"has_photo",value:1})]);
+                                 Ext.create('Ext.util.Filter',{property:"photo_size",value:'small'})]);
 			productStore.load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresult = record.get('ref');
 						if (record.get('has_photo')) {
-							photo = record.get('photo_small');
+							photo = record.get('photo');
 						}
 					});
 					flag = true;
@@ -1803,7 +1803,7 @@ describe("order", function () {
 			flag = false;
 			Ext.getStore('orderline').clearFilter();
 			Ext.getStore('orderline').filter([Ext.create('Ext.util.Filter',{property:"order_id",value:orderId}),
-			                                  Ext.create('Ext.util.Filter',{property:"has_photo",value:1})]);
+			                                  Ext.create('Ext.util.Filter',{property:"photo_size",value:'mini'})]);
 			Ext.getStore('orderline').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
@@ -1814,7 +1814,7 @@ describe("order", function () {
                             orderLineBatchIds.push(record.get('batch_id'));
                         }
                         if (record.get('has_photo')) {
-                        	photo=record.get('photo_mini');
+                        	photo=record.get('photo');
                         }                        
 					});
 					flag = true;
@@ -2564,7 +2564,7 @@ describe("Purchase Order", function () {
 			flag = false;
 			Ext.getStore('PurchaseOrderLine').clearFilter();
 			Ext.getStore('PurchaseOrderLine').filter([Ext.create('Ext.util.Filter',{property:"order_id",value:purchaseOrderId}),
-			                                          Ext.create('Ext.util.Filter',{property:"has_photo",value:1})]);
+			                                          Ext.create('Ext.util.Filter',{property:"photo_size",value:'mini'})]);
 			Ext.getStore('PurchaseOrderLine').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
@@ -2572,7 +2572,7 @@ describe("Purchase Order", function () {
 						stock+=record.get('stock');
 						asked+=record.get('qty_asked');
 						if (record.get('has_photo')) {
-							photo=record.get('photo_mini');
+							photo=record.get('photo');
 						}		
 					});
 					flag = true;

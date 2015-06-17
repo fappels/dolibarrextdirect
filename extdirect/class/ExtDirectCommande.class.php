@@ -466,9 +466,7 @@ class ExtDirectCommande extends Commande
      *                                  warehouse_id x to get stock of 
      *                                  warehouse_id -1 will get total stock
      *                                  no warehouse_id will split lines in stock by warehouse
-     *                              has_photo
-     *                                  1 to load mini thumbnail
-     *                                  2 to load mini and small thumbnail
+     *                              photo_size string with foto size 'mini' or 'small'
      *                              
      *    @return     stdClass result data or error number
      */
@@ -484,20 +482,14 @@ class ExtDirectCommande extends Commande
         $results = array();
         $row = new stdClass;
         $order_id = 0;
-        $includePhotoMini = false;
-        $includePhotoSmall = false;
+        $photoSize = '';
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $order_id=$filter->value; // deprecated
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
-                if ($filter->property == 'has_photo' && !empty($filter->value)) {
-                    $includePhotoMini = true;
-                    if ($filter->value == 2) {
-                        $includePhotoSmall = true;
-                    }
-                }
+                if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
             }
         }
     
@@ -551,11 +543,8 @@ class ExtDirectCommande extends Commande
                             $row->stock = (int) $myprod->stock_reel;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
-                            if ($includePhotoMini) {
-                                $myprod->fetchPhoto($row, 'mini'); 
-                            }
-                            if ($includePhotoSmall) {
-                                $myprod->fetchPhoto($row, 'small');
+                            if (!empty($photoSize)) {
+                                $myprod->fetchPhoto($row, $photoSize);
                             }
                             array_push($results, $row);
                         } else {
@@ -596,11 +585,8 @@ class ExtDirectCommande extends Commande
                             $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
-                            if ($includePhotoMini) {
-                                $myprod->fetchPhoto($row, 'mini'); 
-                            }
-                            if ($includePhotoSmall) {
-                                $myprod->fetchPhoto($row, 'small');
+                            if (!empty($photoSize)) {
+                                $myprod->fetchPhoto($row, $photoSize);
                             }
                             // split orderlines by batch
                             $row->has_batch = $myprod->status_batch;
@@ -656,11 +642,8 @@ class ExtDirectCommande extends Commande
                                 $row->stock = $stock_warehouse->real;
                                 $row->warehouse_id = $warehouse;
                                 $row->has_photo = 0;
-                                if ($includePhotoMini) {
-                                    $myprod->fetchPhoto($row, 'mini'); 
-                                }
-                                if ($includePhotoSmall) {
-                                    $myprod->fetchPhoto($row, 'small');
+                                if (!empty($photoSize)) {
+                                    $myprod->fetchPhoto($row, $photoSize);
                                 }
                                 // split orderlines by batch
                                 $row->has_batch = $myprod->status_batch;

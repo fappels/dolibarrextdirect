@@ -463,7 +463,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      *                              warehouse_id x to get qty_stock of 
      *                              warehouse_id -1 will get total qty_stock
      *                              no warehouse_id will split lines in qty_stock by warehouse
-     *                          has_photo 1 to load mini thumbnail
+     *                          photo_size string with foto size 'mini' or 'small'
      *    @return     stdClass result data or error number
      */
     public function readOrderLine(stdClass $params)
@@ -478,6 +478,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $row = new stdClass;
         $order_id = 0;
         $productAskedQty = array();
+        $photoSize = '';
         $includePhoto = false;
     
         if (isset($params->filter)) {
@@ -485,7 +486,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 if ($filter->property == 'id') $id=$filter->value;
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
-                if ($filter->property == 'has_photo' && !empty($filter->value)) $includePhoto = true;
+                if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
             }
         }
     
@@ -546,12 +547,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->warehouse_id = $warehouse_id;
                             $row->has_batch = $myprod->status_batch;
                             $row->has_photo = 0;
-                            if ($includePhoto) {
-                                if ($id == $line->id) {
-                                    $myprod->fetchPhoto($row, 'small'); // fetch line detail
-                                } else {
-                                    $myprod->fetchPhoto($row, 'mini');
-                                }                                
+                            if (!empty($photoSize)) {
+                                $myprod->fetchPhoto($row, $photoSize);
                             }
                             array_push($results, $row);
                         } else {
@@ -593,12 +590,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->warehouse_id = $warehouse;
                                     $row->has_batch = $myprod->status_batch;
                                     $row->has_photo = 0;
-                                    if ($includePhoto) {
-                                        if ($id == $line->id) {
-                                            $myprod->fetchPhoto($row, 'small'); // fetch line detail
-                                        } else {
-                                            $myprod->fetchPhoto($row, 'mini');
-                                        }                                
+                                    if (!empty($photoSize)) {
+                                        $myprod->fetchPhoto($row, $photoSize);
                                     }
                                     array_push($results, $row);
                                 }
