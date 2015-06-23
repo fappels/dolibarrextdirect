@@ -461,7 +461,9 @@ class ExtDirectProduct extends Product
                 }
                 $this->prepareFields($param);
                 // verify
-                if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (ExtDirect::checkDolVersion() >= 3.6) {
+                    if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }                
                 // update
                 if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 // check batch or non batch
