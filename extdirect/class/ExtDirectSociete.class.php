@@ -583,6 +583,7 @@ class ExtDirectSociete extends Societe
                 $row->url           = $this->url;
                 $row->phone         = $this->phone;
                 $row->fax           = $this->fax;
+                $row->skype         = $this->skype;
             
                 $row->parent        = $this->parent;
             
@@ -1034,6 +1035,7 @@ class ExtDirectSociete extends Societe
         isset($params->town) ? ($this->town = $params->town) : null;
         isset($params->fax) ? ($this->fax = $params->fax) : null;
         isset($params->phone) ? ($this->tel = $params->phone) : null;
+        isset($params->skype) ? ($this->skype = $params->skype) : null;
         isset($params->email) ? ($this->email = $params->email) : null;
         isset($params->ref) ? ($this->ref=$params->ref) : null;
         isset($params->ref_ext) ? ($this->ref_ext=$params->ref_ext) : null;
