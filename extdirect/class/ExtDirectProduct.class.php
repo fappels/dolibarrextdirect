@@ -167,7 +167,7 @@ class ExtDirectProduct extends Product
                     
                     if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
                         $productBatch = new Productbatch($this->db);
-                        if (isset($batchId)) {
+                        if (!empty($batchId)) {
                             $productBatch->fetch($batchId);
                         } else {
                             if (! empty($this->stock_warehouse[$warehouse]->id)) {
@@ -472,23 +472,28 @@ class ExtDirectProduct extends Product
                     $this->load_stock();
                     
                     $stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
-                    $batchesQty = 0;
-                    if (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$param->warehouse_id]->id)) < 0 ) return $batchesQty;
-                    $productBatch = new Productbatch($this->db);
-                    if (!($productBatch->fetch($param->batch_id) && ($productBatch->id == $param->batch_id))) {
-                        if (($param->correct_stock_movement == 0) && ($param->correct_stock_nbpiece > 0) && (($batchesQty + $param->correct_stock_nbpiece) <= $stockQty)) {
-                            // only create batch when non batched stock available
-                            $productBatch->batch = $param->batch;
-                            $productBatch->sellby = $param->sellby;
-                            $productBatch->eatby = $param->eatby;
-                            $productBatch->qty = $param->correct_stock_nbpiece;
-                            $productBatch->fk_product_stock = $this->stock_warehouse[$param->warehouse_id]->id;
-                            if (($res = $productBatch->create($this->_user,1)) < 0) return ExtDirect::getDolError($res, $productBatch->errors, $productBatch->error);
-                            // don't move stock of this new batch
-                            $param->correct_stock_nbpiece = 0;
+                    $createNewBatchFromZeroStock = false;
+                    if ($stockQty > 0) {
+                        $batchesQty = 0;
+                        if (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$param->warehouse_id]->id)) < 0 ) return $batchesQty;
+                        $productBatch = new Productbatch($this->db);
+                        if (!($productBatch->fetch($param->batch_id) && ($productBatch->id == $param->batch_id))) {
+                            if (($param->correct_stock_movement == 0) && ($param->correct_stock_nbpiece > 0) && (($batchesQty + $param->correct_stock_nbpiece) <= $stockQty)) {
+                                // only create batch when non batched stock available
+                                $productBatch->batch = $param->batch;
+                                $productBatch->sellby = $param->sellby;
+                                $productBatch->eatby = $param->eatby;
+                                $productBatch->qty = $param->correct_stock_nbpiece;
+                                $productBatch->fk_product_stock = $this->stock_warehouse[$param->warehouse_id]->id;
+                                if (($res = $productBatch->create($this->_user,1)) < 0) return ExtDirect::getDolError($res, $productBatch->errors, $productBatch->error);
+                                // don't move stock of this new batch
+                                $param->correct_stock_nbpiece = 0;
+                            }
                         }
+                    } else {
+                        $createNewBatchFromZeroStock = true;
                     }
-                    $correctStockFunction = 'correct_stock_batch';
+                    $correctStockFunction = 'correct_stock_batch';                   
                 } else {
                     $correctStockFunction = 'correct_stock';
                 }
@@ -621,14 +626,17 @@ class ExtDirectProduct extends Product
                     $this->setValueFrom('fk_barcode_type', $this->fk_barcode_type);
                 }
                 // update product batch 
-                if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id))) {
+                if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id) || $createNewBatchFromZeroStock)) {
                     $productBatch = new Productbatch($this->db);
                     $dest = $param->correct_stock_dest_warehouseid;
                     if (empty($dest) && !(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
                         // update batch if not removed
                         if (!empty($param->batch_id)) {
                             $productBatch->fetch($param->batch_id);
-                        } else {                            
+                        } else {         
+                            if ($createNewBatchFromZeroStock) {
+                                $this->load_stock();
+                            }    
                             if (isset($this->stock_warehouse[$param->warehouse_id]->id)) {
                                 $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id,$param->eatby,$param->sellby,$param->batch);
                             }
@@ -863,12 +871,10 @@ class ExtDirectProduct extends Product
                 } else {
                     $row->stock = (float) $obj->reel;
                 }
-                $row->stock     = (float) $obj->reel;
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize, 0, $obj); 
                 }
-                
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -1069,13 +1075,32 @@ class ExtDirectProduct extends Product
     {
         $id =0;
         dol_syslog(get_class($this)."::fetch id from barcode=".$barcode);
-        $sql = "SELECT rowid FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."'";
+        $couldBeEAN = false;
+        if ((strlen($barcode) == 13) || (strlen($barcode) == 8)) {
+            $couldBeEAN = true;
+            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."'";
+        } else {
+            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."'";
+        }        
         $resql = $this->db->query($sql);
         if ( $resql ) {
             if ($this->db->num_rows($resql) > 0) {
                 $obj = $this->db->fetch_object($resql);
-                $id = (int) $obj->rowid;
+                if (($obj->fk_barcode_type == 2) || ($obj->fk_barcode_type == 1) || !$couldBeEAN) { // EAN13 || EAN8 || for shure not EAN
+                    $id = (int) $obj->rowid;
+                } else if ($couldBeEAN) {
+                    // re-search if len of EAN but not EAN
+                    $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."'";
+                    $resql2 = $this->db->query($sql);
+                    if ( $resql2 ) {
+                        if ($this->db->num_rows($resql2) > 0) {
+                            $id = (int) $obj->rowid;
+                        }
+                        $this->db->free($resql2);
+                    }
+                }
             }
+            $this->db->free($resql);
         }
         return $id;
     }
