@@ -1,4 +1,4 @@
-function _a39c78f2025c74a8f3178aeefe10080cbe4572eb(){};//@tag foundation,core
+function _5c6ecbee0c3c3f32f5cb9fdd069ab6686b8ca643(){};//@tag foundation,core
 //@define Ext
 /**
  * @class Ext
@@ -61060,6 +61060,9 @@ Ext.define('ConnectorTest.model.Company', {
                 name: 'phone'
             },
             {
+                name: 'skype'
+            },
+            {
                 name: 'fax'
             },
             {
@@ -62631,7 +62634,10 @@ Ext.define('ConnectorTest.model.Warehouse', {
                 name: 'label'
             },
             {
-                name: 'stock_reel'
+                name: 'description'
+            },
+            {
+                name: 'stock'
             }
         ]
     }
