@@ -32,3 +32,4 @@ ActivityName=Activity
 Status=Status
 Clear=Clear
 DolibarrCompatibilityError=Dolibarr version not yet tested for compatibility
+AllLocations=All Locations

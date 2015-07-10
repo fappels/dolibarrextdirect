@@ -33,6 +33,7 @@ class ExtDirectFormProduct extends FormProduct
     private $_user;
     const ALLWAREHOUSE_ID = 0;
     const ALLWAREHOUSE_LABEL = 'All';
+    const ALLWAREHOUSE_DESCRIPTION = 'AllLocations';
     
     /** Constructor
      *
@@ -77,28 +78,51 @@ class ExtDirectFormProduct extends FormProduct
         if (!isset($this->db)) return CONNECTERROR;
         
         $results = array();
-        $row = new stdClass;
+        
         $fkProduct = 0;
+        $fkBatch = 0;
+        $sumStock = true;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'productid') $fkProduct=$filter->value;
+                if ($filter->property == 'product_id') $fkProduct=$filter->value;
+                if ($filter->property == 'batch_id') $fkBatch=$filter->value;
+                if ($filter->property == 'sumstock') $sumStock=$filter->value;
             }
         }
-        if (($result = $this->loadWarehouses($fkProduct)) < 0) return $result;
-        
+        if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $sumStock)) < 0) return $result;
+        $row = new stdClass;
         $row->id = self::ALLWAREHOUSE_ID;
         $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
+        $row->description= $langs->trans(self::ALLWAREHOUSE_DESCRIPTION);
         
-        array_push($results, clone $row);
+        $sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
+        if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
+        $resql = $this->db->query($sql);
+        if ($resql)
+        {
+            $obj = $this->db->fetch_object($resql);
+            if ($obj) {
+                $row->stock = $obj->stock;
+            }
+            $this->db->free($resql);
+        }
+        else
+        {
+            return SQLERROR;
+        }
+        array_push($results, $row);
         
         if (!$this->error) {
             foreach ($this->cache_warehouses as $warehouseId => $warehouse) {
+                $row = new stdClass;
                 $row->id = $warehouseId;
-                isset($warehouse['label'])?$row->label= $warehouse['label']:$row->label='';
-                array_push($results, clone $row);
+                isset($warehouse['label']) ? $row->label = $warehouse['label'] : $row->label='';
+                isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
+                isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
+                array_push($results, $row);
             }
         } else {
-            die ($this->error);
+            ExtDirect::getDolError($result, $this->errors, $this->error);
         }
         
         return $results;
@@ -214,5 +238,79 @@ class ExtDirectFormProduct extends FormProduct
             }
         }
         return $results;
+    }
+    
+    /**
+     * OVERRIDE from dolibarr loadWarehouses, can be removed when patched in Dolibarr
+     * TODO add units
+     * 
+     * Load in cache array list of warehouses
+     * If fk_product is not 0, we do not use cache
+     *
+     * @param	int		$fk_product		Add quantity of stock in label for product with id fk_product. Nothing if 0.
+     * @param	int		$fk_batch		Add quantity of batch stock in label for product with batch id fk_batch. Nothing if 0.
+     * @param	boolean	$sumStock		sum total stock of a warehouse, default true
+     * @return  int  		    		Nb of loaded lines, 0 if already loaded, <0 if KO
+     */
+    private function _loadWarehouses($fk_product=0, $fk_batch=0, $sumStock = true)
+    {
+        if (empty($fk_product) && count($this->cache_warehouses)) return 0;    // Cache already loaded and we do not want a list with information specific to a product
+    
+        $sql = "SELECT e.rowid, e.label, e.description";
+        if (!empty($fk_product)) 
+        {
+            if (!empty($fk_batch)) 
+            {
+                $sql.= ", pb.qty as stock";
+            }
+            else
+            {
+                $sql.= ", ps.reel as stock";
+            }
+        }
+        else if ($sumStock)
+        {
+            $sql.= ", sum(ps.reel) as stock";
+        }
+        $sql.= " FROM ".MAIN_DB_PREFIX."entrepot as e";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock as ps on ps.fk_entrepot = e.rowid";
+        if (!empty($fk_product))
+        {
+            $sql.= " AND ps.fk_product = '".$fk_product."'";
+            if (!empty($fk_batch))
+            {
+                $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_batch as pb on pb.fk_product_stock = ps.rowid";
+                $sql.= " AND pb.rowid = '".$fk_batch."'";
+            }
+        }
+        
+        $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
+        $sql.= " AND e.statut = 1";
+        if ($sumStock && empty($fk_product)) $sql.= " GROUP BY e.rowid, e.label, e.description";
+        $sql.= " ORDER BY e.label";        
+    
+        dol_syslog(get_class($this).'::loadWarehouses', LOG_DEBUG);
+        $resql = $this->db->query($sql);
+        if ($resql)
+        {
+            $num = $this->db->num_rows($resql);
+            $i = 0;
+            while ($i < $num)
+            {
+                $obj = $this->db->fetch_object($resql);
+    
+                $this->cache_warehouses[$obj->rowid]['id'] = $obj->rowid;
+                $this->cache_warehouses[$obj->rowid]['label'] = $obj->label;
+                $this->cache_warehouses[$obj->rowid]['description'] = $obj->description;
+                $this->cache_warehouses[$obj->rowid]['stock'] = $obj->stock;
+                $i++;
+            }
+            return $num;
+        }
+        else
+        {
+            dol_print_error($this->db);
+            return -1;
+        }
     }
 }
