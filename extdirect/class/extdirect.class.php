@@ -512,6 +512,18 @@ class ExtDirect
         $errorText = '';
         
         $langs->load("errors");
+        $langs->load("main");
+        $langs->load("orders");
+        $langs->load("products");
+        $langs->load("stocks");
+        $langs->load("suppliers");
+        $langs->load("users");
+        $langs->load("commercial");
+        $langs->load("companies");
+        $langs->load("deliveries");
+        $langs->load("categories");
+        $langs->load("productbatch");
+        $langs->load("sendings");
         
         if (is_array($errors) && (count($errors) > 0)) {
             foreach ($errors as $error) {
