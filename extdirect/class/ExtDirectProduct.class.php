@@ -1271,6 +1271,10 @@ class ExtDirectProduct extends Product
                     {
                         // Cree fichier en taille vignette
                         $this->add_thumb($dir.'/'.$filename);
+                        return 1;
+                    } else {
+                        $this->error="ErrorFailToCreateFile";
+                        return -5;
                     }
                 } else {
                     $this->error="ErrorFailToCreateDir";

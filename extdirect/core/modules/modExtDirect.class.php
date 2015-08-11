@@ -57,7 +57,7 @@ class modExtDirect extends DolibarrModules
         // not found (where XXX is value of numeric property 'numero' of module)
         $this->description = "Connect to external applications which use Sencha Ext.direct";
         // Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-        $this->version = '1.0.28';
+        $this->version = '1.0.29';
         // Key used in llx_const table to save module status enabled/disabled 
         // (where MYMODULE is value of property name of module in uppercase)
         $this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
