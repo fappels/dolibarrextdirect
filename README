@@ -122,4 +122,4 @@ At least two warehouses, 2 multiprice indexes and one customer-supplier with row
 **Supported Dolibarr Versions:**
 
 - Min version:	3.2
-- Max version:	3.8 alpha
+- Max version:	3.8 beta
