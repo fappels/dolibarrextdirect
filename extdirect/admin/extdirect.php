@@ -30,7 +30,7 @@ dol_include_once("/extdirect/class/extdirectactivity.class.php");
 $langs->load("admin");
 $langs->load("extdirect@extdirect");
 
-
+$error=0;
 
 // Security check
 if (! $user->admin) accessforbidden();
@@ -47,72 +47,83 @@ $value = GETPOST('value', 'alpha');
 $refresh = GETPOST('refresh', 'alpha');
 
 if ($mode == $activities->mode) {
+    $userId = GETPOST('userid', 'int');
+    if ($userId > 0) {
+        $activityFilter = ' AND ea.fk_user = ' . $userId;
+    } else {
+        $activityFilter = '';
+        $userId = -1;
+    }
     $extDirect= new ExtDirectActivity($db);
-    $extDirect->fetchList('', 'rowid ASC');
+    if ($extDirect->fetchList($activityFilter, 'rowid ASC') < 0) $error++;
+    if ($extDirect->getDurations() < 0) $error++;
 } else {
     $extDirect= new ExtDirect($db);
-    $extDirect->fetchList('', 'date_last_connect ASC');
+    if ($extDirect->fetchList('', 'date_last_connect ASC') < 0) $error++;
 }
 
 /*
  * Actions
  */
-
-if ($action == 'autoasign') {
-    $autoAsign = GETPOST('auto_asign', 'alpha'); 
-    $res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_ASIGN", $autoAsign, 'yesno', 0, '', $conf->entity);
-} else if ($action == 'autouser') {
-    $userId = GETPOST('userid', 'alpha');    
-    $res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_USER", $userId, 'chaine', 0, '', $conf->entity);
-} else if ($action == "save" && empty($refresh)) {
-    $i=0;
-    
-    if (! empty($extDirect->dataset)) {
-        $db->begin();
-        foreach ($extDirect->dataset as $user_app) {
-            $extDirect->id=$user_app['rowid'];  
-                
-            $param='REMOVE_'.$user_app['app_id'].$i;
-            //print "param=".$param." - ".$_POST[$param];
-            if (GETPOST($param, 'alpha')) {
+if (!$error) {
+    if ($action == 'autoasign') {
+        $autoAsign = GETPOST('auto_asign', 'alpha'); 
+        $res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_ASIGN", $autoAsign, 'yesno', 0, '', $conf->entity);
+    } else if ($action == 'autouser') {
+        $userId = GETPOST('userid', 'alpha');    
+        $res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_USER", $userId, 'chaine', 0, '', $conf->entity);
+    } else if ($action == "save" && empty($refresh)) {
+        $i=0;
+        
+        if (! empty($extDirect->dataset)) {
+            $db->begin();
+            foreach ($extDirect->dataset as $user_app) {
+                $extDirect->id=$user_app['rowid'];  
+                    
+                $param='REMOVE_'.$user_app['app_id'].$i;
+                //print "param=".$param." - ".$_POST[$param];
+                if (GETPOST($param, 'alpha')) {
+                    //delete
+                    $res = $extDirect->delete($user);
+                } else {
+                    //update
+                    $extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
+                    $extDirect->app_id = $user_app['app_id'];
+                    $extDirect->ack_id = $user_app['ack_id'];
+                    $extDirect->requestid = $user_app['requestid'];
+                    $extDirect->app_name = $user_app['app_name'];
+                    $extDirect->date_last_connect = $db->jdate($user_app['date_last_connect']);
+                    $extDirect->datec = $db->jdate($user_app['datec']);
+                    $extDirect->dev_platform = $user_app['dev_platform'];
+                    $extDirect->dev_type = $user_app['dev_type'];
+                    $res = $extDirect->update($user, 1);
+                }
+                $i++;
+                if (! $res > 0) $error++;
+            }
+        }
+        $extDirect->fetchList('', 'date_last_connect ASC');  
+    } elseif ($action == 'clear' && empty($refresh)) {
+        if (! empty($extDirect->dataset)) {
+            $db->begin();
+            foreach ($extDirect->dataset as $data) {
+                $extDirect->id=$data['rowid'];
                 //delete
                 $res = $extDirect->delete($user);
-            } else {
-                //update
-                $extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
-                $extDirect->app_id = $user_app['app_id'];
-                $extDirect->ack_id = $user_app['ack_id'];
-                $extDirect->requestid = $user_app['requestid'];
-                $extDirect->app_name = $user_app['app_name'];
-                $extDirect->date_last_connect = $db->jdate($user_app['date_last_connect']);
-                $extDirect->datec = $db->jdate($user_app['datec']);
-                $extDirect->dev_platform = $user_app['dev_platform'];
-                $extDirect->dev_type = $user_app['dev_type'];
-                $res = $extDirect->update($user, 1);
+                if (! $res > 0) $error++;
             }
-            $i++;
-            if (! $res > 0) $error++;
+        }
+        if ($extDirect->fetchList('', 'rowid ASC') < 0) $error++;
+    } elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
+        // validate if dolibarr version is in compatibility range
+        if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
+            setEventMessages($mesgText, '', 'warnings');
+        } else {
+            setEventMessages('Dolibarr version not yet tested for compatibility', '', 'warnings');
         }
     }
-    $extDirect->fetchList('', 'date_last_connect ASC');  
-} elseif ($action == 'clear' && empty($refresh)) {
-    if (! empty($extDirect->dataset)) {
-        $db->begin();
-        foreach ($extDirect->dataset as $data) {
-            $extDirect->id=$data['rowid'];
-            //delete
-            $res = $extDirect->delete($user);
-            if (! $res > 0) $error++;
-        }
-    }
-    $extDirect->fetchList('', 'rowid ASC');
-} elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
-    // validate if dolibarr version is in compatibility range
-    if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
-        $mesg = '<font class="error">'.$langs->trans("Error").': '.$mesgText.'</font>';
-    } else {
-        $mesg = '<font class="error">'.$langs->trans("Error").': '.'Dolibarr version not yet tested for compatibility'.'</font>';
-    }
+} else {
+    setEventMessages($extDirect->error, $extDirect->errors, 'errors');
 }
 
 
@@ -121,10 +132,10 @@ if ($action && !$refresh && !(($action == 'selectall') || ($action == 'selectnon
 
     if (! $error) {
         $db->commit();  
-        $mesg = '<font class="ok">'.$langs->trans("SetupSaved").'</font>';
+        setEventMessages($langs->trans("SetupSaved"));
     } else {
-        $db->rollback();    
-        $mesg = '<font class="error">'.$langs->trans("Error").' '.$action.'</font>';
+        $db->rollback();
+        setEventMessages($extDirect->error, $extDirect->errors, 'errors');
     }
 }
 
@@ -141,12 +152,11 @@ $head = extdirect_admin_prepare_head($tabs);
 llxHeader('', $title);
 $linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
 print_fiche_titre($title, $linkback, 'setup');
-
+$form=new Form($db);
 if ($mode == $tabs['tab1']->mode) {
     //tab1
     dol_fiche_head($head, 'tab1', $tabsTitle, 0);
     
-    $form=new Form($db);
     $var=true;
     print '<table class="noborder" width="100%">';
     print '<tr class="liste_titre">';
@@ -251,6 +261,25 @@ if ($mode == $tabs['tab1']->mode) {
     print '<input type="hidden" name="action" value="clear">';
     $var=true;
     print '<table class="noborder" width="100%">';
+    // parameters
+    print '<tr class="liste_titre">';
+    print '<td>'.$langs->trans("Parameters").'</td>'."\n";
+    print '<td>'.$langs->trans("Value").'</td>'."\n";
+    print '<td></td><td></td><td></td><td></td><td></td><td></td></tr>'."\n";
+    // user refresh or clear
+    $var=!$var;
+    print '<tr '.$bc[$var].'>';
+    print '<td>'.$langs->trans("ActivitiesFromUser").'</td>';
+    print '<td>';
+    print $form->select_users($userId, 'userid', 1, $userExclude, 0, '', '');
+    print '</td><td></td><td></td><td></td><td></td><td>';
+    print '<input type="submit" name="refresh" class="button" value="'.$langs->trans("Refresh").'">';
+    print '</td>';
+    print '</td><td>';
+    print '<input type="submit" name="clear" class="button" value="'.$langs->trans("Clear").'">';
+    print '</td></tr>';
+    print '</tr>'."\n";
+    // activies list
     print '<tr class="liste_titre">';
     print '<td>'.$langs->trans("RequestId").'</td>';
     print '<td>'.$langs->trans("AppName").'</td>';
@@ -258,6 +287,7 @@ if ($mode == $tabs['tab1']->mode) {
     print '<td>'.$langs->trans("DateC").'</td>';
     print '<td>'.$langs->trans("ActivityName").'</td>';
     print '<td>'.$langs->trans("Status").'</td>';
+    print '<td>'.$langs->trans("Duration").'</td>';
     print '<td>'.$langs->trans("User").'</td>';
     print '</tr>'."\n";
     if (! empty($extDirect->dataset)) {
@@ -271,23 +301,15 @@ if ($mode == $tabs['tab1']->mode) {
             print '<td>'.$data['datec'].'</td>';
             print '<td>'.$data['activity_name'].'</td>';
             print '<td>'.$data['status'].'</td>';
+            print '<td>'.$data['duration'].'</td>';
             print '<td>'.$data['firstname'].$data['lastname'].'</td>';
             print '</tr>'."\n";
             $i++;
         }
     }
     print '</table>';
-    print '<br><center>';
-    print '<input type="submit" name="clear" class="button" value="'.$langs->trans("Clear").'">';
-    print ' &nbsp; &nbsp; ';
-    print '<input type="submit" name="refresh" class="button" value="'.$langs->trans("Refresh").'">';
-    print "</center>";
-    
     print "</form>\n";
 }
-
-
-dol_htmloutput_mesg($mesg);
 
 llxFooter();
 

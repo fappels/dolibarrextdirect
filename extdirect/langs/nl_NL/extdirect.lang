@@ -33,3 +33,4 @@ Status=Status
 Clear=Ledigen
 DolibarrCompatibilityError=Dolibarr versie nog niet getest op compatibiliteit
 AllLocations=Alle Locaties
+ActivitiesFromUser=Activiteiten van gebruiker

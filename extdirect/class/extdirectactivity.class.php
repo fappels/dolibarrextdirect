@@ -229,6 +229,56 @@ class ExtDirectActivity extends CommonObject
         }
     }
     
+    /**
+     *  get duration of activity and add to dataset
+     *  
+     *  @return int             <0 if KO, >0 if OK
+     */    
+    function getDurations()
+    {
+        $startTime = array();
+        $stopTime = array();
+        $activityId = 0;
+        
+        // get available activity names and init start-stop time
+        $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
+        dol_syslog(get_class($this)."::getDurations sql=".$sql, LOG_DEBUG);
+        $resql=$this->db->query($sql);
+        if ($resql) {
+            $num = $this->db->num_rows($resql);
+            $i = 0;
+            while ($i < $num) {
+                $obj = $this->db->fetch_object($resql);
+                $startTime[$obj->activity_name] = 0;
+                $stopTime[$obj->activity_name] = -1;
+                $i++;
+            }
+            $this->db->free($resql);
+        } else {
+            $this->error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::getDurations ".$this->error, LOG_ERR);
+            return -1;
+        }
+        
+        // calculate activity durations
+        foreach ($this->dataset as &$data) {
+            $data['duration'] = '';
+            
+            if (($data['status'] === 'START')) {// && ($startTime[$data['activity_name']] === 0)) {
+                $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
+                $stopTime[$data['activity_name']] = 0;
+                $activityId = $data['activity_id'];
+            }
+            if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
+                            && ($stopTime[$data['activity_name']] === 0) && ($activityId === $data['activity_id'])) {
+                $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
+                $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
+                $startTime[$data['activity_name']] = 0;
+                $activityId = 0;
+            }            
+        }
+        return 1;
+    }    
 
     /**
      *  Load object in memory from the database
