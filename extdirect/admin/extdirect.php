@@ -117,13 +117,13 @@ if (!$error) {
     } elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
         // validate if dolibarr version is in compatibility range
         if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
-            setEventMessages($mesgText, '', 'warnings');
+            setEventMessage($mesgText, 'warnings');
         } else {
-            setEventMessages('Dolibarr version not yet tested for compatibility', '', 'warnings');
+            setEventMessage('Dolibarr version not yet tested for compatibility', 'warnings');
         }
     }
 } else {
-    setEventMessages($extDirect->error, $extDirect->errors, 'errors');
+    setEventMessage($extDirect->error, 'errors');
 }
 
 
@@ -132,10 +132,10 @@ if ($action && !$refresh && !(($action == 'selectall') || ($action == 'selectnon
 
     if (! $error) {
         $db->commit();  
-        setEventMessages($langs->trans("SetupSaved"));
+        setEventMessage($langs->trans("SetupSaved"));
     } else {
         $db->rollback();
-        setEventMessages($extDirect->error, $extDirect->errors, 'errors');
+        setEventMessage($extDirect->error, 'errors');
     }
 }
 
