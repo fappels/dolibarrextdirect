@@ -238,7 +238,7 @@ class ExtDirectActivity extends CommonObject
     {
         $startTime = array();
         $stopTime = array();
-        $activityId = 0;
+        $activityId = array();
         
         // get available activity names and init start-stop time
         $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
@@ -251,6 +251,7 @@ class ExtDirectActivity extends CommonObject
                 $obj = $this->db->fetch_object($resql);
                 $startTime[$obj->activity_name] = 0;
                 $stopTime[$obj->activity_name] = -1;
+                $activityId[$obj->activity_name] = 0;
                 $i++;
             }
             $this->db->free($resql);
@@ -267,14 +268,14 @@ class ExtDirectActivity extends CommonObject
             if (($data['status'] === 'START')) {// && ($startTime[$data['activity_name']] === 0)) {
                 $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                 $stopTime[$data['activity_name']] = 0;
-                $activityId = $data['activity_id'];
+                $activityId[$data['activity_name']] = $data['activity_id'];
             }
             if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
-                            && ($stopTime[$data['activity_name']] === 0) && ($activityId === $data['activity_id'])) {
+                            && ($stopTime[$data['activity_name']] === 0) && ($activityId[$data['activity_name']] === $data['activity_id'])) {
                 $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                 $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
                 $startTime[$data['activity_name']] = 0;
-                $activityId = 0;
+                $activityId[$data['activity_name']] = 0;
             }            
         }
         return 1;
