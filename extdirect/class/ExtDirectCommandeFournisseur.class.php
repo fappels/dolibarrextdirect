@@ -794,7 +794,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             {
                 $obj = $this->db->fetch_object($resql);
                 if (!empty($obj->qty)) {
-                    $dispatched = $obj->qty;
+                    $dispatched = price2num($obj->qty, 5);
                 }
                 $this->db->free($resql);
             }
