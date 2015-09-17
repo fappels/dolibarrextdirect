@@ -543,7 +543,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->date_end = $line->date_end;
                             // qty shipped for product line
                             $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty);
-                            $row->stock = $myprod->stock_warehouse[$warehouse_id]->real;
+                            $warehouse_id ? $row->stock = $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_batch = $myprod->status_batch;
                             $row->has_photo = 0;
