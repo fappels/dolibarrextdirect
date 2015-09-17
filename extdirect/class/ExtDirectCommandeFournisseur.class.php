@@ -555,47 +555,46 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
                             foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                                 $stockReal = floatval($stock_warehouse->real);
-                                if ($stockReal > 0) {
-                                    $row = null;
-                                    $row->id = $line->id.'_'.$warehouse;
-                                    $row->origin_id = $this->id;
-                                    $row->origin_line_id = $line->id;
-                                    $row->label = $line->product_label;
-                                    $row->description = $line->description;
-                                    $row->product_id = $line->fk_product;
-                                    $row->ref = $line->product_ref;
-                                    $row->product_label = $line->product_label;
-                                    $row->product_desc = $line->product_desc;
-                                    $row->product_type = $line->product->type;
-                                    $row->barcode = $myprod->barcode?$myprod->barcode:'';
-                                    $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                                    $row->qty_asked = $line->qty;
-                                    $row->tax_tx = $line->tva_tx;
-                                    $row->localtax1_tx = $line->localtax1_tx;
-                                    $row->localtax2_tx = $line->localtax2_tx;
-                                    $row->total_net = $line->total_ht;
-                                    $row->total_inc = $line->total_ttc;
-                                    $row->total_tax = $line->total_tva;
-                                    $row->total_localtax1 = $line->total_localtax1;
-                                    $row->total_localtax2 = $line->total_localtax2;
-                                    $row->product_price = $line->pu_ht;
-                                    $row->rang = $line->id;
-                                    $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                                    $row->reduction_percent = $line->remise_percent;
-                                    $row->ref_supplier = $line->ref_supplier;
-                                    $row->date_start = $line->date_start;
-                                    $row->date_end = $line->date_end;
-                                    // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-                                    $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty, $warehouse);
-                                    $row->stock = $stockReal;
-                                    $row->warehouse_id = $warehouse;
-                                    $row->has_batch = $myprod->status_batch;
-                                    $row->has_photo = 0;
-                                    if (!empty($photoSize)) {
-                                        $myprod->fetchPhoto($row, $photoSize);
-                                    }
-                                    array_push($results, $row);
+                                
+                                $row = null;
+                                $row->id = $line->id.'_'.$warehouse;
+                                $row->origin_id = $this->id;
+                                $row->origin_line_id = $line->id;
+                                $row->label = $line->product_label;
+                                $row->description = $line->description;
+                                $row->product_id = $line->fk_product;
+                                $row->ref = $line->product_ref;
+                                $row->product_label = $line->product_label;
+                                $row->product_desc = $line->product_desc;
+                                $row->product_type = $line->product->type;
+                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->qty_asked = $line->qty;
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                $row->product_price = $line->pu_ht;
+                                $row->rang = $line->id;
+                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                                $row->reduction_percent = $line->remise_percent;
+                                $row->ref_supplier = $line->ref_supplier;
+                                $row->date_start = $line->date_start;
+                                $row->date_end = $line->date_end;
+                                // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
+                                $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty, $warehouse);
+                                $row->stock = $stockReal;
+                                $row->warehouse_id = $warehouse;
+                                $row->has_batch = $myprod->status_batch;
+                                $row->has_photo = 0;
+                                if (!empty($photoSize)) {
+                                    $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                array_push($results, $row);
                             }
                         }
                     }
