@@ -298,7 +298,7 @@ class ExtDirectFormProduct extends FormProduct
             while ($i < $num)
             {
                 $obj = $this->db->fetch_object($resql);
-    
+                if ($sumStock) $obj->stock = price2num($obj->stock,5);
                 $this->cache_warehouses[$obj->rowid]['id'] = $obj->rowid;
                 $this->cache_warehouses[$obj->rowid]['label'] = $obj->label;
                 $this->cache_warehouses[$obj->rowid]['description'] = $obj->description;
