@@ -119,7 +119,7 @@ if (!$error) {
         if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
             setEventMessage($mesgText, 'warnings');
         } else {
-            setEventMessage('Dolibarr version not yet tested for compatibility', 'warnings');
+            setEventMessage('Dolibarr version not yet tested for compatibility<br>Please contact <a href="mailto:info@z-application.com">Z-Application</a>', 'warnings');
         }
     }
 } else {
