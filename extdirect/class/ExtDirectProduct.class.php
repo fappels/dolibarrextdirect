@@ -937,7 +937,7 @@ class ExtDirectProduct extends Product
                     $row->id = 'X';
                     $row->product_id = $id;
                     $row->batch_id = 0;
-                    $row->batch = $langs->trans('BatchDefaultNumber');
+                    $row->batch = $langs->transnoentities('BatchDefaultNumber');
                     $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                     $row->warehouse_id = $warehouseId;
                 }
@@ -948,7 +948,7 @@ class ExtDirectProduct extends Product
                 $row->id = 'X';
                 $row->product_id = $id;
                 $row->batch_id = 0;
-                $row->batch = $langs->trans('BatchDefaultNumber');
+                $row->batch = $langs->transnoentities('BatchDefaultNumber');
                 $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                 $row->warehouse_id = $warehouseId;
             }

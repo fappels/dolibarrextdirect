@@ -1,11 +1,9 @@
 # Dolibarr language file - fr_FR - extdirect
 CHARSET = UTF-8
 DirectConnect = Ext.direct connecteur
-Module605002Name = Ext.direct connecteur
-Module605002Desc = Connectez-vous à des applications externes qui utilisent l'interface de données Ext.direct
+Module202002Name = Ext.direct connecteur
+Module202002Desc = Connectez-vous à des applications externes qui utilisent l'interface de données Ext.direct
 Applications=Applications
-Mobile Apps=Apps Mobile 
-DirectConnect App=Ext.direct connecteur
 DirectConnectSetup=Ext.direct connecteur configuration
 Parameters=Paramètre
 Value=Valeur

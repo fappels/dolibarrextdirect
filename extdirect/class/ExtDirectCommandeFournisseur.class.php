@@ -1,7 +1,7 @@
 <?PHP
 
 /*
- * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2015  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -494,13 +494,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $this->id=$order_id;
             if (($result = $this->fetch($this->id)) < 0)  return $result;
             if (!$this->error) {
-                foreach ($this->lines as $line) {
-                    if (!array_key_exists($line->fk_product, $productAskedQty)) {
-                        $productAskedQty[$line->fk_product] = $line->qty;
-                    } else {
-                        $productAskedQty[$line->fk_product] += $line->qty;
+                if (ExtDirect::checkDolVersion(0,'','3.6')) {
+                    foreach ($this->lines as $line) {
+                        if (!array_key_exists($line->fk_product, $productAskedQty)) {
+                            $productAskedQty[$line->fk_product] = $line->qty;
+                        } else {
+                            $productAskedQty[$line->fk_product] += $line->qty;
+                        }
                     }
                 }
+                
                 foreach ($this->lines as $line) {   
                     if ((!isset($id) || ($id == $line->id)) && ($line->fk_product > 0)) {
                         $myprod = new ExtDirectProduct($this->_user->login);
@@ -524,8 +527,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->product_type = $line->product->type;
                             $row->barcode = $myprod->barcode?$myprod->barcode:'';
                             $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                            //  total qty asked for all same products
-                            $row->qty_asked = $productAskedQty[$line->fk_product];
+                            if (ExtDirect::checkDolVersion(0,'','3.6')) {
+                                //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
+                                $row->qty_asked = $productAskedQty[$line->fk_product];
+                            } else {
+                                $row->qty_asked = $line->qty;
+                            }                            
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
                             $row->localtax2_tx = $line->localtax2_tx;
@@ -542,8 +549,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->date_start = $line->date_start;
                             $row->date_end = $line->date_end;
                             // qty shipped for product line
-                            $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty);
-                            $warehouse_id ? $row->stock = $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
+                            $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                            $warehouse_id ? $row->stock = price2num($myprod->stock_warehouse[$warehouse_id]->real, 5) : $row->stock = price2num($myprod->stock_reel, 5);
                             $row->warehouse_id = $warehouse_id;
                             $row->has_batch = $myprod->status_batch;
                             $row->has_photo = 0;
@@ -554,7 +561,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         } else {
                             // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
                             foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-                                $stockReal = floatval($stock_warehouse->real);
+                                $stockReal = price2num($stock_warehouse->real, 5);
                                 
                                 $row = null;
                                 $row->id = $line->id.'_'.$warehouse;
@@ -586,7 +593,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-                                $row->qty_shipped = $this->getDispatched($line->fk_product, $line->qty, $warehouse);
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
                                 $row->stock = $stockReal;
                                 $row->warehouse_id = $warehouse;
                                 $row->has_batch = $myprod->status_batch;
@@ -773,7 +780,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      * 
      * @return int qty
      */
-    private function getDispatched($productId, $qtyAsked, $warehouseId = 0) {
+    private function getDispatched($lineId, $productId, $qtyAsked, $warehouseId = 0) {
         static $dispatchedProducts = array();
         static $totalDispatchedProducts = array(); // in case of orderlines of same product
         
@@ -785,6 +792,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur_dispatch as cfd";
             $sql.= " WHERE cfd.fk_commande = ".$this->id;
             $sql.= " AND cfd.fk_product = ".$productId;
+            if (!empty($lineId) && ExtDirect::checkDolVersion(0,'3.7','')) {
+                $sql.= " AND cfd.fk_commandefourndet = ".$lineId;
+            }
             if ($warehouseId > 0) {
                 $sql.= " AND cfd.fk_entrepot = ".$warehouseId;
             }
@@ -797,33 +807,39 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 }
                 $this->db->free($resql);
             }
-            // accept lines with same product for orderline list
-            if ($warehouseId > 0) {
-                if (!array_key_exists($productId, $dispatchedProducts[$warehouseId])) {
-                    $qtyShipped = $dispatched;
-                    if ($qtyShipped > $qtyAsked) {
-                        $dispatchedProducts[$warehouseId][$productId]=$qtyShipped - $qtyAsked;
-                       
-                        $qtyShipped = $qtyAsked;
-                    } else {
-                        $dispatchedProducts[$warehouseId][$productId]=0;
-                    }
-                    
-                } else {
-                    if ($dispatchedProducts[$warehouseId][$productId]) {
-                        $qtyShipped = $dispatchedProducts[$warehouseId][$productId];
-                        if ($qtyShipped > $qtyAsked) {
-                            $qtyShipped = $qtyAsked;
-                        }
-                        if ($totalDispatchedProducts[$warehouseId][$productId] > $qtyShipped) {
-                            $qtyShipped = $dispatched - $totalDispatchedProducts[$warehouseId][$productId];
-                        }
-                    }
-                }                
-            } else {
+            
+            if (!empty($lineId) && ExtDirect::checkDolVersion(0,'3.7','')) {
                 $qtyShipped = $dispatched;
-            }
-            $totalDispatchedProducts[$warehouseId][$productId] += $qtyShipped;
+            } else {
+                // assemble qtyshipped from products for Dolibarr < 3.7
+                // accept lines with same product for orderline list
+                if ($warehouseId > 0) {
+                    if (!array_key_exists($productId, $dispatchedProducts[$warehouseId])) {
+                        $qtyShipped = $dispatched;
+                        if ($qtyShipped > $qtyAsked) {
+                            $dispatchedProducts[$warehouseId][$productId]=$qtyShipped - $qtyAsked;
+                             
+                            $qtyShipped = $qtyAsked;
+                        } else {
+                            $dispatchedProducts[$warehouseId][$productId]=0;
+                        }
+                
+                    } else {
+                        if ($dispatchedProducts[$warehouseId][$productId]) {
+                            $qtyShipped = $dispatchedProducts[$warehouseId][$productId];
+                            if ($qtyShipped > $qtyAsked) {
+                                $qtyShipped = $qtyAsked;
+                            }
+                            if ($totalDispatchedProducts[$warehouseId][$productId] > $qtyShipped) {
+                                $qtyShipped = $dispatched - $totalDispatchedProducts[$warehouseId][$productId];
+                            }
+                        }
+                    }
+                } else {
+                    $qtyShipped = $dispatched;
+                }
+                $totalDispatchedProducts[$warehouseId][$productId] += $qtyShipped;
+            }            
         }   
         
         return $qtyShipped;

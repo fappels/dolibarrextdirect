@@ -1,11 +1,9 @@
 # Dolibarr language file - nl_NL - extdirect
 CHARSET = UTF-8
 DirectConnect = Ext.direct connector
-Module605002Name = Ext.direct connector
-Module605002Desc = Connector naar externe applicaties welke gebruik maken van de Sencha Ext.direct data interface
+Module202002Name = Ext.direct connector
+Module202002Desc = Connector naar externe applicaties welke gebruik maken van de Sencha Ext.direct data interface
 Applications=Applicaties
-Mobile Apps=Mobiele Apps
-DirectConnect App=Ext.direct connector
 DirectConnectSetup=Ext.direct connector setup
 Parameters=Parameters
 Value=Waarde
