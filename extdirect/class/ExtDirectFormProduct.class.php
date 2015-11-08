@@ -31,6 +31,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectFormProduct extends FormProduct
 {
     private $_user;
+    
     const ALLWAREHOUSE_ID = 0;
     const ALLWAREHOUSE_LABEL = 'All';
     const ALLWAREHOUSE_DESCRIPTION = 'AllLocations';
@@ -81,37 +82,52 @@ class ExtDirectFormProduct extends FormProduct
         
         $fkProduct = 0;
         $fkBatch = 0;
+        $batch = '';
         $sumStock = true;
+        $limit = 0;
+        $start = 0;
+        $contentValue = '';
+        
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+                
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'product_id') $fkProduct=$filter->value;
                 if ($filter->property == 'batch_id') $fkBatch=$filter->value;
+                if ($filter->property == 'batch') $batch=$this->db->escape($filter->value);
                 if ($filter->property == 'sumstock') $sumStock=$filter->value;
+                if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));  
             }
         }
-        if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $sumStock)) < 0) return $result;
-        $row = new stdClass;
-        $row->id = self::ALLWAREHOUSE_ID;
-        $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
-        $row->description= $langs->trans(self::ALLWAREHOUSE_DESCRIPTION);
+        if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $contentValue, $sumStock, $limit, $start)) < 0) return $result;
         
-        $sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
-        if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
-        $resql = $this->db->query($sql);
-        if ($resql)
-        {
-            $obj = $this->db->fetch_object($resql);
-            if ($obj) {
-                $row->stock = $obj->stock;
+        if ($start == 0) {
+            // create allwarehouse record with total warehouse stock, only for first page
+            $row = new stdClass;
+            $row->id = self::ALLWAREHOUSE_ID;
+            $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
+            $row->description= $langs->trans(self::ALLWAREHOUSE_DESCRIPTION);
+            $sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
+            if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
+            $resql = $this->db->query($sql);
+            if ($resql)
+            {
+                $obj = $this->db->fetch_object($resql);
+                if ($obj) {
+                    $row->stock = $obj->stock;
+                }
+                $this->db->free($resql);
             }
-            $this->db->free($resql);
+            else
+            {
+                return SQLERROR;
+            }
+            array_push($results, $row);
         }
-        else
-        {
-            return SQLERROR;
-        }
-        array_push($results, $row);
-        
+
         if (!$this->error) {
             foreach ($this->cache_warehouses as $warehouseId => $warehouse) {
                 $row = new stdClass;
@@ -249,17 +265,20 @@ class ExtDirectFormProduct extends FormProduct
      *
      * @param	int		$fk_product		Add quantity of stock in label for product with id fk_product. Nothing if 0.
      * @param	int		$fk_batch		Add quantity of batch stock in label for product with batch id fk_batch. Nothing if 0.
+     * @param   int     $batch          Add quantity of batch stock in label for product with batch name batch. Nothing if '' batch name precedes batch_id.
+     * @param   string  $contentValue   content search string
      * @param	boolean	$sumStock		sum total stock of a warehouse, default true
+     * @param   int     $limit          paging limit
+     * @param   int     $start          paging start
      * @return  int  		    		Nb of loaded lines, 0 if already loaded, <0 if KO
      */
-    private function _loadWarehouses($fk_product=0, $fk_batch=0, $sumStock = true)
+    private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
     {
-        if (empty($fk_product) && count($this->cache_warehouses)) return 0;    // Cache already loaded and we do not want a list with information specific to a product
-    
+        dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
         $sql = "SELECT e.rowid, e.label, e.description";
         if (!empty($fk_product)) 
         {
-            if (!empty($fk_batch)) 
+            if (!empty($fk_batch) || !empty($batch)) 
             {
                 $sql.= ", pb.qty as stock";
             }
@@ -277,19 +296,29 @@ class ExtDirectFormProduct extends FormProduct
         if (!empty($fk_product))
         {
             $sql.= " AND ps.fk_product = '".$fk_product."'";
-            if (!empty($fk_batch))
+            if (!empty($batch)) 
             {
                 $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_batch as pb on pb.fk_product_stock = ps.rowid";
-                $sql.= " AND pb.rowid = '".$fk_batch."'";
+                $sql.= " AND pb.batch = '".$batch."'";
+            } else if (!empty($fk_batch))
+            {
+                $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_batch as pb on pb.fk_product_stock = ps.rowid";
+                $sql.= " AND pb.rowid = ".$fk_batch;
             }
         }
         
         $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
         $sql.= " AND e.statut = 1";
+        if (!empty($contentValue)) {
+            $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+        }
+        
         if ($sumStock && empty($fk_product)) $sql.= " GROUP BY e.rowid, e.label, e.description";
         $sql.= " ORDER BY e.label";        
-    
-        dol_syslog(get_class($this).'::loadWarehouses', LOG_DEBUG);
+        if (!empty($limit)) {
+            $sql .= $this->db->plimit($limit, $start);
+        }
+        
         $resql = $this->db->query($sql);
         if ($resql)
         {
