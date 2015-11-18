@@ -961,16 +961,24 @@ class ExtDirectProduct extends Product
     /**
      * private method to copy field into dolibarr object element and check if changed
      *
-     * @param boolean $diff is set to true if changed
+     * @param boolean $diff diff status of param elements
      * @param stdclass $param object with fields
      * @param string $paramName param object field name
      * @param string $propertyName object property name
+     * 
+     * @return boolean true if param $diff true or true on param element change
      */
-    private function prepareField(&$diff, $param, $paramName, $propertyName)
+    private function prepareField($diff, $param, $paramName, $propertyName)
     {
         if (isset($param->$paramName) && ($param->$paramName !== $this->$propertyName)) {
             $this->$propertyName = $param->$paramName;
-            $diff = true;
+            return true;
+        } else {
+        	if ($diff) {
+        		return true;
+        	} else {
+        		return false;
+        	}
         }
     }
         
@@ -982,100 +990,100 @@ class ExtDirectProduct extends Product
      */
     private function prepareFields($param) 
     {
-        $diff = false;
-        $this->prepareField($diff, $param, 'ref', 'ref');
+        $diff = false; // difference flag, set to true if a param element diff detected
+        $diff = $this->prepareField($diff, $param, 'ref', 'ref');
         if (ExtDirect::checkDolVersion() >= 3.8) {
-            $this->prepareField($diff, $param, 'label', 'label'); 
+            $diff = $this->prepareField($diff, $param, 'label', 'label'); 
         } else {
-            $this->prepareField($diff, $param, 'label', 'libelle'); 
+            $diff = $this->prepareField($diff, $param, 'label', 'libelle'); 
         }        
-        $this->prepareField($diff, $param, 'description', 'description');
+        $diff = $this->prepareField($diff, $param, 'description', 'description');
         //! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
-        $this->prepareField($diff, $param, 'type', 'type'); 
-        $this->prepareField($diff, $param, 'note', 'note');
+        $diff = $this->prepareField($diff, $param, 'type', 'type'); 
+        $diff = $this->prepareField($diff, $param, 'note', 'note');
         (isset($this->note) ? null : ($this->note = '')); // create new product, set note to ''
         //! Selling price
         
         if (! empty($conf->global->PRODUIT_MULTIPRICES) && !empty($param->multiprices_index)) {
-            $this->prepareField($diff, $param, 'price', 'multiprices[$param->multiprices_index]');
-            $this->prepareField($diff, $param, 'price_ttc', 'multiprices_ttc[$param->multiprices_index]');
+            $diff = $this->prepareField($diff, $param, 'price', 'multiprices[$param->multiprices_index]');
+            $diff = $this->prepareField($diff, $param, 'price_ttc', 'multiprices_ttc[$param->multiprices_index]');
             //! Default VAT rate of product
-            $this->prepareField($diff, $param, 'tva_tx', 'multiprices_tva_tx[$param->multiprices_index]');
+            $diff = $this->prepareField($diff, $param, 'tva_tx', 'multiprices_tva_tx[$param->multiprices_index]');
             //! Base price ('TTC' for price including tax or 'HT' for net price)
-            $this->prepareField($diff, $param, 'price_base_type', 'multiprices_base_type[$param->multiprices_index]');
+            $diff = $this->prepareField($diff, $param, 'price_base_type', 'multiprices_base_type[$param->multiprices_index]');
         } else {
-            $this->prepareField($diff, $param, 'price', 'price');
-            $this->prepareField($diff, $param, 'price_ttc', 'price_ttc');
+            $diff = $this->prepareField($diff, $param, 'price', 'price');
+            $diff = $this->prepareField($diff, $param, 'price_ttc', 'price_ttc');
             //! Default VAT rate of product
-            $this->prepareField($diff, $param, 'tva_tx', 'tva_tx');
+            $diff = $this->prepareField($diff, $param, 'tva_tx', 'tva_tx');
             //! Base price ('TTC' for price including tax or 'HT' for net price)
-            $this->prepareField($diff, $param, 'price_base_type', 'price_base_type');
+            $diff = $this->prepareField($diff, $param, 'price_base_type', 'price_base_type');
         }
             
-        $this->prepareField($diff, $param, 'price_min', 'price_min');
-        $this->prepareField($diff, $param, 'price_min_ttc', 'price_min_ttc');
+        $diff = $this->prepareField($diff, $param, 'price_min', 'price_min');
+        $diff = $this->prepareField($diff, $param, 'price_min_ttc', 'price_min_ttc');
         
         //! French VAT NPR (0 or 1)
-        $this->prepareField($diff, $param, 'tva_npr', 'tva_npr');
+        $diff = $this->prepareField($diff, $param, 'tva_npr', 'tva_npr');
         //! Spanish local taxes
-        $this->prepareField($diff, $param, 'localtax1_tx', 'localtax1_tx');
-        $this->prepareField($diff, $param, 'localtax2_tx', 'localtax2_tx');
+        $diff = $this->prepareField($diff, $param, 'localtax1_tx', 'localtax1_tx');
+        $diff = $this->prepareField($diff, $param, 'localtax2_tx', 'localtax2_tx');
         //! Stock alert
-        $this->prepareField($diff, $param, 'seuil_stock_alerte', 'seuil_stock_alerte');
+        $diff = $this->prepareField($diff, $param, 'seuil_stock_alerte', 'seuil_stock_alerte');
         
         //! Duree de validite du service
-        $this->prepareField($diff, $param, 'duration_value', 'duration_value');
+        $diff = $this->prepareField($diff, $param, 'duration_value', 'duration_value');
         //! Unite de duree
-        $this->prepareField($diff, $param, 'duration_unit', 'duration_unit');
+        $diff = $this->prepareField($diff, $param, 'duration_unit', 'duration_unit');
         // Statut indique si le produit est en vente '1' ou non '0'
-        $this->prepareField($diff, $param, 'tosell', 'status');
+        $diff = $this->prepareField($diff, $param, 'tosell', 'status');
         // Status indicate whether the product is available for purchase '1' or not '0'
-        $this->prepareField($diff, $param, 'tobuy', 'status_buy');
+        $diff = $this->prepareField($diff, $param, 'tobuy', 'status_buy');
         // Statut indique si le produit est un produit fini '1' ou une matiere premiere '0'
-        $this->prepareField($diff, $param, 'finished', 'finished');
+        $diff = $this->prepareField($diff, $param, 'finished', 'finished');
         
-        $this->prepareField($diff, $param, 'customcode', 'customcode');
-        $this->prepareField($diff, $param, 'country_id', 'country_id');
-        $this->prepareField($diff, $param, 'country_code', 'country_code');
+        $diff = $this->prepareField($diff, $param, 'customcode', 'customcode');
+        $diff = $this->prepareField($diff, $param, 'country_id', 'country_id');
+        $diff = $this->prepareField($diff, $param, 'country_code', 'country_code');
         
         //! Unites de mesure
-        $this->prepareField($diff, $param, 'weight', 'weight');
-        $this->prepareField($diff, $param, 'weight_units', 'weight_units');
-        $this->prepareField($diff, $param, 'length', 'length');
-        $this->prepareField($diff, $param, 'length_units', 'length_units');
-        $this->prepareField($diff, $param, 'surface', 'surface');
-        $this->prepareField($diff, $param, 'surface_units', 'surface_units');
-        $this->prepareField($diff, $param, 'volume', 'volume');
-        $this->prepareField($diff, $param, 'volume_units', 'volume_units');
+        $diff = $this->prepareField($diff, $param, 'weight', 'weight');
+        $diff = $this->prepareField($diff, $param, 'weight_units', 'weight_units');
+        $diff = $this->prepareField($diff, $param, 'length', 'length');
+        $diff = $this->prepareField($diff, $param, 'length_units', 'length_units');
+        $diff = $this->prepareField($diff, $param, 'surface', 'surface');
+        $diff = $this->prepareField($diff, $param, 'surface_units', 'surface_units');
+        $diff = $this->prepareField($diff, $param, 'volume', 'volume');
+        $diff = $this->prepareField($diff, $param, 'volume_units', 'volume_units');
         
-        $this->prepareField($diff, $param, 'accountancy_code_buy', 'accountancy_code_buy');
-        $this->prepareField($diff, $param, 'accountancy_code_sell', 'accountancy_code_sell');
+        $diff = $this->prepareField($diff, $param, 'accountancy_code_buy', 'accountancy_code_buy');
+		$diff = $this->prepareField($diff, $param, 'accountancy_code_sell', 'accountancy_code_sell');
         
         //! barcode
-        $this->prepareField($diff, $param, 'barcode', 'barcode');
-        $this->prepareField($diff, $param, 'barcode_type', 'barcode_type');
+		$diff = $this->prepareField($diff, $param, 'barcode', 'barcode');
+		$diff = $this->prepareField($diff, $param, 'barcode_type', 'barcode_type');
         
         // no links to offers in this version
         // no multilangs in this version
         
         //! Canevas a utiliser si le produit n'est pas un produit generique
-        $this->prepareField($diff, $param, 'canvas', 'canvas');
-        $this->prepareField($diff, $param, 'entity', 'entity');
-        $this->prepareField($diff, $param, 'import_key', 'import_key');
-        $this->prepareField($diff, $param, 'date_creation', 'date_creation');
-        $this->prepareField($diff, $param, 'date_modification', 'date_modification');
+		$diff = $this->prepareField($diff, $param, 'canvas', 'canvas');
+        $diff = $this->prepareField($diff, $param, 'entity', 'entity');
+        $diff = $this->prepareField($diff, $param, 'import_key', 'import_key');
+        $diff = $this->prepareField($diff, $param, 'date_creation', 'date_creation');
+        $diff = $this->prepareField($diff, $param, 'date_modification', 'date_modification');
         // has batch
-        $this->prepareField($diff, $param, 'has_batch', 'status_batch');
+        $diff = $this->prepareField($diff, $param, 'has_batch', 'status_batch');
         //$this->prepareField($diff, $param, 'productinfo', 'array_options['options_productinfo']');
-        $this->prepareField($diff, $param, 'ref_supplier', 'fourn_ref');
-        $this->prepareField($diff, $param, 'ref_supplier_id', 'product_fourn_price_id');
-        $this->prepareField($diff, $param, 'price_supplier', 'fourn_price');
-        $this->prepareField($diff, $param, 'qty_supplier', 'fourn_qty');
-        $this->prepareField($diff, $param, 'reduction_percent_supplier', 'fourn_remise_percent');
-        $this->prepareField($diff, $param, 'reduction_supplier', 'fourn_remise');
-        $this->prepareField($diff, $param, 'pu_supplier', 'fourn_unitprice');
-        $this->prepareField($diff, $param, 'vat_supplier', 'fourn_tva_tx');
-        $this->prepareField($diff, $param, 'supplier_id', 'fourn_id');
+        $diff = $this->prepareField($diff, $param, 'ref_supplier', 'fourn_ref');
+        $diff = $this->prepareField($diff, $param, 'ref_supplier_id', 'product_fourn_price_id');
+        $diff = $this->prepareField($diff, $param, 'price_supplier', 'fourn_price');
+        $diff = $this->prepareField($diff, $param, 'qty_supplier', 'fourn_qty');
+        $diff = $this->prepareField($diff, $param, 'reduction_percent_supplier', 'fourn_remise_percent');
+        $diff = $this->prepareField($diff, $param, 'reduction_supplier', 'fourn_remise');
+        $diff = $this->prepareField($diff, $param, 'pu_supplier', 'fourn_unitprice');
+        $diff = $this->prepareField($diff, $param, 'vat_supplier', 'fourn_tva_tx');
+        $diff = $this->prepareField($diff, $param, 'supplier_id', 'fourn_id');
         return $diff;
     }
     

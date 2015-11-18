@@ -774,6 +774,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     /**
      * private method the get qty dispatched for product
      * 
+     * @param int $lineId supplier order line id
      * @param int $productId product to get qty ditpatched
      * @param int $qtyAsked ordered line qty
      * @param int $warehouseId warehouse id
