@@ -52,11 +52,7 @@ class ExtDirectContact extends Contact
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("companies");
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
             }
         }   
     }

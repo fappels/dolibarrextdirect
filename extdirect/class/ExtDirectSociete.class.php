@@ -55,11 +55,7 @@ class ExtDirectSociete extends Societe
                 $langs->load("companies");
                 $langs->load("bills");
                 $langs->load("dict");
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
             }
         }
     }

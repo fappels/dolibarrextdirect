@@ -58,11 +58,7 @@ class ExtDirectCategorie extends Categorie
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("categories");
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
             }
         }
     }
@@ -261,13 +257,7 @@ class ExtDirectCategorie extends Categorie
             $row=null;
             $row->id = $cat->id;
             $row->categorie = $cat->label;
-            if (ExtDirect::checkDolVersion() >= 3.3) {
-                array_push($results, $row);
-            } else {
-                if ($type == $cat->type) {
-                    array_push($results, $row);
-                }
-            } 
+            array_push($results, $row);
         }
         return $results;
     }

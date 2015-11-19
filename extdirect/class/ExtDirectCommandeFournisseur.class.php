@@ -60,11 +60,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("orders");
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
             }
         }
     }

@@ -54,11 +54,7 @@ class ExtDirectFormProduct extends FormProduct
                 }
                 $langs->load("products");
                 $langs->load("extdirect@extdirect");
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
             }
         }
     }

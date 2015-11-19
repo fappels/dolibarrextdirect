@@ -62,11 +62,7 @@ class ExtDirectProduct extends Product
                 }
                 $langs->load("products");
                 if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
             }
         }
     }

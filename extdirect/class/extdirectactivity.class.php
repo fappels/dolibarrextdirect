@@ -175,12 +175,11 @@ class ExtDirectActivity extends CommonObject
         $sql.= " eu.requestid,";
         $sql.= " eu.app_name,";
         $sql.= " u.firstname,";
-        if (ExtDirect::checkDolVersion() >= 3.3) {
+    	if (ExtDirect::checkDolVersion() >= 3.4) {
             $sql.= " u.lastname";
         } else {
             $sql.= " u.name";
         }
-        
             
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_activity as ea, ";
         $sql.= MAIN_DB_PREFIX."extdirect_user as eu, ".MAIN_DB_PREFIX."user as u";
@@ -212,12 +211,11 @@ class ExtDirectActivity extends CommonObject
                 $this->dataset[$i]['requestid'] = $obj->requestid;
                 $this->dataset[$i]['app_name'] = $obj->app_name;
                 $this->dataset[$i]['firstname'] = $obj->firstname;
-                if (ExtDirect::checkDolVersion() >= 3.3) {
+            	if (ExtDirect::checkDolVersion() >= 3.4) {
                     $this->dataset[$i++]['lastname'] = $obj->lastname;
                 } else {
                     $this->dataset[$i++]['lastname'] = $obj->name;
                 }
-                
             }
             $this->db->free($resql);
     

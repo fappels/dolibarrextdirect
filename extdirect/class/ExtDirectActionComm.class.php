@@ -53,11 +53,7 @@ class ExtDirectActionComm extends ActionComm
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
-                if (ExtDirect::checkDolVersion() >= 3.3) {
-                    parent::__construct($db);
-                } else {
-                    $this->db = $db;
-                }
+                parent::__construct($db);
                 $this->_societe = new Societe($db);
             }
         }
@@ -377,13 +373,13 @@ class ExtDirectActionComm extends ActionComm
         array_push($results, $row);
         
         $sql = "SELECT u.rowid, u.firstname,";
-        if (ExtDirect::checkDolVersion() >= 3.3) {
+    	if (ExtDirect::checkDolVersion() >= 3.4) {
             $sql.= " u.lastname";
         } else {
             $sql.= " u.name as lastname";
         }
         $sql .= " FROM ".MAIN_DB_PREFIX."user as u";
-        if (ExtDirect::checkDolVersion() >= 3.3) {
+    	if (ExtDirect::checkDolVersion() >= 3.4) {
             $sql .= " ORDER BY u.lastname ASC ";
         } else {
             $sql .= " ORDER BY u.name ASC ";

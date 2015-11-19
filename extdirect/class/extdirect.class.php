@@ -483,13 +483,13 @@ class ExtDirect
 
         if($validate) 
         {
-            $minVersion = '3.2';
+            $minVersion = '3.3';
             $maxVersion = '3.9';
         }
         if (empty($minVersion) && empty($maxVersion)) {
             return $dolMajorMinorVersion;
         } else {
-            if (empty($minVersion)) $minVersion = '3.2';
+            if (empty($minVersion)) $minVersion = '3.3';
             if (empty($maxVersion)) $maxVersion = '3.9';
             $minVersionArray = explode('.', $minVersion);
             $maxVersionArray = explode('.', $maxVersion);
