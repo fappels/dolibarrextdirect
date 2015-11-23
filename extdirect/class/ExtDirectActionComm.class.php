@@ -184,8 +184,12 @@ class ExtDirectActionComm extends ActionComm
                     $sql.= "(ac.type = '".$this->db->escape($filter->value)."')";
                 else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);
-                    $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    $sql.= " OR LOWER(s.name) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contenValue."%')" ;
+                    if (ExtDirect::checkDolVersion() >= 3.4) {
+                    	$sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    } else {
+                    	$sql.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    }                    
+                    $sql.= " OR LOWER(s.nom) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contentValue."%')" ;
                 } else break;
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
