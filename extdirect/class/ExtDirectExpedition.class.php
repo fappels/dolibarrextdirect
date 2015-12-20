@@ -337,7 +337,7 @@ class ExtDirectExpedition extends Expedition
             $this->id=$params->origin_id;
             dol_syslog(get_class($this).'::'.__FUNCTION__." line id=".$params->origin_line_id, LOG_DEBUG);
             if ($params->origin_id > 0) {
-                if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {                    
+                if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {
                     if (count($batches) > 0) {
                         $finishBatch = false;
                         foreach ($batches as $batch) {
@@ -403,29 +403,43 @@ class ExtDirectExpedition extends Expedition
     {
         // write related batch info
         require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
-        if (($result = $this->create_line($batches[0]->warehouse_id, $batches[0]->origin_line_id,  $qtyShipped)) < 0)  return $result;
-        // fetch line id
-        if (($result = $this->fetch_lines()) < 0)   return $result;
-        foreach ($this->lines as $line) {
-            if ($line->fk_origin_line == $batches[0]->origin_line_id) {
-                $shipmentLineId = $line->line_id;
-            }
-        }
-        // store colleted batches
-        foreach ($batches as $batch) {
-            if (ExtDirect::checkDolVersion() >= 3.8) {
-                $expeditionLineBatch = new ExpeditionLineBatch($this->db);
-            } else {
-                $expeditionLineBatch = new ExpeditionLigneBatch($this->db);
-            }            
-            $expeditionLineBatch->sellby = $batch->sellby;
-            $expeditionLineBatch->eatby = $batch->eatby;
-            $expeditionLineBatch->batch = $batch->batch;
-            $expeditionLineBatch->dluo_qty = $batch->qty_toship;
-            $expeditionLineBatch->fk_origin_stock = $batch->batch_id;
-            $expeditionLineBatch->create($shipmentLineId);
-        }
-        return 1;
+        
+        $stockLocationQty = array(); // associated array with batch qty in stock location
+        $stockLocationOriginLineId = array(); // associated array with OriginLineId's
+    	foreach ($batches as $batch)
+		{
+			if ($batch->warehouse_id)
+			{
+				$stockLocationQty[$batch->warehouse_id] += $batch->qty_toship;
+				$stockLocationOriginLineId[$batch->warehouse_id] = $batch->origin_line_id;				
+			}
+		}
+		foreach ($stockLocationQty as $stockLocation => $qty) {
+			dol_syslog(get_class($this).'::'.__FUNCTION__." stock location = ".$stockLocation." qty = ".$qty, LOG_DEBUG);
+			if (($result = $this->create_line($stockLocation, $stockLocationOriginLineId[$stockLocation], $qty)) < 0)  {
+				return $result;
+			} else {
+				// create shipment batch lines for stockLocation
+				$shipmentLineId = $this->db->last_insert_id(MAIN_DB_PREFIX."expeditiondet");
+		        // store colleted batches
+		        foreach ($batches as $batch) {
+		        	if ($batch->warehouse_id == $stockLocation) {
+		        		if (ExtDirect::checkDolVersion() >= 3.8) {
+			                $expeditionLineBatch = new ExpeditionLineBatch($this->db);
+			            } else {
+			                $expeditionLineBatch = new ExpeditionLigneBatch($this->db);
+			            }            
+			            $expeditionLineBatch->sellby = $batch->sellby;
+			            $expeditionLineBatch->eatby = $batch->eatby;
+			            $expeditionLineBatch->batch = $batch->batch;
+			            $expeditionLineBatch->dluo_qty = $batch->qty_toship;
+			            $expeditionLineBatch->fk_origin_stock = $batch->batch_id;
+			            $expeditionLineBatch->create($shipmentLineId);
+		        	}		            
+		        }
+			}
+		}
+		return 1;
     }
     
     /**
