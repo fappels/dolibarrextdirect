@@ -684,8 +684,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $params->warehouse_id,
                                         $params->product_price,
                                         $params->comment,
-                                        $params->eatby,
-                                        $params->sellby,
+                                        ExtDirect::dateTimeToDate($params->eatby),
+                                        ExtDirect::dateTimeToDate($params->sellby),
                                         $params->batch,
                                         $params->origin_line_id
                         )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);

@@ -61,6 +61,8 @@ class ExtDirectProduct extends Product
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("products");
+                $langs->load("stocks");
+                $langs->load("productbatch");
                 if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
                 parent::__construct($db);
             }
@@ -166,7 +168,7 @@ class ExtDirectProduct extends Product
                         if (!empty($batchId)) {
                             $productBatch->fetch($batchId);
                         } else {
-                            if (! empty($this->stock_warehouse[$warehouse]->id)) {
+                            if (!empty($batch) && !empty($this->stock_warehouse[$warehouse]->id)) {
                                 $productBatch->find($this->stock_warehouse[$warehouse]->id,'','',$batch);
                             }                            
                         }    
@@ -344,9 +346,9 @@ class ExtDirectProduct extends Product
                                     // Price to use for stock eval
                                     $param->correct_stock_price,
                                     // sellBy date
-                                    $param->sellby,
+                                    ExtDirect::dateTimeToDate($param->sellby),
                                     // eatBy date
-                                    $param->eatby,
+                                    ExtDirect::dateTimeToDate($param->eatby),
                                     // batch number
                                     $param->batch,
                                     // inventorycode
@@ -472,8 +474,8 @@ class ExtDirectProduct extends Product
                             if (($param->correct_stock_movement == 0) && ($param->correct_stock_nbpiece > 0) && (($batchesQty + $param->correct_stock_nbpiece) <= $stockQty)) {
                                 // only create batch when non batched stock available
                                 $productBatch->batch = $param->batch;
-                                $productBatch->sellby = $param->sellby;
-                                $productBatch->eatby = $param->eatby;
+                                $productBatch->sellby = ExtDirect::dateTimeToDate($param->sellby);
+                                $productBatch->eatby = ExtDirect::dateTimeToDate($param->eatby);
                                 $productBatch->qty = $param->correct_stock_nbpiece;
                                 $productBatch->fk_product_stock = $this->stock_warehouse[$param->warehouse_id]->id;
                                 if (($res = $productBatch->create($this->_user,1)) < 0) return ExtDirect::getDolError($res, $productBatch->errors, $productBatch->error);
@@ -504,10 +506,10 @@ class ExtDirectProduct extends Product
                                             $param->correct_stock_label,
                                             // Price to use for stock eval
                                             $param->correct_stock_price,
-                                            // sellBy date
-                                            $param->eatby,
                                             // eatBy date
-                                            $param->sellby,
+                                            ExtDirect::dateTimeToDate($param->eatby),
+                                            // sellBy date
+                                            ExtDirect::dateTimeToDate($param->sellby),
                                             // batch number
                                             $param->batch,
                                             // inventorycode
@@ -543,10 +545,10 @@ class ExtDirectProduct extends Product
                                             $param->correct_stock_label,
                                             // Price to use for stock eval
                                             $param->correct_stock_price,
-                                            // sellBy date
-                                            $param->eatby,
                                             // eatBy date
-                                            $param->sellby,
+                                            ExtDirect::dateTimeToDate($param->eatby),
+                                            // sellBy date
+                                            ExtDirect::dateTimeToDate($param->sellby),
                                             // batch number
                                             $param->batch,
                                             // inventorycode
@@ -584,10 +586,10 @@ class ExtDirectProduct extends Product
                                         $param->correct_stock_label,
                                         // Price to use for stock eval
                                         $param->correct_stock_price,
-                                        // sellBy date
-                                        $param->eatby,
                                         // eatBy date
-                                        $param->sellby,
+                                        ExtDirect::dateTimeToDate($param->eatby),
+                                        // sellBy date
+                                        ExtDirect::dateTimeToDate($param->sellby),
                                         // batch number
                                         $param->batch,
                                         // inventorycode
@@ -629,19 +631,19 @@ class ExtDirectProduct extends Product
                                 $this->load_stock();
                             }    
                             if (isset($this->stock_warehouse[$param->warehouse_id]->id)) {
-                                $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id,$param->eatby,$param->sellby,$param->batch);
+                                $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id,ExtDirect::dateTimeToDate($param->eatby),ExtDirect::dateTimeToDate($param->sellby),$param->batch);
                             }
                         }                        
                     } else if (!empty($dest)){
                         // update destination batch
                         if (isset($this->stock_warehouse[$dest]->id)) {
-                            $productBatch->find($this->stock_warehouse[$dest]->id,$param->eatby,$param->sellby,$param->batch);
+                            $productBatch->find($this->stock_warehouse[$dest]->id,ExtDirect::dateTimeToDate($param->eatby),ExtDirect::dateTimeToDate($param->sellby),$param->batch);
                         }
                     }  
                     if (isset($productBatch->id)) {
                         isset($param->batch) ? $productBatch->batch = $param->batch : null;
-                        isset($param->sellby) ? $productBatch->sellby = $param->sellby : null;
-                        isset($param->eatby) ? $productBatch->eatby = $param->eatby : null;
+                        isset($param->sellby) ? $productBatch->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
+                        isset($param->eatby) ? $productBatch->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
                         isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
                         if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
                     }               

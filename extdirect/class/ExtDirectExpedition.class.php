@@ -52,6 +52,9 @@ class ExtDirectExpedition extends Expedition
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("sendings");
+                $langs->load("products");
+                $langs->load("stocks");
+                $langs->load("productbatch");
                 parent::__construct($db);
             }
         }

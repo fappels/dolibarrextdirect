@@ -550,4 +550,20 @@ class ExtDirect
         
         return $errorText;
     }
+    
+    /**
+     * static method to convert timestamp containing date and time to timestamp containing date only
+     *
+     * @param int $timestamp timestamp with time
+     * 
+     * @return return int timestamp without time
+     */
+    public static function dateTimeToDate($timestamp) {
+    	if ($timestamp > 0) {
+    		$getDate = dol_getdate($timestamp);
+			return dol_mktime(0, 0, 0, $getDate['mon'], $getDate['mday'], $getDate['year']);
+    	} else {
+    		return $timestamp;
+    	}    	
+    }
 }
