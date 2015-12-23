@@ -514,12 +514,10 @@ class ExtDirectCommande extends Commande
                             } 
                             $row->description = $line->desc;
                             $row->product_id = $line->fk_product;
-                            $row->product_ref = $line->product_ref; //deprecated
                             $row->ref = $line->product_ref;
                             $row->product_label = $line->product_label;
                             $row->product_desc = $line->product_desc;
                             $row->product_type = $line->product->type;
-                            $row->product_barcode= $myprod->barcode?$myprod->barcode:''; //deprecated
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
@@ -535,7 +533,6 @@ class ExtDirectCommande extends Commande
                             $row->price = $line->price;
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                            $row->qty_stock = (int) $myprod->stock_reel; //deprecated
                             $row->stock = (int) $myprod->stock_reel;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
@@ -556,12 +553,10 @@ class ExtDirectCommande extends Commande
                             }                           
                             $row->description = $line->desc;
                             $row->product_id = $line->fk_product;
-                            $row->product_ref = $line->product_ref; //deprecated
                             $row->ref = $line->product_ref;
                             $row->product_label = $line->product_label;
                             $row->product_desc = $line->product_desc;
                             $row->product_type = $line->product->type;
-                            $row->product_barcode= $myprod->barcode?$myprod->barcode:''; // deprecated
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
@@ -577,7 +572,6 @@ class ExtDirectCommande extends Commande
                             $row->price = $line->price;
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                            $row->qty_stock = (int) $myprod->stock_warehouse[$warehouse_id]->real; //deprecated
                             $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
@@ -607,11 +601,9 @@ class ExtDirectCommande extends Commande
                                 } 
                                 $row->description = $line->desc;
                                 $row->product_id = $line->fk_product;
-                                $row->product_ref = $line->product_ref; //deprecated
                                 $row->ref = $line->product_ref;
                                 $row->product_label = $line->product_label;
                                 $row->product_desc = $line->product_desc;
-                                $row->product_barcode= $myprod->barcode?$myprod->barcode:''; //deprecated
                                 $row->barcode= $myprod->barcode?$myprod->barcode:'';
                                 $row->product_type = $line->product->type;
                                 // limit qty asked to stock qty
@@ -634,7 +626,6 @@ class ExtDirectCommande extends Commande
                                 $row->price = $line->price;
                                 $row->reduction_percent = $line->remise_percent;
                                 $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                                $row->qty_stock = $stock_warehouse->real; //deprecated
                                 $row->stock = $stock_warehouse->real;
                                 $row->warehouse_id = $warehouse;
                                 $row->has_photo = 0;
@@ -681,7 +672,7 @@ class ExtDirectCommande extends Commande
                 $this->id = $orderLine->fk_commande;
                 if (($result = $this->addline(
                     $orderLine->desc,
-                    $orderLine->subprice,
+                    $orderLine->price,
                     $orderLine->qty,
                     $orderLine->tva_tx,
                     $orderLine->localtax1_tx,
@@ -690,8 +681,8 @@ class ExtDirectCommande extends Commande
                     $orderLine->remise_percent,
                     $orderLine->info_bits,
                     $orderLine->fk_remise_except,
-                    'HT',
-                    0,
+                    $orderLine->price_base_type,
+                    $orderLine->price,
                     $orderLine->date_start,
                     $orderLine->date_end,
                     $orderLine->product_type,
@@ -706,7 +697,7 @@ class ExtDirectCommande extends Commande
                 if (($result = $this->addline(
                     $orderLine->fk_commande,
                     $orderLine->desc,
-                    $orderLine->subprice,
+                    $orderLine->price,
                     $orderLine->qty,
                     $orderLine->tva_tx,
                     $orderLine->localtax1_tx,
@@ -715,8 +706,8 @@ class ExtDirectCommande extends Commande
                     $orderLine->remise_percent,
                     $orderLine->info_bits,
                     $orderLine->fk_remise_except,
-                    'HT',
-                    0,
+                    $orderLine->price_base_type,
+                    $orderLine->price,
                     $orderLine->date_start,
                     $orderLine->date_end,
                     $orderLine->product_type,
@@ -765,13 +756,13 @@ class ExtDirectCommande extends Commande
                             if (($result = $this->updateline(
                                 $orderLine->rowid, 
                                 $orderLine->desc, 
-                                $orderLine->subprice, 
+                                $orderLine->price, 
                                 $orderLine->qty, 
                                 $orderLine->remise_percent, 
                                 $orderLine->tva_tx, 
                                 $orderLine->total_localtax1,
                                 $orderLine->total_localtax2, 
-                                'HT', 
+                                $orderLine->price_base_type, 
                                 $orderLine->info_bits, 
                                 $orderLine->date_start, 
                                 $orderLine->date_end, 
@@ -852,6 +843,8 @@ class ExtDirectCommande extends Commande
         isset($params->localtax2_tx) ? ($orderLine->localtax2_tx = $params->localtax2_tx) : null;
         isset($params->product_type) ? ($orderLine->product_type = $params->product_type) : null;
         isset($params->rang) ? ($orderLine->rang = $params->rang) : null;
-        isset($params->label) ? ($orderLine->label = $params->label) : null;        
+        isset($params->label) ? ($orderLine->label = $params->label) : null;
+        isset($params->price) ? ($orderLine->price = $params->price) : null;
+        isset($params->price_base_type) ? ($orderLine->price_base_type = $params->price_base_type) : null;
     }
 }
