@@ -844,7 +844,7 @@ class ExtDirectCommande extends Commande
         isset($params->product_type) ? ($orderLine->product_type = $params->product_type) : null;
         isset($params->rang) ? ($orderLine->rang = $params->rang) : null;
         isset($params->label) ? ($orderLine->label = $params->label) : null;
-        isset($params->price) ? ($orderLine->price = $params->price) : null;
+        isset($params->price) ? ($orderLine->price = $params->price) : ($orderLine->price ? null : $orderLine->price = 0);
         isset($params->price_base_type) ? ($orderLine->price_base_type = $params->price_base_type) : null;
     }
 }

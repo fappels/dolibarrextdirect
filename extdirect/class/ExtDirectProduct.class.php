@@ -378,6 +378,9 @@ class ExtDirectProduct extends Product
                 $this->setValueFrom('fk_barcode_type', $this->barcode_type);
             }
             
+            // price
+            if (($result = $this->updatePrice($this->price, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+	            
             // supplier fields
             if (!empty($this->fourn_price)) {
                 $supplierProduct = new ProductFournisseur($this->db);
@@ -451,7 +454,8 @@ class ExtDirectProduct extends Product
                         }                        
                     }
                 }
-                if ($this->prepareFields($param) && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
+                $updated = $this->prepareFields($param);
+                if ($updated && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
                 if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
                 // verify
                 if (ExtDirect::checkDolVersion() >= 3.6) {
@@ -648,24 +652,29 @@ class ExtDirectProduct extends Product
                         if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
                     }               
                 }
-                // supplier fields
-                if (!empty($this->fourn_price) && !empty($this->fourn_ref)) {
-                    $supplierProduct = new ProductFournisseur($this->db);
-                    $supplier = new Societe($this->db);
-                    if (($result = $supplier->fetch($this->fourn_id)) < 0) return $result;
-                    $supplierProduct->id = $this->id;
-                    $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
-                    if (($result = $supplierProduct->update_buyprice(
-                                    $this->fourn_qty, 
-                                    $this->fourn_price, 
-                                    $this->_user, 
-                                    'HT', 
-                                    $supplier, 
-                                    0, 
-                                    $this->fourn_ref, 
-                                    $this->fourn_tva_tx
-                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+                if ($updated) {
+                	 // price
+            		if (($result = $this->updatePrice($this->price, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+	                // supplier fields
+	                if (!empty($this->fourn_price) && !empty($this->fourn_ref)) {
+	                    $supplierProduct = new ProductFournisseur($this->db);
+	                    $supplier = new Societe($this->db);
+	                    if (($result = $supplier->fetch($this->fourn_id)) < 0) return $result;
+	                    $supplierProduct->id = $this->id;
+	                    $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
+	                    if (($result = $supplierProduct->update_buyprice(
+	                                    $this->fourn_qty, 
+	                                    $this->fourn_price, 
+	                                    $this->_user, 
+	                                    'HT', 
+	                                    $supplier, 
+	                                    0, 
+	                                    $this->fourn_ref, 
+	                                    $this->fourn_tva_tx
+	                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+	                }
                 }
+                
                 // add photo
                 if (!empty($param->has_photo) && !empty($param->photo)) {
                     if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1155,7 +1164,8 @@ class ExtDirectProduct extends Product
                 $row->eatby = $batch->eatby;
                 $row->batch = $batch->batch;
                 $row->stock_reel= (float) $batch->qty;
-                $row->qty_stock = (int) $batch->qty;
+                $row->qty_stock = (int) $batch->qty; //deprecated
+                $row->stock = (int) $batch->qty;
                 $row->batch_info = $batch->import_key;
                 array_push($results, clone $row);
                 $batchesQty += $batch->qty;
