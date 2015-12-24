@@ -1,4 +1,4 @@
-function _5c6ecbee0c3c3f32f5cb9fdd069ab6686b8ca643(){};//@tag foundation,core
+function _db1be651ee2106059af20e31d8f38c1f7513fb85(){};//@tag foundation,core
 //@define Ext
 /**
  * @class Ext
@@ -61703,11 +61703,6 @@ Ext.define('ConnectorTest.model.OrderLine', {
             },
             {
                 defaultValue: 0,
-                name: 'qty_stock',
-                type: 'int'
-            },
-            {
-                defaultValue: 0,
                 name: 'stock',
                 type: 'int'
             },
@@ -61715,9 +61710,6 @@ Ext.define('ConnectorTest.model.OrderLine', {
                 defaultValue: 0,
                 name: 'qty_toship',
                 type: 'int'
-            },
-            {
-                name: 'product_ref'
             },
             {
                 name: 'ref'
@@ -61731,9 +61723,6 @@ Ext.define('ConnectorTest.model.OrderLine', {
             {
                 name: 'product_price',
                 type: 'float'
-            },
-            {
-                name: 'product_barcode'
             },
             {
                 name: 'barcode'
@@ -61808,6 +61797,9 @@ Ext.define('ConnectorTest.model.OrderLine', {
             {
                 name: 'price',
                 type: 'float'
+            },
+            {
+                name: 'price_base_type'
             },
             {
                 name: 'has_batch',

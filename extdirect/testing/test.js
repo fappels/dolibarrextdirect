@@ -1,4 +1,4 @@
-function _920826dedc0d4aaf089ef858f0c5c4868f628e60(){};/**
+function _9f53ffa8d54f8b5c61c859c79da3cdce85ba1be3(){};/**
  * jasmine unit tests for extdirect connector
  */
 
@@ -1168,7 +1168,11 @@ describe("products", function () {
 				supplier_id: 1,
 				vat_supplier: 0,
 				has_photo: 0,
-				photo: null
+				photo: null,
+				price: 10,
+				price_base_type: 'HT',
+				tva_tx: 20,
+				multiprices_index: priceIndex
 			};
 			for (i=0;i<3;i++) {
 				switch (i) {
@@ -1296,6 +1300,7 @@ describe("products", function () {
 					Ext.Array.each(records,function (record) {
 						testresults.push(record.get('ref'));
 						testresults.push(record.get('ref_supplier'));
+						testresults.push(record.get('price_ttc'))
 					});
 					flag = true;
 				}
@@ -1307,6 +1312,7 @@ describe("products", function () {
 		runs(function () {
 			expect(testresults).toContain('CT0001');
 			expect(testresults).toContain('SCT0001');
+			expect(testresults).toContain(12);
 		});
 	});
 	
@@ -1322,6 +1328,7 @@ describe("products", function () {
 			record.set('correct_stock_label','move');
 			record.set('correct_stock_price','15');
 			record.set('correct_stock_dest_warehouseid',warehouseIds[2]);
+			record.set('price', 20);
 			productStore.sync();
 			productStore.clearFilter();
 			productStore.filter([Ext.create('Ext.util.Filter',{property:"warehouse_id",value:warehouseIds[1]}),
@@ -1333,6 +1340,7 @@ describe("products", function () {
 						testresults.push(record.get('label'));
 						testresults.push(record.get('stock_reel'));
 						testresults.push(record.get('pmp'));
+						testresults.push(record.get('price'));
 					});
 					flag = true;
 				}
@@ -1345,6 +1353,7 @@ describe("products", function () {
 			expect(recordIndex).toBe(0);
 			expect(testresults).toContain('connectortested');
 			expect(testresults).toContain(5);//stock
+			expect(testresults).toContain(20);
 			if (dolibarrVersion >= 3.8) {
 				expect(testresults).toContain(12.5);//3.8 has pmp calculated in product table
 			} else {
@@ -1808,7 +1817,7 @@ describe("order", function () {
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresults.push(record.get('warehouse_id'));
-						stock+=record.get('qty_stock');
+						stock+=record.get('stock');
 						asked+=record.get('qty_asked');
                         if (record.get('batch_id')) {
                             orderLineBatchIds.push(record.get('batch_id'));
@@ -1882,7 +1891,7 @@ describe("order", function () {
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresults.push(record.get('warehouse_id'));
-						stock+=record.get('qty_stock');
+						stock+=record.get('stock');
 					});
 					flag = true;
 				}
