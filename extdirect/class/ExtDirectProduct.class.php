@@ -977,7 +977,7 @@ class ExtDirectProduct extends Product
      */
     private function prepareField($diff, $param, $paramName, $propertyName)
     {
-        if (isset($param->$paramName) && ($param->$paramName !== $this->$propertyName)) {
+        if (isset($param->$paramName) && (($param->$paramName != $this->$propertyName) || (($param->$paramName == 0) && ($param->$paramName !== $this->$propertyName)))) {
             $this->$propertyName = $param->$paramName;
             return true;
         } else {
