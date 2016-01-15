@@ -676,7 +676,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 // get old orderline
                 if (($result = $this->fetch($this->id)) < 0)    return $result;
                 if (!$this->error) {
-                    if ($params->qty_shipped > 0) {
+                    if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
                         if (($result = $this->DispatchProduct(
                                         $this->_user,
                                         $params->product_id,
