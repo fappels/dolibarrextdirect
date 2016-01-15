@@ -701,7 +701,11 @@ class ExtDirectCommande extends Commande
             if (($result = $this->fetch($orderLine->fk_commande)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             $this->fetch_thirdparty();
             if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
-            	$tva_tx = $orderLine->tva_tx;
+            	if (!empty($this->thirdparty->tva_assuj)) {
+                	$tva_tx = $orderLine->tva_tx;
+                } else {
+                	$tva_tx = 0;
+               	}
 				$tva_npr = 0;
             } else {
             	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
@@ -781,8 +785,6 @@ class ExtDirectCommande extends Commande
     {
         global $conf, $mysoc;
         
-        dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
-        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $orderlineUpdated = false;
@@ -799,27 +801,32 @@ class ExtDirectCommande extends Commande
                 // get old orderline
                 if (($result = $this->fetch($this->id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->fetch_lines(1)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-                $this->fetch_thirdparty();
-                if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
-	            	$tva_tx = $orderLine->tva_tx;
-					$tva_npr = 0;
-	            } else {
-	            	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
-					$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
-	            }
-	            
-	            $info_bits = 0;
-				if ($tva_npr) {
-					$info_bits |= 0x01;
-				} else {
-					$info_bits = $orderLine->info_bits;
-				}
+                $this->fetch_thirdparty();         
 				
                 if (!$this->error) {
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->rowid == $params->origin_line_id) {
                             // update fields
                             $this->prepareOrderLineFields($params, $orderLine);
+                        	if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
+			                	if (!empty($this->thirdparty->tva_assuj)) {
+			                		$tva_tx = $orderLine->tva_tx;
+			                	} else {
+			                		$tva_tx = 0;
+			                	}
+								$tva_npr = 0;
+				            } else {
+				            	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+								$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+				            }
+				            
+				            $info_bits = 0;
+							if ($tva_npr) {
+								$info_bits |= 0x01;
+							} else {
+								$info_bits = $orderLine->info_bits;
+							}
+							
                             if (($result = $this->updateline(
                                 $orderLine->rowid, 
                                 $orderLine->desc, 
