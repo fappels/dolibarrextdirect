@@ -172,7 +172,9 @@ class ExtDirectCommande extends Commande
      */
     public function updateOrder($param) 
     {
-        if (!isset($this->db)) return CONNECTERROR;
+        global $conf, $langs, $mysoc;
+    	
+    	if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
@@ -190,7 +192,29 @@ class ExtDirectCommande extends Commande
                         $result = $this->set_draft($this->_user);
                         break;
                     case 1:
-                        $result = $this->valid($this->_user);
+                    	// set global $mysoc required to set pdf sender
+                    	$mysoc = new Societe($this->db);
+		                $mysoc->setMysoc($conf);
+                    	if ($params->warehouse_id > 0) {
+                    		$warehouseId = $params->warehouse_id;
+                    	} else {
+                    		$warehouseId = 0;
+                    	}
+                    	$result = $this->valid($this->_user, $warehouseId);
+                    	// PDF generating
+                        if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
+                        	if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                        	$hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
+							$hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
+							$hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
+                        	$outputlangs = $langs;
+							if ($conf->global->MAIN_MULTILANGS)	{
+								$newlang = $this->thirdparty->default_lang;
+								$outputlangs = new Translate("", $conf);
+								$outputlangs->setDefaultLang($newlang);
+							}
+							$this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                        }
                         break;
                     case 3:
                         $result = $this->cloture($this->_user);
@@ -658,28 +682,47 @@ class ExtDirectCommande extends Commande
      */
     public function createOrderLine($param) 
     {
+        global $conf, $mysoc;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $orderLine = new OrderLine($this->db);
         
+        // set global $mysoc required for price calculation
+        $mysoc = new Societe($this->db);
+		$mysoc->setMysoc($conf);
+		
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
     
         foreach ($paramArray as &$params) {
             // prepare fields
             $this->prepareOrderLineFields($params, $orderLine);
+            if (($result = $this->fetch($orderLine->fk_commande)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            $this->fetch_thirdparty();
+            if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
+            	$tva_tx = $orderLine->tva_tx;
+				$tva_npr = 0;
+            } else {
+            	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+				$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+            }
+            
+            $info_bits = 0;
+			if ($tva_npr) $info_bits |= 0x01;
+			
             if (ExtDirect::checkDolVersion() >= 3.5) {
                 $this->id = $orderLine->fk_commande;
                 if (($result = $this->addline(
                     $orderLine->desc,
                     $orderLine->price,
                     $orderLine->qty,
-                    $orderLine->tva_tx,
+                    $tva_tx,
                     $orderLine->localtax1_tx,
                     $orderLine->localtax2_tx,
                     $orderLine->fk_product,
                     $orderLine->remise_percent,
-                    $orderLine->info_bits,
+                    $info_bits,
                     $orderLine->fk_remise_except,
                     $orderLine->price_base_type,
                     $orderLine->price,
@@ -699,12 +742,12 @@ class ExtDirectCommande extends Commande
                     $orderLine->desc,
                     $orderLine->price,
                     $orderLine->qty,
-                    $orderLine->tva_tx,
+                    $tva_tx,
                     $orderLine->localtax1_tx,
                     $orderLine->localtax2_tx,
                     $orderLine->fk_product,
                     $orderLine->remise_percent,
-                    $orderLine->info_bits,
+                    $info_bits,
                     $orderLine->fk_remise_except,
                     $orderLine->price_base_type,
                     $orderLine->price,
@@ -718,8 +761,7 @@ class ExtDirectCommande extends Commande
                     $orderLine->pa_ht,
                     $orderLine->label
                 )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            }
-            
+            }            
         }
     
         if (is_array($param)) {
@@ -737,17 +779,42 @@ class ExtDirectCommande extends Commande
      */
     public function updateOrderLine($param) 
     {
+        global $conf, $mysoc;
+        
+        dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $orderlineUpdated = false;
+        
+        // set global $mysoc required for price calculation
+        $mysoc = new Societe($this->db);
+		$mysoc->setMysoc($conf);
+		
         $paramArray = ExtDirect::toArray($param);
     
         foreach ($paramArray as &$params) {
             
             if (($this->id=$params->origin_id) > 0) {
                 // get old orderline
-                if (($result = $this->fetch($this->id)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (($result = $this->fetch($this->id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->fetch_lines(1)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                $this->fetch_thirdparty();
+                if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
+	            	$tva_tx = $orderLine->tva_tx;
+					$tva_npr = 0;
+	            } else {
+	            	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+					$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+	            }
+	            
+	            $info_bits = 0;
+				if ($tva_npr) {
+					$info_bits |= 0x01;
+				} else {
+					$info_bits = $orderLine->info_bits;
+				}
+				
                 if (!$this->error) {
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->rowid == $params->origin_line_id) {
@@ -759,11 +826,11 @@ class ExtDirectCommande extends Commande
                                 $orderLine->price, 
                                 $orderLine->qty, 
                                 $orderLine->remise_percent, 
-                                $orderLine->tva_tx, 
+                                $tva_tx, 
                                 $orderLine->total_localtax1,
                                 $orderLine->total_localtax2, 
                                 $orderLine->price_base_type, 
-                                $orderLine->info_bits, 
+                                $info_bits, 
                                 $orderLine->date_start, 
                                 $orderLine->date_end, 
                                 $orderLine->product_type, 
@@ -845,6 +912,6 @@ class ExtDirectCommande extends Commande
         isset($params->rang) ? ($orderLine->rang = $params->rang) : null;
         isset($params->label) ? ($orderLine->label = $params->label) : null;
         isset($params->price) ? ($orderLine->price = $params->price) : ($orderLine->price ? null : $orderLine->price = 0);
-        isset($params->price_base_type) ? ($orderLine->price_base_type = $params->price_base_type) : null;
+        isset($params->price_base_type) ? ($orderLine->price_base_type = $params->price_base_type) : $orderLine->price_base_type = 'HT';
     }
 }
