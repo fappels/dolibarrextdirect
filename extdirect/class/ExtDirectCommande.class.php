@@ -209,6 +209,7 @@ class ExtDirectCommande extends Commande
 							$hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
                         	$outputlangs = $langs;
 							if ($conf->global->MAIN_MULTILANGS)	{
+								$this->fetch_thirdparty();
 								$newlang = $this->thirdparty->default_lang;
 								$outputlangs = new Translate("", $conf);
 								$outputlangs->setDefaultLang($newlang);

@@ -27,6 +27,7 @@ require_once DOL_DOCUMENT_ROOT.'/expedition/class/expedition.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectExpedition class
@@ -170,7 +171,9 @@ class ExtDirectExpedition extends Expedition
      */
     public function updateShipment($param) 
     {
-        if (!isset($this->db)) return CONNECTERROR;
+        global $conf, $langs, $mysoc;
+    	
+    	if (!isset($this->db)) return CONNECTERROR;
         
         $paramArray = ExtDirect::toArray($param);
 
@@ -189,7 +192,24 @@ class ExtDirectExpedition extends Expedition
                         
                         break;
                     case 1:
+                    	// set global $mysoc required to set pdf sender
+                    	$mysoc = new Societe($this->db);
+		                $mysoc->setMysoc($conf);
                         $result = $this->valid($this->_user);
+                		// PDF generating
+                        if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
+                        	$hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
+							$hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
+							$hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
+                        	$outputlangs = $langs;
+							if ($conf->global->MAIN_MULTILANGS)	{
+								$this->fetch_thirdparty();
+								$newlang = $this->thirdparty->default_lang;
+								$outputlangs = new Translate("", $conf);
+								$outputlangs->setDefaultLang($newlang);
+							}
+							$this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                        }
                         break;
                     case 2:
                         
