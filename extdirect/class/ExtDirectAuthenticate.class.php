@@ -24,6 +24,7 @@
 
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/core/modules/modExtDirect.class.php');
 
@@ -160,7 +161,9 @@ class ExtDirectAuthenticate extends ExtDirect
                 $result->home_country_id = $mysoc->country_id;
                 $result->home_state_id = $mysoc->state_id;
                 $result->home_name = $mysoc->name;
-            }            
+            } 
+            $result->timezone_offset = getServerTimeZoneInt('now');   
+            $result->timezone = getServerTimeZoneString();        
             return $result;
         }
     }
