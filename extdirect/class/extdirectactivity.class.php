@@ -268,7 +268,7 @@ class ExtDirectActivity extends CommonObject
                 $stopTime[$data['activity_name']] = 0;
                 $activityId[$data['activity_name']] = $data['activity_id'];
             }
-            if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
+            if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'ERROR') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
                             && ($stopTime[$data['activity_name']] === 0) && ($activityId[$data['activity_name']] === $data['activity_id'])) {
                 $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                 $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
