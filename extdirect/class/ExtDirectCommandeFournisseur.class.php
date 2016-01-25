@@ -1,7 +1,7 @@
 <?PHP
 
 /*
- * Copyright (C) 2013-2015  Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2016  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
  */
 
 require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
+require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
@@ -627,7 +628,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         foreach ($paramArray as &$params) {
             // prepare fields
             $this->prepareOrderLineFields($params, $orderLine);
-            $this->id = $orderLine->fk_commande;
+            $this->id = $params->origin_id;
             if (($result = $this->addline(
                 $orderLine->desc,
                 $orderLine->subprice,
@@ -636,7 +637,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $orderLine->localtax1_tx,
                 $orderLine->localtax2_tx,
                 $orderLine->fk_product,
-                $orderLine->ref_fourn_id,
+                $params->ref_supplier_id,
                 $orderLine->ref_fourn,           
                 $orderLine->remise_percent,
                 'HT',
@@ -665,7 +666,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     public function updateOrderLine($param) 
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
         $orderlineUpdated = false;
         $paramArray = ExtDirect::toArray($param);
@@ -676,53 +677,95 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 // get old orderline
                 if (($result = $this->fetch($this->id)) < 0)    return $result;
                 if (!$this->error) {
-                    if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
-                        if (($result = $this->DispatchProduct(
-                                        $this->_user,
-                                        $params->product_id,
-                                        $params->qty_shipped,
-                                        $params->warehouse_id,
-                                        $params->product_price,
-                                        $params->comment,
-                                        ExtDirect::dateTimeToDate($params->eatby),
-                                        ExtDirect::dateTimeToDate($params->sellby),
-                                        $params->batch,
-                                        $params->origin_line_id
-                        )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-                    }
+                    
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->id == $params->origin_line_id) {
-                            if ($this->statut == 0) {
-                                // update fields
-                                $this->prepareOrderLineFields($params, $orderLine);
-                                if (($result = $this->updateline(
-                                                $orderLine->id,
-                                                $orderLine->desc,
-                                                $orderLine->subprice,
-                                                $orderLine->qty,
-                                                $orderLine->remise_percent,
-                                                $orderLine->tva_tx,
-                                                $orderLine->total_localtax1,
-                                                $orderLine->total_localtax2,
-                                                'HT',
-                                                $orderLine->info_bits,
-                                                $orderLine->product_type,
-                                                false,
-                                                $orderLine->date_start,
-                                                $orderLine->date_end
-                                )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-                            }                            
+                        	if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer)) {
+	                            if ($this->statut == 0) {
+	                                // update fields
+	                                if (($result = $this->updateline(
+	                                                $orderLine->id,
+	                                                $orderLine->desc,
+	                                                $orderLine->subprice,
+	                                                $orderLine->qty,
+	                                                $orderLine->remise_percent,
+	                                                $orderLine->tva_tx,
+	                                                $orderLine->total_localtax1,
+	                                                $orderLine->total_localtax2,
+	                                                'HT',
+	                                                $orderLine->info_bits,
+	                                                $orderLine->product_type,
+	                                                false,
+	                                                $orderLine->date_start,
+	                                                $orderLine->date_end
+	                                )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+	                            }
+                        	}
+                        	
                             $product = new ExtDirectProduct($this->_user->login);
                             if (($result = $product->fetch($orderLine->fk_product)) <0) return ExtDirect::getDolError($result, $product->errors, $product->error);
-                            // update barcode
-                            if (! empty($params->barcode) && empty($product->barcode)) {
-                                $product->setValueFrom('barcode', $params->barcode);
-                                $product->setValueFrom('fk_barcode_type', $params->barcode_type);
+                            if (($updated = $this->prepareProductFields($params, $product)) && isset($this->_user->rights->produit->creer)) {
+	                            // update barcode
+	                            if ($updated) {
+	                                $product->setValueFrom('barcode', $product->barcode);
+	                                $product->setValueFrom('fk_barcode_type', $product->barcode_type);
+	                            }
+	                            
                             }
-                            // add photo
-                            if (!empty($params->has_photo) && !empty($params->photo)) {
+                        	// add photo
+                            if (!empty($params->has_photo) && !empty($params->photo) && isset($this->_user->rights->produit->creer)) {
                                 if (($result = $product->addBase64Jpeg($params->photo)) < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
                             }
+                            
+                            // update unit price
+                        	$supplierProduct = new ProductFournisseur($this->db);
+                        	$supplierProducts = $supplierProduct->list_product_fournisseur_price($product->id);
+				            if (is_array($supplierProducts)) {
+					            foreach ($supplierProducts as $prodsupplier) {
+					                if ($prodsupplier->fourn_ref == $params->ref_supplier){
+					                    $supplierProduct->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
+					                   	$supplierProduct->fourn_id = $prodsupplier->fourn_id;
+					                	$supplierProduct->fourn_qty = $prodsupplier->fourn_qty;
+				                        if (isset($prodsupplier->fourn_tva_tx)) { // workaround
+				                            $supplierProduct->fourn_tva_tx = $prodsupplier->fourn_tva_tx;
+				                        } else {
+				                            $supplierProduct->fourn_tva_tx = $prodsupplier->tva_tx;
+				                        } 
+				                        $supplierProduct->fetch_product_fournisseur_price($supplierProduct->product_fourn_price_id);
+					                }
+					            }
+				            }
+		                    if (!empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
+			                    $supplier = new Societe($this->db);
+			                    if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;	
+	                    		if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {
+			                    	if (($result = $supplierProduct->update_buyprice(
+				                                    $supplierProduct->fourn_qty, 
+				                                    $supplierProduct->fourn_unitprice * $supplierProduct->fourn_qty,
+				                                    $this->_user, 
+				                                    'HT', 
+				                                    $supplier, 
+				                                    0, 
+				                                    $supplierProduct->ref_supplier, 
+				                                    $supplierProduct->fourn_tva_tx
+				                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+			                    }
+                          	}
+                          	// dispatch
+	                        if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
+		                        if (($result = $this->DispatchProduct(
+		                                        $this->_user,
+		                                        $orderLine->fk_product,
+		                                        $params->qty_shipped,
+		                                        $params->warehouse_id,
+		                                        $params->price, // must be ordered unitprice with discount
+		                                        $params->comment,
+		                                        ExtDirect::dateTimeToDate($params->eatby),
+		                                        ExtDirect::dateTimeToDate($params->sellby),
+		                                        $params->batch,
+		                                        $orderLine->id
+		                        )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+		                    }
                         }
                     }
                 }           
@@ -843,7 +886,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     }
     
     /**
-     * private method to copy order fields into dolibarr object
+     * private method to copy orderline fields into dolibarr orderline object
      *
      * @param stdclass $params object with fields
      * @param stdclass $orderLine object
@@ -851,20 +894,52 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     private function prepareOrderLineFields($params,$orderLine) 
     {
-        isset($params->origin_line_id) ? ( $orderLine->id= $params->origin_line_id) : null;
-        isset($params->origin_id) ? ( $orderLine->fk_commande= $params->origin_id) : null;
-        isset($params->product_id) ? ( $orderLine->fk_product = $params->product_id) : null;
-        isset($params->product_price) ? ( $orderLine->subprice = $params->product_price) : null;
-        isset($params->product_tax) ? ( $orderLine->tva_tx = $params->product_tax) : null;
-        isset($params->description) ? ( $orderLine->desc = $params->description) : null;
-        isset($params->qty_asked) ? ( $orderLine->qty = $params->qty_asked) : null;
-        isset($params->reduction_percent) ? ($orderLine->remise_percent = $params->reduction_percent) : $orderLine->remise_percent = 0;
-        isset($params->product_type) ? ($orderLine->product_type = $params->product_type) : null;
-        isset($params->total_localtax1) ? ($orderLine->total_localtax1 = $params->total_localtax1) : null;
-        isset($params->total_localtax2) ? ($orderLine->total_localtax2 = $params->total_localtax2) : null;
-        isset($params->date_start) ? ($orderLine->date_start = $params->date_start) : null;
-        isset($params->date_end) ? ($orderLine->date_end = $params->date_end) : null; 
-        isset($params->ref_supplier) ? ($orderLine->ref_fourn = $params->ref_supplier) : null;
-        isset($params->ref_supplier_id) ? ($orderLine->ref_fourn_id = $params->ref_supplier_id) : null;
+        $diff = false;
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'origin_line_id', 'id');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_id', 'fk_product');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_price', 'subprice');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_tax', 'tva_tx');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'description', 'desc');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'qty_asked', 'qty');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'reduction_percent', 'remise_percent');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_type', 'product_type');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'total_localtax1', 'total_localtax1');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'total_localtax2', 'total_localtax2');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_start', 'date_start');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_end', 'date_end');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'ref_supplier', 'ref_fourn');
+        return $diff;
+    }
+    
+	/**
+     * private method to copy orderline fields into dolibarr supplier product object
+     *
+     * @param stdclass $params object with fields
+     * @param stdclass $prodSupplier object
+     * @return null
+     */
+    private function prepareProdSupplierFields($params,$prodSupplier) 
+    {
+        $diff = false;
+        $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'product_price', 'fourn_unitprice');
+        $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'ref_supplier', 'ref_supplier');
+        $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'ref_supplier_id', 'product_fourn_price_id');
+        return $diff;
+    }
+    
+	/**
+     * private method to copy orderline fields into dolibarr product object
+     *
+     * @param stdclass $params object with fields
+     * @param stdclass $product object
+     * @return null
+     */
+    private function prepareProductFields($params,$product) 
+    {
+        $diff = false;
+        $diff = ExtDirect::prepareField($diff, $params, $product, 'product_id', 'id');
+        $diff = ExtDirect::prepareField($diff, $params, $product, 'barcode', 'barcode');
+        $diff = ExtDirect::prepareField($diff, $params, $product, 'barcode_type', 'barcode_type');
+        return $diff;
     }
 }
