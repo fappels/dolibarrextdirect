@@ -566,4 +566,29 @@ class ExtDirect
     		return $timestamp;
     	}    	
     }
+    
+	/**
+     * static method to copy field into dolibarr object element and check if changed
+     *
+     * @param boolean $diff diff status of param elements
+     * @param stdclass $param object with fields
+     * @param stdclass $object dolibarr object
+     * @param string $paramName param object field name
+     * @param string $propertyName object property name
+     * 
+     * @return boolean true if param $diff true or true on param element change
+     */
+    public static function prepareField($diff, $param, $object, $paramName, $propertyName)
+    {
+        if (isset($param->$paramName) && (($param->$paramName != $object->$propertyName) || (($param->$paramName == 0) && ($object->$propertyName != 0) && ($param->$paramName !== $object->$propertyName)))) {
+            $object->$propertyName = $param->$paramName;
+            return true;
+        } else {
+        	if ($diff) {
+        		return true;
+        	} else {
+        		return false;
+        	}
+        }
+    }
 }
