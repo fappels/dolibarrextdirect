@@ -580,10 +580,19 @@ class ExtDirect
      */
     public static function prepareField($diff, $param, $object, $paramName, $propertyName)
     {
-        if (isset($param->$paramName) && (($param->$paramName != $object->$propertyName) || (($param->$paramName == 0) && ($object->$propertyName != 0) && ($param->$paramName !== $object->$propertyName)))) {
-            $object->$propertyName = $param->$paramName;
-            return true;
-        } else {
+    	$epsilon = 0.00001;
+    	$propertySet = isset($object->$propertyName);
+    	if (is_numeric($object->$propertyName) || is_numeric($param->$paramName)) {
+    		$equal = (abs($object->$propertyName - $param->$paramName) < $epsilon);
+    		$paramSet = isset($param->$paramName);
+    	} else {
+    		$equal = ($param->$paramName == $object->$propertyName);
+    		$paramSet = !empty($param->$paramName);
+    	}
+    	if ($paramSet && (!$equal || !$propertySet)) {
+    		$object->$propertyName = $param->$paramName;
+           	return true;
+    	} else {
         	if ($diff) {
         		return true;
         	} else {
