@@ -168,7 +168,7 @@ class ExtDirectSociete extends Societe
         }
 
         $row = new stdClass;
-        $row->id 		    = null;
+        $row->id 		    = 0;
         $row->code     	    = '';
         $row->label		    = '';
         $row->country_id    = null;
