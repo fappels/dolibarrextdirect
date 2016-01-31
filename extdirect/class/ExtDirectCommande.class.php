@@ -238,6 +238,10 @@ class ExtDirectCommande extends Commande
                     ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->mode_reglement_id) &&
                     ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (isset($this->shipping_method_id) &&
+                	($result = $this->setShippingMethod($this->shipping_method_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (isset($this->fk_incoterms) &&
+                	($result = $this->setIncoterms($this->fk_incoterms, $this->location_incoterms)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 
             } else {
                 return PARAMETERERROR;
