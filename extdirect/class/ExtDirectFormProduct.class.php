@@ -113,7 +113,7 @@ class ExtDirectFormProduct extends FormProduct
             {
                 $obj = $this->db->fetch_object($resql);
                 if ($obj) {
-                    $row->stock = $obj->stock;
+                    $row->stock = price2num($obj->stock,5);
                 }
                 $this->db->free($resql);
             }
