@@ -52,6 +52,7 @@ class ExtDirectCommande extends Commande
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
                 $langs->load("orders");
+                $langs->load("sendings"); // for shipment methods
                 parent::__construct($db);
             }
         }
@@ -472,7 +473,7 @@ class ExtDirectCommande extends Commande
                 $row = null;
 
                 $row->id = $obj->rowid;
-                $transcode=$langs->trans($obj->code);
+                $transcode=$langs->transnoentities($obj->code);
                 $label=($transcode!=null?$transcode:$obj->label);
                 $row->code = $obj->code;
                 $row->label = $label;
@@ -518,7 +519,7 @@ class ExtDirectCommande extends Commande
 	                $row = null;
 	
 	                $row->id = $obj->rowid;
-	                $transcode=$langs->trans("SendingMethod".strtoupper($obj->code));
+	                $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
 	                $label=($transcode!=null?$transcode:$obj->label);
 	                $row->code = $obj->code;
 	                $row->label = $label;
