@@ -484,21 +484,16 @@ class ExtDirect
         if($validate) 
         {
             $minVersion = '3.3';
-            $maxVersion = '3.9';
+            $maxVersion = '3.9'; // tested version
         }
         if (empty($minVersion) && empty($maxVersion)) {
             return $dolMajorMinorVersion;
         } else {
             if (empty($minVersion)) $minVersion = '3.3';
-            if (empty($maxVersion)) $maxVersion = '3.9';
-            $minVersionArray = explode('.', $minVersion);
-            $maxVersionArray = explode('.', $maxVersion);
-            if (($minVersionArray[0] <= $dolVersion[0])
-                && ($minVersionArray[1] <= $dolVersion[1])   
-                && ($maxVersionArray[0] >= $dolVersion[0])
-                && ($maxVersionArray[1] >= $dolVersion[1]))
+            if (empty($maxVersion)) $maxVersion = '4.0'; // debugging version
+            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) 
             {
-                return 1;
+            	return 1;
             }
             else 
             {
