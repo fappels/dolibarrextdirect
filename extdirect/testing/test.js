@@ -1,4 +1,4 @@
-function _9f53ffa8d54f8b5c61c859c79da3cdce85ba1be3(){};/**
+function _e684a88da2310a3742a4b27d40ebeddccd9b1c52(){};/**
  * jasmine unit tests for extdirect connector
  */
 
@@ -326,6 +326,59 @@ describe("availability codes", function () {
 	});
 });
 
+describe("shipment modes", function () {
+	var flag = false,
+		testresults = [];
+	
+	it("load shipment modes", function() {
+		if (dolibarrVersion >= 3.7)	{	
+			runs(function() {
+				flag = false;
+				Ext.getStore("ShipmentModes").load({
+					callback: function(records) {
+						Ext.Array.each(records, function (record,index) {
+							testresults[index] = record.get('code');
+						});
+						flag = true;
+					}
+	    		}); 
+			});
+			
+			waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+			
+			runs(function () {
+				expect(testresults).toContain('CATCH');				
+			});
+		}
+	});
+});
+
+describe("incoterms codes", function () {
+	var flag = false,
+		testresults = [];
+	
+	it("load incoterms codes", function() {
+		if (dolibarrVersion >= 3.8)	{		
+			runs(function() {
+				flag = false;
+				Ext.getStore("IncotermsCodes").load({
+					callback: function(records) {
+						Ext.Array.each(records, function (record,index) {
+							testresults[index] = record.get('code');
+						});
+						flag = true;
+					}
+	    		}); 
+			});
+			
+			waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+			
+			runs(function () {
+				expect(testresults).toContain('EXW');
+			});
+		}
+	});
+});
 
 
 describe("Activities", function () {
@@ -1638,6 +1691,13 @@ describe("order", function () {
 				order_date: Ext.Date.format(new Date(),'U')
 			};
 			order = Ext.create('ConnectorTest.model.Order',orderData);
+			if (dolibarrVersion >= 3.7)	{
+				order.set('shipping_method_id', 1);
+			}
+			if (dolibarrVersion >= 3.8)	{
+				order.set('incoterms_id', 2);
+				order.set('location_incoterms', 'location incoterms')
+			}
 			orderStore = Ext.getStore('order');
 			orderStore.add(order);					
 			orderStore.sync();
@@ -1742,7 +1802,14 @@ describe("order", function () {
 			Ext.getStore('order').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
-						testresult = record.get('ref');
+						testresults.push(record.get('ref'));
+						if (dolibarrVersion >= 3.7)	{
+							testresults.push(record.get('shipping_method_id'));
+						}
+						if (dolibarrVersion >= 3.8)	{
+							testresults.push(record.get('incoterms_id'));
+							testresults.push(record.get('location_incoterms'));
+						}
 					});
 					flag = true;
 				}
@@ -1752,7 +1819,14 @@ describe("order", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(testresult).toBe(orderRef);
+			expect(testresults).toContain(orderRef);
+			if (dolibarrVersion >= 3.7)	{
+				expect(testresults).toContain(1);
+			}
+			if (dolibarrVersion >= 3.8)	{
+				expect(testresults).toContain(2);
+				expect(testresults).toContain('location incoterms');
+			}
 		});
 	});
 	
@@ -1951,6 +2025,13 @@ describe("shipment", function ()
                 deliver_date: Ext.Date.format(new Date(), 'U')
             };
             shipment = Ext.create('ConnectorTest.model.Order', shipmentData);
+            if (dolibarrVersion >= 3.7)	{
+            	shipment.set('shipping_method_id', 1);
+			}
+			if (dolibarrVersion >= 3.8)	{
+				shipment.set('incoterms_id', 2);
+				shipment.set('location_incoterms', 'location incoterms')
+			}
             Ext.getStore('shipment').add(shipment);
             Ext.getStore('shipment').sync();
             Ext.getStore('shipment').clearFilter();
@@ -2055,7 +2136,14 @@ describe("shipment", function ()
                 {
                     Ext.Array.each(records, function (record)
                     {
-                        testresult = record.get('ref');
+                    	testresults.push(record.get('ref'));
+                    	if (dolibarrVersion >= 3.7)	{
+							testresults.push(record.get('shipping_method_id'));
+						}
+						if (dolibarrVersion >= 3.8)	{
+							testresults.push(record.get('incoterms_id'));
+							testresults.push(record.get('location_incoterms'));
+						}
                     });
                     flag = true;
                 }
@@ -2066,7 +2154,14 @@ describe("shipment", function ()
 
         runs(function ()
         {
-            expect(testresult).toBe(shipmentRef);
+            expect(testresults).toContain(shipmentRef);
+			if (dolibarrVersion >= 3.7)	{
+				expect(testresults).toContain(1);
+			}
+			if (dolibarrVersion >= 3.8)	{
+				expect(testresults).toContain(2);
+				expect(testresults).toContain('location incoterms');
+			}
         });
     });
 

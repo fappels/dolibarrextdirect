@@ -226,6 +226,12 @@ $API = array(
             ),
             'readAvailabilityCodes'=>array(
                     'len'=>1
+            ),
+            'readShipmentModes'=>array(
+                    'len'=>1
+            ),
+            'readIncotermCodes'=>array(
+                    'len'=>1
             )
         )
     ),

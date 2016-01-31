@@ -126,6 +126,9 @@ class ExtDirectExpedition extends Expedition
                 $row->trueDepth = $this->trueDepth;
                 $row->trueWidth = $this->trueWidth;
                 $row->trueHeight = $this->trueHeight;
+                $row->shipping_method_id = $this->shipping_method_id;
+				$row->incoterms_id = $this->fk_incoterms;
+				$row->location_incoterms = $this->location_incoterms;
                 array_push($results, $row);
             } else {
                 return 0;
@@ -279,7 +282,10 @@ class ExtDirectExpedition extends Expedition
         isset($params->size_units) ? ( $this->size_units = $params->size_units) : isset($this->size_units)?null:($this->size_units = 0);
         isset($params->trueDepth) ? ( $this->sizeS = $params->trueDepth) : isset($this->sizeS)?null:($this->sizeS = 0);
         isset($params->trueWidth) ? ( $this->sizeW = $params->trueWidth) : isset($this->sizeW)?null:($this->sizeW = 0);
-        isset($params->trueHeight) ? ( $this->sizeH = $params->trueHeight) : isset($this->sizeH)?null:($this->sizeH = 0);       
+        isset($params->trueHeight) ? ( $this->sizeH = $params->trueHeight) : isset($this->sizeH)?null:($this->sizeH = 0);   
+        isset($params->shipping_method_id) ? ($this->shipping_method_id = $params->shipping_method_id) : null;
+        isset($params->incoterms_id) ? ($this->fk_incoterms = $params->incoterms_id) : null;
+        isset($params->location_incoterms) ? ($this->location_incoterms = $params->location_incoterms) : null;    
     } 
     
     /**

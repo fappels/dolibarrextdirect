@@ -120,6 +120,9 @@ class ExtDirectCommande extends Commande
                 $row->total_net = $this->total_ht;
                 $row->total_tax = $this->total_tva;
                 $row->total_inc = $this->total_ttc;
+                $row->shipping_method_id = $this->shipping_method_id;
+				$row->incoterms_id = $this->fk_incoterms;
+				$row->location_incoterms = $this->location_incoterms;
                 if (empty($orderstatus_ids)) {
                     array_push($results, $row);
                 } else {
@@ -300,6 +303,9 @@ class ExtDirectCommande extends Commande
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
         isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
+        isset($params->shipping_method_id) ? ($this->shipping_method_id = $params->shipping_method_id) : null;
+        isset($params->incoterms_id) ? ($this->fk_incoterms = $params->incoterms_id) : null;
+        isset($params->location_incoterms) ? ($this->location_incoterms = $params->location_incoterms) : null;
     } 
     
     /**
@@ -473,9 +479,102 @@ class ExtDirectCommande extends Commande
             return $results;
         } else {
             $error="Error ".$this->db->lasterror();
-            dol_syslog(get_class($this)."::readAvailabilityCodes".$error, LOG_ERR);
-            return -1;
+            dol_syslog(get_class($this)."::readAvailabilityCodes ".$error, LOG_ERR);
+            return SQLERROR;
         }
+    }
+    
+	/**
+     * public method to read a list of shipping modes
+     *
+     * @return     stdClass result data or error number
+     */
+
+    function readShipmentModes()
+    {
+        global $langs;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+		if (ExtDirect::checkDolVersion(0,'3.7','')) {
+			$sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
+	        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
+	        $sql .= ' WHERE csm.active > 0';
+	        $sql .= ' ORDER BY csm.rowid';
+	        
+	        dol_syslog(get_class($this)."::readShipmentModes sql=".$sql, LOG_DEBUG);
+	        $resql=$this->db->query($sql);
+	        
+	        if ($resql) {
+	            $num=$this->db->num_rows($resql);
+	
+	            for ($i = 0;$i < $num; $i++) {
+	                $obj = $this->db->fetch_object($resql);
+	                $row = null;
+	
+	                $row->id = $obj->rowid;
+	                $transcode=$langs->trans("SendingMethod".strtoupper($obj->code));
+	                $label=($transcode!=null?$transcode:$obj->label);
+	                $row->code = $obj->code;
+	                $row->label = $label;
+	                array_push($results, $row);
+	            }
+	
+	            $this->db->free($resql);
+	            return $results;
+	        } else {
+	            $error="Error ".$this->db->lasterror();
+	            dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
+	            return SQLERROR;
+	        }
+		} else {
+			return $results;
+		}
+    }
+    
+	/**
+     * public method to read a list of incoterm codes
+     *
+     * @return     stdClass result data or error number
+     */
+
+    function readIncotermCodes()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        if (ExtDirect::checkDolVersion(0,'3.8','')) {
+	        $sql = 'SELECT ci.rowid, ci.code';
+	        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
+	        $sql .= ' WHERE ci.active > 0';
+	        $sql .= ' ORDER BY ci.rowid';
+	        
+	        dol_syslog(get_class($this)."::readIncotermCodes sql=".$sql, LOG_DEBUG);
+	        $resql=$this->db->query($sql);
+	        
+	        if ($resql) {
+	            $num=$this->db->num_rows($resql);
+	
+	            for ($i = 0;$i < $num; $i++) {
+	                $obj = $this->db->fetch_object($resql);
+	                $row = null;
+	
+	                $row->id = $obj->rowid;
+	                $row->code = $obj->code;
+	                array_push($results, $row);
+	            }
+	
+	            $this->db->free($resql);
+	            return $results;
+	        } else {
+	            $error="Error ".$this->db->lasterror();
+	            dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
+	            return SQLERROR;
+	        }
+        }  else {
+			return $results;
+		}
     }
     
     /**
