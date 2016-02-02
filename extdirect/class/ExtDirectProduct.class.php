@@ -458,11 +458,13 @@ class ExtDirectProduct extends Product
                 if ($updated && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
                 if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
                 // verify
-                if (ExtDirect::checkDolVersion() >= 3.6) {
+                if ($updated && (ExtDirect::checkDolVersion() >= 3.6)) {
                     if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }                
                 // update
-                if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if ($updated) {
+                	if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }                
                 // check batch or non batch
                 if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
                     //! Stock
@@ -618,7 +620,7 @@ class ExtDirectProduct extends Product
                     if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 // barcode
-                if (!empty($this->barcode)) {
+                if ($updated && !empty($this->barcode)) {
                     $this->setValueFrom('barcode', $this->barcode);
                     $this->setValueFrom('fk_barcode_type', $this->barcode_type);
                 }
