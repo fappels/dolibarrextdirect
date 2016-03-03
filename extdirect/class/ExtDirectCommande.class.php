@@ -26,6 +26,7 @@
 require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/price.lib.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectCommande class
@@ -338,7 +339,7 @@ class ExtDirectCommande extends Commande
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status";
+        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -388,6 +389,7 @@ class ExtDirectCommande extends Commande
                 $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
                 $row->availability_id = $obj->fk_availability;
                 $row->status        = $obj->status;
+                $row->customer_price_level = (int) $obj->price_level;
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -615,6 +617,7 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
                 if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+                if ($filter->property == 'multiprices_index'  && !empty($filter->value)) $multiprices_index = $filter->value;
             }
         }
     
@@ -646,7 +649,7 @@ class ExtDirectCommande extends Commande
                             $row->ref = $line->product_ref;
                             $row->product_label = $line->product_label;
                             $row->product_desc = $line->product_desc;
-                            $row->product_type = $line->product->type;
+                            $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
@@ -657,9 +660,18 @@ class ExtDirectCommande extends Commande
                             $row->total_tax = $line->total_tva;
                             $row->total_localtax1 = $line->total_localtax1;
                             $row->total_localtax2 = $line->total_localtax2;
-                            $row->product_price = $line->subprice;
+                            if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
+			                    //! Arrays for multiprices
+			                    $row->product_price=$myprod->multiprices[$multiprices_index];
+			                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+			                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+			                } else {
+			                	$row->product_price = $myprod->price;
+			                	$row->product_price_ttc = $myprod->price_ttc;
+			                	$row->price_base_type = $myprod->price_base_type;
+			                }
                             $row->rang = $line->rang;
-                            $row->price = $line->price;
+                            $row->price = $line->price;                            
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                             $row->stock = (int) $myprod->stock_reel;
@@ -685,7 +697,7 @@ class ExtDirectCommande extends Commande
                             $row->ref = $line->product_ref;
                             $row->product_label = $line->product_label;
                             $row->product_desc = $line->product_desc;
-                            $row->product_type = $line->product->type;
+                            $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
@@ -696,7 +708,16 @@ class ExtDirectCommande extends Commande
                             $row->total_tax = $line->total_tva;
                             $row->total_localtax1 = $line->total_localtax1;
                             $row->total_localtax2 = $line->total_localtax2;
-                            $row->product_price = $line->subprice;
+                        	if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
+			                    //! Arrays for multiprices
+			                    $row->product_price=$myprod->multiprices[$multiprices_index];
+			                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+			                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+			                } else {
+			                	$row->product_price = $myprod->price;
+			                	$row->product_price_ttc = $myprod->price_ttc;
+			                	$row->price_base_type = $myprod->price_base_type;
+			                }
                             $row->rang = $line->rang;
                             $row->price = $line->price;
                             $row->reduction_percent = $line->remise_percent;
@@ -734,7 +755,7 @@ class ExtDirectCommande extends Commande
                                 $row->product_label = $line->product_label;
                                 $row->product_desc = $line->product_desc;
                                 $row->barcode= $myprod->barcode?$myprod->barcode:'';
-                                $row->product_type = $line->product->type;
+                                $row->product_type = $line->product_type;
                                 // limit qty asked to stock qty
                                 if ($qtyToAsk > $stockReal) {
                                     $row->qty_asked = $stockReal;
@@ -750,7 +771,16 @@ class ExtDirectCommande extends Commande
                                 $row->total_tax = $line->total_tva;
                                 $row->total_localtax1 = $line->total_localtax1;
                                 $row->total_localtax2 = $line->total_localtax2;
-                                $row->product_price = $line->subprice;
+	                            if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
+				                    //! Arrays for multiprices
+				                    $row->product_price=$myprod->multiprices[$multiprices_index];
+				                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+				                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+				                } else {
+				                	$row->product_price = $myprod->price;
+				                	$row->product_price_ttc = $myprod->price_ttc;
+				                	$row->price_base_type = $myprod->price_base_type;
+				                }
                                 $row->rang = $line->rang;
                                 $row->price = $line->price;
                                 $row->reduction_percent = $line->remise_percent;
@@ -819,12 +849,22 @@ class ExtDirectCommande extends Commande
             
             $info_bits = 0;
 			if ($tva_npr) $info_bits |= 0x01;
+			// recalculate pu's incase product pu with tax without tax was updated
+			if ($orderLine->price_base_type == 'TTC') {
+				$tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+				$pu_ht = $tabprice[3];
+				$pu_ttc = $tabprice[5];
+			} else {
+				$tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+				$pu_ht = $tabprice[3];
+				$pu_ttc = $tabprice[5];
+			}			
 			
             if (ExtDirect::checkDolVersion() >= 3.5) {
                 $this->id = $orderLine->fk_commande;
                 if (($result = $this->addline(
                     $orderLine->desc,
-                    $orderLine->price,
+                    $pu_ht,
                     $orderLine->qty,
                     $tva_tx,
                     $orderLine->localtax1_tx,
@@ -834,7 +874,7 @@ class ExtDirectCommande extends Commande
                     $info_bits,
                     $orderLine->fk_remise_except,
                     $orderLine->price_base_type,
-                    $orderLine->price,
+                    $pu_ttc,
                     $orderLine->date_start,
                     $orderLine->date_end,
                     $orderLine->product_type,
@@ -849,7 +889,7 @@ class ExtDirectCommande extends Commande
                 if (($result = $this->addline(
                     $orderLine->fk_commande,
                     $orderLine->desc,
-                    $orderLine->price,
+                    $pu_ht,
                     $orderLine->qty,
                     $tva_tx,
                     $orderLine->localtax1_tx,
@@ -859,7 +899,7 @@ class ExtDirectCommande extends Commande
                     $info_bits,
                     $orderLine->fk_remise_except,
                     $orderLine->price_base_type,
-                    $orderLine->price,
+                    $pu_ttc,
                     $orderLine->date_start,
                     $orderLine->date_end,
                     $orderLine->product_type,
@@ -932,10 +972,15 @@ class ExtDirectCommande extends Commande
 								$info_bits = $orderLine->info_bits;
 							}
 							
+							if ($orderLine->price_base_type == 'TTC') {
+								$pu = $params->product_price_ttc;
+							} else {
+								$pu = $params->product_price;
+							}
                             if (($result = $this->updateline(
                                 $orderLine->rowid, 
                                 $orderLine->desc, 
-                                $orderLine->price, 
+                                $pu,
                                 $orderLine->qty, 
                                 $orderLine->remise_percent, 
                                 $tva_tx, 

@@ -182,20 +182,47 @@ class ExtDirectFormProduct extends FormProduct
         
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
+        
         if (! empty($conf->product->enabled)) {
+        	$row = new stdClass;
             $row->id = 0;
-            $row->label = $langs->trans("Product") ? $langs->trans("Product") : "Product";//lang
-            array_push($results, clone $row);
+            $row->label = $langs->trans("Product") ? $langs->transnoentities("Product") : "Product";
+            array_push($results, $row);
         }
         if (! empty($conf->service->enabled)) {
+        	$row = new stdClass;
             $row->id = 1;
-            $row->label = $langs->trans("Service") ? $langs->trans("Service") : "Service";//lang
-            array_push($results, clone $row);
+            $row->label = $langs->trans("Service") ? $langs->transnoentities("Service") : "Service";
+            array_push($results, $row);
         }
         
         return $results;
-    }  
+    }
+    
+	/**
+     *    Load available price_base_types
+     *
+     *    @param    stdClass    $params     not used
+     *      
+     *    @return     stdClass result data 
+     */
+    public function readPriceBaseType(stdClass $params)
+    {
+        global $langs;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        $row->code = 'HT';
+        $row->label = $langs->transnoentities("HT") ? $langs->trans("HT") : "Net of tax";
+        array_push($results, $row);
+        $row = new stdClass;
+        $row->code = 'TTC';
+        $row->label = $langs->transnoentities("TTC") ? $langs->trans("TTC") : "Inc. tax";
+        array_push($results, $row);
+        
+        return $results;
+    }
     
     /**
      *    Load available barcodetypes

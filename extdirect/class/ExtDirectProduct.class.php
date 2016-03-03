@@ -379,7 +379,12 @@ class ExtDirectProduct extends Product
             }
             
             // price
-            if (($result = $this->updatePrice($this->price, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+           	if ($this->price_base_type == 'TTC') {
+       			$newSellPrice = $this->price_ttc;
+            } else {
+            	$newSellPrice = $this->price;
+            }
+            if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 	            
             // supplier fields
             if (!empty($this->fourn_price)) {
@@ -655,8 +660,13 @@ class ExtDirectProduct extends Product
                     }               
                 }
                 if ($updated) {
-                	 // price
-            		if (($result = $this->updatePrice($this->price, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                	// price
+                	if ($this->price_base_type == 'TTC') {
+                		$newSellPrice = $this->price_ttc;
+                	} else {
+                		$newSellPrice = $this->price;
+                	}
+            		if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 	                // supplier fields
 	                if (!empty($this->fourn_price) && !empty($this->fourn_ref)) {
 	                    $supplierProduct = new ProductFournisseur($this->db);

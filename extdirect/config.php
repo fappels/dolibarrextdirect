@@ -149,6 +149,9 @@ $API = array(
             'readProductType'=>array(
                     'len'=>1
             ),
+        	'readPriceBaseType'=>array(
+                    'len'=>1
+            ),
             'readBarcodeType'=>array(
                     'len'=>1
             )
