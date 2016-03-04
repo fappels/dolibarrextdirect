@@ -629,6 +629,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             // prepare fields
             $this->prepareOrderLineFields($params, $orderLine);
             $this->id = $params->origin_id;
+            if (($result = $this->fetch($this->id)) < 0)   return $result; //fetch multicurrency data
             if (($result = $this->addline(
                 $orderLine->desc,
                 $orderLine->subprice,
