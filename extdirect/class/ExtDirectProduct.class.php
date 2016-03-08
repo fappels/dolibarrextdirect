@@ -178,7 +178,7 @@ class ExtDirectProduct extends Product
                             $stockQty = $this->stock_warehouse[$warehouse]->real;
                             if ((! empty($this->stock_warehouse[$warehouse]->id)) && (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$warehouse]->id)) < 0 )) return $batchesQty;
                             dol_syslog(get_class($this)."::batchesQty=".$batchesQty." stockQty=".$stockQty);
-                            $row->stock_reel = $stockQty - $batchesQty;
+                            $row->stock_reel = price2num($stockQty - $batchesQty, 5);
                         } else {
                             $row->batch_id = $productBatch->id;
                             $row->sellby = $productBatch->sellby;
@@ -474,14 +474,24 @@ class ExtDirectProduct extends Product
                 if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
                     //! Stock
                     $this->load_stock();
-                    
+                    $originalQty = $param->stock_reel;
                     $stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
                     $createNewBatchFromZeroStock = false;
-                    if ($stockQty > 0) {
+                	$productBatch = new Productbatch($this->db);
+	               
+	                if (($originalQty < 0) && ($param->batch_id > 0)) {
+	                	// if negative batch qty, remove negative batch and move remaining positive qty
+	                	$productBatch->id = $param->batch_id;
+	                	if (($res = $productBatch->delete($this->_user)) < 0) return ExtDirect::getDolError($res, $productBatch->errors, $productBatch->error);
+	                	$param->correct_stock_nbpiece = $param->correct_stock_nbpiece + $originalQty;
+	                } else if (($param->correct_stock_movement == 1) && ($param->batch_id === 0)) {
+	                	// correct stock - batch stock diff, only update batch qty not stock qty
+	                	$batchCorrectQty = $param->correct_stock_nbpiece;
+	                	$param->correct_stock_nbpiece = 0;
+	                } else if ($stockQty > 0) {
                         $batchesQty = 0;
                         if (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$param->warehouse_id]->id)) < 0 ) return $batchesQty;
-                        $productBatch = new Productbatch($this->db);
-                        if (!($productBatch->fetch($param->batch_id) && ($productBatch->id == $param->batch_id))) {
+                        if ($param->batch_id === 0) {
                             if (($param->correct_stock_movement == 0) && ($param->correct_stock_nbpiece > 0) && (($batchesQty + $param->correct_stock_nbpiece) <= $stockQty)) {
                                 // only create batch when non batched stock available
                                 $productBatch->batch = $param->batch;
@@ -633,7 +643,7 @@ class ExtDirectProduct extends Product
                 if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id) || $createNewBatchFromZeroStock)) {
                     $productBatch = new Productbatch($this->db);
                     $dest = $param->correct_stock_dest_warehouseid;
-                    if (empty($dest) && !(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0)) {
+                    if (empty($dest) && (!(($param->correct_stock_movement == 1) && ($param->stock_reel - $param->correct_stock_nbpiece) == 0) || !empty($batchCorrectQty))) {
                         // update batch if not removed
                         if (!empty($param->batch_id)) {
                             $productBatch->fetch($param->batch_id);
@@ -656,6 +666,7 @@ class ExtDirectProduct extends Product
                         isset($param->sellby) ? $productBatch->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
                         isset($param->eatby) ? $productBatch->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
                         isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
+                        !empty($batchCorrectQty) ? $productBatch->qty = $productBatch->qty - $batchCorrectQty : null;
                         if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
                     }               
                 }
@@ -1111,6 +1122,7 @@ class ExtDirectProduct extends Product
                     $resql2 = $this->db->query($sql);
                     if ( $resql2 ) {
                         if ($this->db->num_rows($resql2) > 0) {
+                        	$obj = $this->db->fetch_object($resql2);
                             $id = (int) $obj->rowid;
                         }
                         $this->db->free($resql2);
@@ -1153,7 +1165,7 @@ class ExtDirectProduct extends Product
                 $row->batch = $batch->batch;
                 $row->stock_reel= (float) $batch->qty;
                 $row->qty_stock = (int) $batch->qty; //deprecated
-                $row->stock = (int) $batch->qty;
+                $row->stock = (float) $batch->qty;
                 $row->batch_info = $batch->import_key;
                 array_push($results, clone $row);
                 $batchesQty += $batch->qty;
@@ -1165,7 +1177,7 @@ class ExtDirectProduct extends Product
         
         if (!empty($stockQty) && isset($row->id) && isset($row->batch_id)) {
             // add undefined batch with non batched stock for adding batches
-            $undefinedBatch->stock_reel = $stockQty - $batchesQty;
+            $undefinedBatch->stock_reel = price2num($stockQty - $batchesQty, 5);
             array_push($results, $undefinedBatch);
         }       
         return 1;
