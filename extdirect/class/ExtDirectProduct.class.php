@@ -1175,7 +1175,7 @@ class ExtDirectProduct extends Product
             array_push($results, $row);
         } 
         
-        if (!empty($stockQty) && isset($row->id) && isset($row->batch_id)) {
+        if ((!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
             // add undefined batch with non batched stock for adding batches
             $undefinedBatch->stock_reel = price2num($stockQty - $batchesQty, 5);
             array_push($results, $undefinedBatch);
