@@ -971,7 +971,7 @@ class ExtDirectProduct extends Product
                     $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                     $row->warehouse_id = $warehouseId;
                 }
-                if (($res = $this->fetchBatches($results, clone $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id)) < 0) return $res;
+                if (($res = $this->fetchBatches($results, clone $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
             }
         } else {
             if ($includeNoBatch) {
@@ -982,7 +982,7 @@ class ExtDirectProduct extends Product
                 $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                 $row->warehouse_id = $warehouseId;
             }
-            if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id)) < 0) return $res;
+            if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
         }
 
         return $results;
@@ -1144,7 +1144,7 @@ class ExtDirectProduct extends Product
      * @param int $productStockId produc stock id
      * @return int < 0 if error > 0 if OK
      */
-    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId) {
+    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false) {
         require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
         $batches = array();
         $batchesQty = 0;
@@ -1173,13 +1173,13 @@ class ExtDirectProduct extends Product
         } else if(isset($row->id)) {
             // no batch
             array_push($results, $row);
-        } 
+        }
         
-        if ((!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
+        if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
             // add undefined batch with non batched stock for adding batches
             $undefinedBatch->stock_reel = price2num($stockQty - $batchesQty, 5);
             array_push($results, $undefinedBatch);
-        }       
+        }
         return 1;
     }
     
