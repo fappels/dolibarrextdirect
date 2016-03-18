@@ -110,8 +110,8 @@ class ExtDirectExpedition extends Expedition
                 //! -1 for cancelled, 0 for draft, 1 for validated, 2 for processed
                 $row->orderstatus_id = (int) $this->statut;
                 $row->orderstatus = $this->getLibStatut(1);
-                $row->note_private = '';
-                $row->note_public = '';
+                $row->note_private = $this->note_private;
+                $row->note_public = $this->note_public;
                 $row->user_id = $this->user_author_id;
                 if ($myUser->fetch($this->user_author_id)>0) {
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
@@ -129,6 +129,11 @@ class ExtDirectExpedition extends Expedition
                 $row->shipping_method_id = $this->shipping_method_id;
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
+				$row->tracking_number = $this->tracking_number;
+				$row->model_pdf = $this->model_pdf;
+				$row->create_date = $this->date_creation;
+				$row->delivery_address_id = $this->fk_delivery_address;
+				$row->ref_int = $this->ref_int;
                 array_push($results, $row);
             } else {
                 return 0;
@@ -280,13 +285,155 @@ class ExtDirectExpedition extends Expedition
         isset($params->weight_units) ? ( $this->weight_units = $params->weight_units) : isset($this->weight_units)?null:($this->weight_units = 0); 
         isset($params->weight) ? ( $this->weight = $params->weight) : isset($this->weight)?null:($this->weight = 0);
         isset($params->size_units) ? ( $this->size_units = $params->size_units) : isset($this->size_units)?null:($this->size_units = 0);
+        // sizes for create
         isset($params->trueDepth) ? ( $this->sizeS = $params->trueDepth) : isset($this->sizeS)?null:($this->sizeS = 0);
         isset($params->trueWidth) ? ( $this->sizeW = $params->trueWidth) : isset($this->sizeW)?null:($this->sizeW = 0);
         isset($params->trueHeight) ? ( $this->sizeH = $params->trueHeight) : isset($this->sizeH)?null:($this->sizeH = 0);   
+        // sizes for update
+        isset($params->trueDepth) ? ( $this->trueDepth = $params->trueDepth) : isset($this->trueDepth)?null:($this->trueDepth = 0);
+        isset($params->trueWidth) ? ( $this->trueWidth = $params->trueWidth) : isset($this->trueWidth)?null:($this->trueWidth = 0);
+        isset($params->trueHeight) ? ( $this->trueHeight = $params->trueHeight) : isset($this->trueHeight)?null:($this->trueHeight = 0);   
         isset($params->shipping_method_id) ? ($this->shipping_method_id = $params->shipping_method_id) : null;
         isset($params->incoterms_id) ? ($this->fk_incoterms = $params->incoterms_id) : null;
         isset($params->location_incoterms) ? ($this->location_incoterms = $params->location_incoterms) : null;    
+        isset($params->tracking_number) ? $this->tracking_number = $params->tracking_number : null;
+		isset($params->model_pdf) ? $this->model_pdf = $params->model_pdf : null;
+		isset($params->note_public) ? $this->note_public = $params->note_public : null;
+		isset($params->note_private) ? $this->note_private = $params->note_private : null;
+		isset($params->delivery_address_id) ? $this->fk_delivery_address = $params->delivery_address_id : null;
     } 
+    
+/**
+     * public method to read a list of shipments
+     *
+     * @param stdClass $params to filter on order status and ref
+     * @return     stdClass result data or error number
+     */
+    public function readShipmentList(stdClass $params) 
+    {
+        global $conf;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        $statusFilterCount = 0;
+        $ref = null;
+        $contactTypeId = 0;
+        if (isset($params->filter)) {
+            foreach ($params->filter as $key => $filter) {
+                if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
+                if ($filter->property == 'ref') $ref=$filter->value;
+                if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+                if ($filter->property == 'contact_id') $contactId = $filter->value;
+            }
+        }
+        
+        $sql = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_int, ea.status, csm.libelle as mode";
+        $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."c_shipment_mode as csm ON e.fk_shipping_method = csm.rowid";
+        $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+        $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
+        $sql.= "   FROM (";
+        $sql.= "    SELECT MAX( rowid ) AS maxrow, activity_id";
+        $sql.= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
+        $sql.= "    GROUP BY activity_id";
+        $sql.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
+        $sql.= "   WHERE ma.maxrow = ea.rowid";
+        $sql.= " ) AS ea ON e.rowid = ea.activity_id";
+        $sql.= " WHERE e.entity IN (".getEntity('shipping', 1).')';
+        $sql.= " AND e.fk_soc = s.rowid";
+        
+        
+        if ($statusFilterCount>0) {
+            $sql.= " AND ( ";
+            foreach ($orderstatus_id as $key => $fk_statut) {
+                $sql .= "e.fk_statut = ".$fk_statut;
+                if ($key < ($statusFilterCount-1)) $sql .= " OR ";
+            }
+            $sql.= ")";
+        }
+        if ($ref) {
+            $sql.= " AND e.ref = '".$ref."'";
+        }
+        if ($contactTypeId > 0) {
+            $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sql.= " AND ec.fk_socpeople = ".$contactId;
+        }
+        $sql .= " ORDER BY e.date_creation DESC";
+        
+        dol_syslog(get_class($this).'::readShipmentList', LOG_DEBUG);
+        $resql=$this->db->query($sql);
+        
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = null;
+                $row->id            = (int) $obj->rowid;
+                $row->customer      = $obj->nom;
+                $row->customer_id   = (int) $obj->socid;
+                $row->ref           = $obj->ref;
+                $row->ref_int           = $obj->ref_int;
+                $row->orderstatus_id= (int) $obj->fk_statut;
+                $row->orderstatus   = $this->LibStatut($obj->fk_statut, 1);
+                $row->status        = $obj->status;
+                $row->mode			= $obj->mode;
+                array_push($results, $row);
+            }
+            $this->db->free($resql);
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readOrdelList ".$error, LOG_ERR);
+            return SQLERROR;
+        }   
+    }
+    
+	/**
+     * public method to read a list of shipment statusses
+     *
+     * @return     stdClass result data or error number
+     */
+    public function readShipmentStatus() 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        $statut = 0;
+        while (($result = $this->LibStatut($statut, 1)) !== null) {
+            $row = null;
+            $row->id = $statut;
+            $row->status = $result;
+            $statut++;
+            array_push($results, $row);
+        }
+        return $results;
+    }
+    
+    /**
+     * public method to read a list of contac types
+     *
+     * @return     stdClass result data or error number
+     */
+    public function readContactTypes()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $row = new stdClass;
+        if (! is_array($result = $this->liste_type_contact())) return $result;
+        // add empty type
+        $row->id = 0;
+        $row->label = '';
+        array_push($results, $row);
+        foreach ($result as $id => $label) {
+            $row = null;
+            $row->id = $id;
+            $row->label = html_entity_decode($label);
+            array_push($results, $row);
+        }
+        return $results;
+    }
     
     /**
      *    Load shipmentline from database into memory
@@ -420,7 +567,7 @@ class ExtDirectExpedition extends Expedition
     }
     
     /**
-     * private method to update shipment line
+     * private method to create batch shipment lines
      *
      * @param array $batches array with batch objects
      * @param int $qtyShipped qty items of batch to ship

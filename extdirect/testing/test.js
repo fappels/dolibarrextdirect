@@ -1,4 +1,4 @@
-function _e684a88da2310a3742a4b27d40ebeddccd9b1c52(){};/**
+function _f8951775d021feadbb9923f00b04b416ca8e9103(){};/**
  * jasmine unit tests for extdirect connector
  */
 
@@ -380,6 +380,31 @@ describe("incoterms codes", function () {
 	});
 });
 
+describe("price_base_type modes", function () {
+	var flag = false,
+		testresults = [];
+	
+	it("load price_base_type modes", function() {
+		runs(function() {
+			flag = false;
+			Ext.getStore("PriceBaseTypes").load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('code');
+					});
+					flag = true;
+				}
+    		}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain('HT');
+			expect(testresults).toContain('TTC');
+		});
+	});
+});
 
 describe("Activities", function () {
 	var flag = false,
@@ -1995,13 +2020,40 @@ describe("shipment", function ()
 		testresults = [],
 		testresult = null,
 		shipmentRef = null,
-		shipmentLineIds = [];
+		shipmentLineIds = [],
+		orderstatusIds = [];
 
     beforeEach(function ()
     {
         testresults = [];
         testresult = null;
     });
+    
+    it("read shipmentstatuslist", function() {
+		
+		runs(function() {
+			var i=0;
+			
+			flag = false;
+			Ext.getStore('ShipmentStatus').load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.getId();
+						orderstatusIds[i++] = record.getId();
+					});
+					flag = true;
+				}
+    		}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain(-0);	
+			expect(testresults).toContain(1);	
+			expect(testresults).toContain(2);
+		});
+	});
 
     it("create shipment", function ()
     {
@@ -2022,6 +2074,9 @@ describe("shipment", function ()
                 trueDepth: .2,
                 trueWidth: .2,
                 trueHeight: .2,
+                note_private: 'connectortest private',
+                note_public: 'connectortest public',
+                tracking_number: 'connectortest tracking',
                 deliver_date: Ext.Date.format(new Date(), 'U')
             };
             shipment = Ext.create('ConnectorTest.model.Order', shipmentData);
@@ -2058,6 +2113,33 @@ describe("shipment", function ()
             expect(testresult).toBe('connectortest');
         });
     });
+    
+    it("read shipmentlist", function() {
+	
+		runs(function() {
+			flag = false;
+			Ext.getStore('ShipmentList').clearFilter();
+			Ext.getStore('ShipmentList').filter([Ext.create('Ext.util.Filter',{property:"orderstatus_id",value:orderstatusIds[0]})]);
+			Ext.getStore('ShipmentList').load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('ref');
+						if (record.get('ref_int') == 'CT0001') {
+							shipmentRef = record.get('ref');
+							shipmentId = record.getId();
+						}
+					});
+					flag = true;
+				}
+    		}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain(shipmentRef);	
+		});
+	});
 
     it("create shipmentlines", function ()
     {
@@ -2137,6 +2219,11 @@ describe("shipment", function ()
                     Ext.Array.each(records, function (record)
                     {
                     	testresults.push(record.get('ref'));
+                    	if (dolibarrVersion >= 3.4)	{
+							testresults.push(record.get('note_public'));
+							testresults.push(record.get('note_private'));
+							testresults.push(record.get('tracking_number'));
+						}
                     	if (dolibarrVersion >= 3.7)	{
 							testresults.push(record.get('shipping_method_id'));
 						}
@@ -2155,6 +2242,11 @@ describe("shipment", function ()
         runs(function ()
         {
             expect(testresults).toContain(shipmentRef);
+            if (dolibarrVersion >= 3.4)	{
+            	expect(testresults).toContain('connectortest public');
+            	expect(testresults).toContain('connectortest private');
+            	expect(testresults).toContain('connectortest tracking');
+            }            
 			if (dolibarrVersion >= 3.7)	{
 				expect(testresults).toContain(1);
 			}
@@ -2172,7 +2264,7 @@ describe("shipment", function ()
         runs(function ()
         {
             flag = false;
-            Ext.getStore('shipment').getAt(record).set('orderstatus_id', 1);
+            Ext.getStore('shipment').getAt(record).set('orderstatus_id', orderstatusIds[1]);
             Ext.getStore('shipment').sync();
             Ext.getStore('shipment').load({
                 callback: function (records)
@@ -2192,7 +2284,7 @@ describe("shipment", function ()
         runs(function ()
         {
             expect(record).toBe(0);
-            expect(testresult).toBe(1);
+            expect(testresult).toBe(orderstatusIds[1]);
         });
     });
 

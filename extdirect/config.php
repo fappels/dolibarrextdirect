@@ -289,6 +289,15 @@ $API = array(
             'destroyShipment'=>array(
                     'len'=>1
             ),
+        	'readShipmentList'=>array(
+                    'len'=>1
+            ),
+        	'readShipmentStatus'=>array(
+                    'len'=>1
+            ),
+        	'readContactTypes'=>array(
+                    'len'=>1
+            ),
             'readShipmentLine'=>array(
                     'len'=>1
             ),
