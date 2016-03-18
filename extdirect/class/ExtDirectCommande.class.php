@@ -351,7 +351,7 @@ class ExtDirectCommande extends Commande
         $sql.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
         $sql.= "   WHERE ma.maxrow = ea.rowid";
         $sql.= " ) AS ea ON c.rowid = ea.activity_id";
-        $sql.= " WHERE c.entity = ".$conf->entity;
+        $sql.= " WHERE c.entity IN (".getEntity('commande', 1).')';
         $sql.= " AND c.fk_soc = s.rowid";
         
         
