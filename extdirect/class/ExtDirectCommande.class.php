@@ -339,7 +339,7 @@ class ExtDirectCommande extends Commande
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level";
+        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -390,6 +390,7 @@ class ExtDirectCommande extends Commande
                 $row->availability_id = $obj->fk_availability;
                 $row->status        = $obj->status;
                 $row->customer_price_level = (int) $obj->price_level;
+                $row->ref_customer  = $obj->ref_client;
                 array_push($results, $row);
             }
             $this->db->free($resql);
