@@ -322,7 +322,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     public function readOrderList(stdClass $params) 
     {
-        global $conf;
+        global $conf, $langs;
         
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
@@ -341,7 +341,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
         
-        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode";
+        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
@@ -396,7 +396,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
                 $row->status        = $obj->status;
-                $row->mode			= $obj->mode;
+                if ($langs->transnoentitiesnoconv($obj->mode_code)) {
+                	$row->mode		= $langs->transnoentitiesnoconv($obj->mode_code);
+                } else {
+                	$row->mode		= $obj->mode_label;
+                }
+                
                 array_push($results, $row);
             }
             $this->db->free($resql);
