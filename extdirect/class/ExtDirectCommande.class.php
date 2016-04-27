@@ -327,6 +327,7 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
+        $myUser = new User($this->db);
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
@@ -339,7 +340,7 @@ class ExtDirectCommande extends Commande
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client";
+        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -391,6 +392,11 @@ class ExtDirectCommande extends Commande
                 $row->status        = $obj->status;
                 $row->customer_price_level = (int) $obj->price_level;
                 $row->ref_customer  = $obj->ref_client;
+            	$row->user_id 		= $obj->fk_user_author;
+                if ($myUser->fetch($row->user_id)>0) {
+                    $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
+                }
+                $row->total_inc		= $obj->total_ttc;
                 array_push($results, $row);
             }
             $this->db->free($resql);
