@@ -330,6 +330,9 @@ class ExtDirectProduct extends Product
         foreach ($paramArray as &$param) {
             // prepare fields
             $this->prepareFields($param);
+            if (!empty($this->barcode)) {
+            	$this->fetch_barcode();
+            }
             if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             //! Stock
             if (!empty($param->correct_stock_nbpiece)) {
@@ -460,6 +463,9 @@ class ExtDirectProduct extends Product
                     }
                 }
                 $updated = $this->prepareFields($param);
+	            if (!empty($this->barcode)) {
+	            	$this->fetch_barcode();
+	            }
                 if ($updated && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
                 if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
                 // verify
@@ -1300,7 +1306,11 @@ class ExtDirectProduct extends Product
                     if (file_exists(dol_osencode($dir.'/'.$filename)))
                     {
                         // Cree fichier en taille vignette
-                        $this->add_thumb($dir.'/'.$filename);
+                        if (ExtDirect::checkDolVersion() <= 3.9) {
+                        	$this->add_thumb($dir.'/'.$filename);
+                        } else {
+                        	$this->addThumbs($dir.'/'.$filename);
+                        }                        
                         return 1;
                     } else {
                         $this->error="ErrorFailToCreateFile";
