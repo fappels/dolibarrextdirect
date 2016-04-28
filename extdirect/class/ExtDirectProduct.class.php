@@ -781,6 +781,7 @@ class ExtDirectProduct extends Product
         $dataComplete=false;
         $dataNotComplete=false;        
         $photoSize = '';
+        $multiprices=false;
         
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -789,12 +790,23 @@ class ExtDirectProduct extends Product
         if (isset($param->filter)) {
             $filterSize = count($param->filter);
         }
+        foreach ($param->filter as $key => $filter) {
+        	if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiprices=true;
+        }
         
         $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity';
+        if ($multiprices){
+        	$sql .= ', pp.price, pp.price_ttc';
+        } else {
+        	$sql .= ', p.price, p.price_ttc';
+        }
         $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
+        if ($multiprices) {
+        	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
+        }
         $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
@@ -853,6 +865,8 @@ class ExtDirectProduct extends Product
                     } else if ($filter->property == 'photo_size' && !empty($value)) {
                         $sql .= '1';
                         $photoSize = $value;
+                    } else if ($filter->property == 'multiprices_index' && !empty($value) && $multiprices) {
+                        $sql .= 'pp.price_level = '.$value;
                     }
                 }    
                 if ($key < ($filterSize-1)) {
@@ -906,6 +920,8 @@ class ExtDirectProduct extends Product
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize, 0, $obj); 
                 }
+                $row->price		= $obj->price;
+                $row->price_ttc	= $obj->price_ttc;
                 array_push($results, $row);
             }
             $this->db->free($resql);
