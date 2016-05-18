@@ -131,6 +131,7 @@ class ExtDirectFormProduct extends FormProduct
                 isset($warehouse['label']) ? $row->label = $warehouse['label'] : $row->label='';
                 isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
                 isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
+                isset($warehouse['status']) ? $row->status = $warehouse['status'] : $row->status=null;
                 array_push($results, $row);
             }
         } else {
@@ -298,7 +299,7 @@ class ExtDirectFormProduct extends FormProduct
     private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
     {
         dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
-        $sql = "SELECT e.rowid, e.label, e.description";
+        $sql = "SELECT e.rowid, e.label, e.description, e.statut";
         if (!empty($fk_product)) 
         {
             if (!empty($fk_batch) || !empty($batch)) 
@@ -331,12 +332,12 @@ class ExtDirectFormProduct extends FormProduct
         }
         
         $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
-        $sql.= " AND e.statut = 1";
+        $sql.= " AND e.statut > 0";
         if (!empty($contentValue)) {
             $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
         }
         
-        if ($sumStock && empty($fk_product)) $sql.= " GROUP BY e.rowid, e.label, e.description";
+        if ($sumStock && empty($fk_product)) $sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
         $sql.= " ORDER BY e.label";        
         if (!empty($limit)) {
             $sql .= $this->db->plimit($limit, $start);
@@ -355,6 +356,7 @@ class ExtDirectFormProduct extends FormProduct
                 $this->cache_warehouses[$obj->rowid]['label'] = $obj->label;
                 $this->cache_warehouses[$obj->rowid]['description'] = $obj->description;
                 $this->cache_warehouses[$obj->rowid]['stock'] = $obj->stock;
+                $this->cache_warehouses[$obj->rowid]['status'] = $obj->statut;
                 $i++;
             }
             return $num;
