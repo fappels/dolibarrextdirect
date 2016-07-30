@@ -1,4 +1,4 @@
-function _2e888d9592e9132d7bbae27d5ba97d2bfc824a98(){};//@tag foundation,core
+//@tag foundation,core
 //@define Ext
 /**
  * @class Ext
@@ -16916,7 +16916,7 @@ Ext.define('Ext.util.Format', {
                     if (Ext.os.is.Android && Ext.os.version.isLessThan("3.0")) {
                         /**
                          * This code is modified from the following source: <https://github.com/csnover/js-iso8601>
-                         * � 2011 Colin Snover <http://zetafleet.com>
+                         * © 2011 Colin Snover <http://zetafleet.com>
                          * Released under MIT license.
                          */
                         var potentialUndefinedKeys = [
@@ -16939,7 +16939,7 @@ Ext.define('Ext.util.Format', {
                         // 6 ss (optional)
                         // 7 msec (optional)
                         // 8 Z (optional)
-                        // 9 � (optional)
+                        // 9 ± (optional)
                         // 10 tzHH (optional)
                         // 11 tzmm (optional)
                         if ((dateParsed = /^(\d{4}|[+\-]\d{6})(?:-(\d{2})(?:-(\d{2}))?)?(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{3}))?)?(?:(Z)|([+\-])(\d{2})(?::(\d{2}))?)?)?$/.exec(value))) {
@@ -49448,7 +49448,7 @@ Ext.define('Ext.data.DirectStore', {
  *                     if (weather) {
  *                         // Style the viewport html, and set the html of the max temperature
  *                         Ext.Viewport.setStyleHtmlContent(true);
- *                         Ext.Viewport.setHtml('The temperature in Palo Alto is <b>' + weather[0].tempMaxF + '� F</b>');
+ *                         Ext.Viewport.setHtml('The temperature in Palo Alto is <b>' + weather[0].tempMaxF + '° F</b>');
  *                     }
  *                 }
  *             });
@@ -61600,19 +61600,23 @@ Ext.define('ConnectorTest.model.Order', {
                 name: 'weight_units'
             },
             {
-                name: 'weight'
+                name: 'weight',
+                type: 'float'
             },
             {
                 name: 'size_units'
             },
             {
-                name: 'trueDepth'
+                name: 'trueDepth',
+                type: 'float'
             },
             {
-                name: 'trueWidth'
+                name: 'trueWidth',
+                type: 'float'
             },
             {
-                name: 'trueHeight'
+                name: 'trueHeight',
+                type: 'float'
             },
             {
                 name: 'reduction_percent',
@@ -61724,22 +61728,22 @@ Ext.define('ConnectorTest.model.OrderLine', {
             },
             {
                 name: 'qty_asked',
-                type: 'int'
+                type: 'float'
             },
             {
                 defaultValue: 0,
                 name: 'qty_shipped',
-                type: 'int'
+                type: 'float'
             },
             {
                 defaultValue: 0,
                 name: 'stock',
-                type: 'int'
+                type: 'float'
             },
             {
                 defaultValue: 0,
                 name: 'qty_toship',
-                type: 'int'
+                type: 'float'
             },
             {
                 name: 'ref'
@@ -61752,6 +61756,10 @@ Ext.define('ConnectorTest.model.OrderLine', {
             },
             {
                 name: 'product_price',
+                type: 'float'
+            },
+            {
+                name: 'product_price_ttc',
                 type: 'float'
             },
             {
@@ -61786,7 +61794,8 @@ Ext.define('ConnectorTest.model.OrderLine', {
                 name: 'ref_supplier'
             },
             {
-                name: 'ref_supplier_id'
+                name: 'ref_supplier_id',
+                type: 'int'
             },
             {
                 name: 'tax_tx',
@@ -61830,6 +61839,10 @@ Ext.define('ConnectorTest.model.OrderLine', {
             },
             {
                 name: 'price_base_type'
+            },
+            {
+                name: 'subprice',
+                type: 'float'
             },
             {
                 name: 'has_batch',
@@ -61914,7 +61927,7 @@ Ext.define('ConnectorTest.model.OrderList', {
                 name: 'ref_int'
             },
             {
-                name: 'ref_supplier'
+                name: 'ref_customer'
             },
             {
                 name: 'availability_id',
@@ -61940,6 +61953,17 @@ Ext.define('ConnectorTest.model.OrderList', {
             {
                 name: 'customer_price_level',
                 type: 'int'
+            },
+            {
+                name: 'total_inc',
+                type: 'float'
+            },
+            {
+                name: 'user_id',
+                type: 'int'
+            },
+            {
+                name: 'user_name'
             }
         ]
     }
@@ -61995,6 +62019,9 @@ Ext.define('ConnectorTest.model.DispatchList', {
             },
             {
                 name: 'status'
+            },
+            {
+                name: 'mode'
             }
         ]
     }
@@ -62815,10 +62842,7 @@ Ext.define('ConnectorTest.model.ShipmentList', {
                 name: 'ref_int'
             },
             {
-                name: 'customer'
-            },
-            {
-                name: 'customer_id',
+                name: 'supplier_id',
                 type: 'int'
             },
             {

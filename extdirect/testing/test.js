@@ -1,4 +1,4 @@
-function _f8951775d021feadbb9923f00b04b416ca8e9103(){};/**
+/**
  * jasmine unit tests for extdirect connector
  */
 
