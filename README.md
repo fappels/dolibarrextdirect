@@ -125,4 +125,4 @@ Enable customer and supplier order modules with stock increase/decrease enabled.
 **Supported Dolibarr Versions:**
 
 - Min version:	3.3
-- Max version:	3.9
+- Max version:	4.0

@@ -1069,6 +1069,7 @@ class ExtDirectSociete extends Societe
         } else {
            isset($params->note_public) ? ($this->note = $params->note_public) : null;
         }
+        isset($params->typent_id) ? ($this->typent_id = $params->typent_id) : null;
         /*	$img = str_replace('data:image/png;base64,', '', $params->logo);
 	        $img = str_replace(' ', '+', $img);
 	        $data = base64_decode($img);*/
