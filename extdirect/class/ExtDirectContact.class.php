@@ -75,47 +75,71 @@ class ExtDirectContact extends Contact
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') {
                     if (($result = $this->fetch($filter->value)) < 0)   return $result;
-                    if ($result == 0) {
-                        return array(); // no results
-                    }
-                    if (!$this->error) {
-                        $row = null;
-                        $row->id                = (int) $this->id;
-                        $row->civility_id       = $this->civilite_id;
-                        $row->lastname          = $this->lastname;
-                        $row->firstname         = $this->firstname;
-                        $row->address           = $this->address;
-                        $row->zip               = $this->zip;
-                        $row->town              = $this->town;
-                        $row->state             = $this->state;
-                        $row->state_id          = $this->state_id;
-                        $row->country           = $this->country;
-                        $row->country_id        = $this->country_id;
-                        $row->company_id        = (int) $this->socid;
-                        $row->companyname       = $this->socname;
-                        $row->poste             = $this->poste;
-                        $row->phone_pro         = $this->phone_pro;
-                        $row->fax               = $this->fax;
-                        $row->phone_perso       = $this->phone_perso;
-                        $row->phone_mobile      = $this->phone_mobile;
-                        $row->skype             = $this->skype;
-                        $row->email             = $this->email;
-                        $row->jabberid          = $this->jabberid;
-                        $row->priv              = (int) $this->priv;
-                        $row->birthday          = $this->birthday;
-                        $row->birthday_alert    = $this->birthday_alert;
-                        $row->note              = $this->note;
-                        $row->default_lang      = $this->default_lang;
-                        $row->user_id           = (int) $this->user_id;
-                        $row->user_login        = $this->user_login;
-                        $row->canvas            = $this->canvas;
-                        
-                        array_push($results, $row);
-                        
-                        return $results;
-                    } else {
-                        return $result;
-                    }
+                } else if ($filter->property == 'company_id') {
+                	// fetch first contact
+                	$sql = 'SELECT rowid as id';
+        			$sql .= ' FROM '.MAIN_DB_PREFIX.'socpeople';
+        			$sql .= ' WHERE fk_soc = '.$filter->value;
+        			$sql .= ' ORDER BY rowid';
+        			$sql .= $this->db->plimit(1, 0);
+        			
+        			$resql=$this->db->query($sql);
+    		        if ($resql) {
+    		        	$num=$this->db->num_rows($resql);
+    		        	if ($num) {
+    		        		$obj = $this->db->fetch_object($resql);
+    		        		if (($result = $this->fetch($obj->id)) < 0)   return $result;
+    		        	} else {
+    		        		return array(); // no results
+    		        	}
+			        } else {
+			            $error="Error ".$this->db->lasterror();
+			            dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);
+			            return SQLERROR;
+			        }
+                } else {
+                	return PARAMETERERROR;
+                }
+            	if ($result == 0) {
+                    return array(); // no results
+                }
+                if (!$this->error) {
+                    $row = null;
+                    $row->id                = (int) $this->id;
+                    $row->civility_id       = $this->civilite_id;
+                    $row->lastname          = $this->lastname;
+                    $row->firstname         = $this->firstname;
+                    $row->address           = $this->address;
+                    $row->zip               = $this->zip;
+                    $row->town              = $this->town;
+                    $row->state             = $this->state;
+                    $row->state_id          = $this->state_id;
+                    $row->country           = $this->country;
+                    $row->country_id        = $this->country_id;
+                    $row->company_id        = (int) $this->socid;
+                    $row->companyname       = $this->socname;
+                    $row->poste             = $this->poste;
+                    $row->phone_pro         = $this->phone_pro;
+                    $row->fax               = $this->fax;
+                    $row->phone_perso       = $this->phone_perso;
+                    $row->phone_mobile      = $this->phone_mobile;
+                    $row->skype             = $this->skype;
+                    $row->email             = $this->email;
+                    $row->jabberid          = $this->jabberid;
+                    $row->priv              = (int) $this->priv;
+                    $row->birthday          = $this->birthday;
+                    $row->birthday_alert    = $this->birthday_alert;
+                    $row->note              = $this->note;
+                    $row->default_lang      = $this->default_lang;
+                    $row->user_id           = (int) $this->user_id;
+                    $row->user_login        = $this->user_login;
+                    $row->canvas            = $this->canvas;
+                    
+                    array_push($results, $row);
+                    
+                    return $results;
+                } else {
+                    return $result;
                 }
             }
         }
@@ -179,7 +203,7 @@ class ExtDirectContact extends Contact
                     }      
                 }              
                 else if ($filter->property == 'content') {
-                    $contentValue = strtolower($filter->value);
+                    $contentValue = $this->db->escape(strtolower($filter->value));
                     if (ExtDirect::checkDolVersion() >= 3.4) {
                         $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
                         $sql.= " OR LOWER(c.town) like '%".$contentValue."%')" ;
