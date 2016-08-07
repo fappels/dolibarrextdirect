@@ -125,6 +125,25 @@ class ExtDirectCommande extends Commande
                 $row->shipping_method_id = $this->shipping_method_id;
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
+				$row->customer_type = $mySociete->typent_code;
+	            if ($this->remise == 0) {
+	            	$row->reduction = 0;
+	            	foreach ($this->lines as $line) {
+	            		if ($line->remise_percent > 0) {
+		            		$tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type);	
+							$noDiscountHT = $tabprice[0];
+							$noDiscountTTC = $tabprice[2];
+			            	if ($row->customer_type == 'TE_PRIVATE') {
+			            		$row->reduction += round($noDiscountTTC - $line->total_ttc, 2);
+			            	} else {
+			            		$row->reduction += round($noDiscountHT - $line->total_ht, 2);
+			            	}
+	            		}
+	            	}	            		                
+	            } else {
+	            	$row->reduction = $this->remise;
+	            }
+	            
                 if (empty($orderstatus_ids)) {
                     array_push($results, $row);
                 } else {
