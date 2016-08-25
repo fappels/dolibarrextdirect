@@ -636,6 +636,7 @@ class ExtDirectCommande extends Commande
         $row = new stdClass;
         $order_id = 0;
         $photoSize = '';
+        $onlyProduct = 1;
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -644,22 +645,27 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
                 if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
                 if ($filter->property == 'multiprices_index'  && !empty($filter->value)) $multiprices_index = $filter->value;
+                if ($filter->property == 'only_product') $onlyProduct=$filter->value;
             }
         }
     
         if ($order_id > 0) {
             $this->id=$order_id;
             $this->loadExpeditions();
-            if (($result = $this->fetch_lines(1)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if (($result = $this->fetch_lines($onlyProduct)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 foreach ($this->lines as $line) {
+                	$isService = false;
                     $myprod = new ExtDirectProduct($this->_user->login);
                     if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                     if (ExtDirect::checkDolVersion() >= 3.5) {
                         if (($result = $myprod->load_stock()) < 0) return $result;
                     } 
-                    if (isset($warehouse_id) || ($myprod->stock_reel == 0)) {
-                        if ($warehouse_id == -1) {
+                    if ($line->product_type == 1) {
+                    	$isService = true;
+                    }
+                    if ($isService || isset($warehouse_id) || ($myprod->stock_reel == 0)) {
+                        if ($isService || $warehouse_id == -1) {
                             // get orderline with complete stock
                             $row = null;
                             $row->id = $line->rowid;
@@ -702,7 +708,7 @@ class ExtDirectCommande extends Commande
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                             $row->stock = (int) $myprod->stock_reel;
-                            $row->warehouse_id = $warehouse_id;
+                            $isService ? $row->warehouse_id = -1 : $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
                             if (!empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
@@ -980,7 +986,7 @@ class ExtDirectCommande extends Commande
             if (($this->id=$params->origin_id) > 0) {
                 // get old orderline
                 if (($result = $this->fetch($this->id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-                if (($result = $this->fetch_lines(1)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (($result = $this->fetch_lines()) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 $this->fetch_thirdparty();         
 				
                 if (!$this->error) {
