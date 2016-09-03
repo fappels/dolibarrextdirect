@@ -463,7 +463,13 @@ class ExtDirectExpedition extends Expedition
             if (($result = $this->fetch_lines()) < 0)   return $result;
             if (!$this->error) {
                 foreach ($this->lines as $key => $line) {
-                    $row->id = $key;
+                	if (ExtDirect::checkDolVersion() < 3.6) {
+			    		$row->id = $key; // no line id available
+			    		$row->origin_line_id = null;
+			    	} else {
+			    		$row->id = $line->line_id;
+			    		$row->origin_line_id = $line->line_id;
+			    	}
                     $row->description = $line->description;
                     $row->product_id = $line->fk_product;
                     $row->product_ref = $line->product_ref; // deprecated
@@ -471,15 +477,14 @@ class ExtDirectExpedition extends Expedition
                     $row->product_label = $line->product_label;
                     $row->product_desc = '';
                     $row->origin_id = $origin_id;
-                    $row->origin_line_id = $line->fk_origin_line;
+                    
                     $row->qty_asked = $line->qty_asked;
                     $row->qty_shipped = $line->qty_shipped;
                     $row->warehouse_id = $line->entrepot_id;
                     // read related batch info
                     if (empty($conf->productbatch->enabled)) {
                         array_push($results, clone $row);
-                    } else {
-                        $row->id = $line->line_id;
+                    } else {                        
                         if (($res = $this->fetchBatches($results, $row, $line->line_id)) < 0) return $res;
                     }
                 }
@@ -626,7 +631,30 @@ class ExtDirectExpedition extends Expedition
      */
     public function destroyShipmentLine($param) 
     {
-        return PARAMETERERROR;// no destroy possible, will be destroyed when shipment is destroyed
+    	if (ExtDirect::checkDolVersion() < 3.6) {
+    		return PARAMETERERROR;// no destroy possible, no line id available
+    	}
+    	if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->expedition->supprimer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($param);
+    
+        foreach ($paramArray as &$params) {
+            // prepare fields
+        	if (($result = $this->fetch($params->origin_id)) < 0) {
+                 return ExtDirect::getDolError($result, $this->errors, $this->error);
+            }
+            if ($params->origin_line_id) {
+                if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+    
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
     }
     
     /**
@@ -664,4 +692,54 @@ class ExtDirectExpedition extends Expedition
        
         return 1;
     }
+    
+	/**
+	 * 	Delete shipment line.
+	 *  
+	 *  @param      int		$lineid		Id of line to delete
+	 * 	@return	int		>0 if OK, <0 if KO
+	 */
+	function deleteline($lineid)
+	{
+		global $conf;
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+		
+		// Add a protection to refuse deleting if shipment is not in draft status
+		if ($this->statut != self::STATUS_DRAFT)
+		{
+			$this->errors[]='ErrorBadParameters';
+			return -1;
+		}		
+
+		$this->db->begin();
+				
+		// delete batch expedition line
+		if ($conf->productbatch->enabled)
+		{
+			$sql = "DELETE FROM ".MAIN_DB_PREFIX."expeditiondet_batch";
+			$sql.= " WHERE fk_expeditiondet = ".$lineid;
+
+			if (!$this->db->query($sql))
+			{
+				$this->errors[]=$this->db->lasterror()." - sql=$sql";
+				$this->db->rollback();
+				return -2;
+			}
+		}
+		
+		$sql = "DELETE FROM ".MAIN_DB_PREFIX."expeditiondet";
+		$sql.= " WHERE rowid = ".$lineid;
+
+		if ( $this->db->query($sql))
+		{
+			$this->db->commit();
+			return 1;
+		}
+		else
+		{
+			$this->errors[]=$this->db->lasterror()." - sql=$sql";
+			$this->db->rollback();
+			return -3;
+		}
+	}
 }
