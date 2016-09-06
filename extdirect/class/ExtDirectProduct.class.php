@@ -348,10 +348,10 @@ class ExtDirectProduct extends Product
                                     $param->correct_stock_label,
                                     // Price to use for stock eval
                                     $param->correct_stock_price,
-                                    // sellBy date
-                                    ExtDirect::dateTimeToDate($param->sellby),
                                     // eatBy date
                                     ExtDirect::dateTimeToDate($param->eatby),
+                                    // selltBy date
+                                    ExtDirect::dateTimeToDate($param->sellby),
                                     // batch number
                                     $param->batch,
                                     // inventorycode
@@ -1171,9 +1171,10 @@ class ExtDirectProduct extends Product
         $batches = array();
         $batchesQty = 0;
         $stockQty = $row->stock_reel;
+        $product_id = $row->product_id;
         $undefinedBatch = clone $row;
         
-        if (!empty($productStockId) && ($batches = Productbatch::findAll($this->db, $productStockId)) < 0 ) return $batches;
+        if (!empty($productStockId) && ($batches = Productbatch::findAll($this->db, $productStockId, 1, $product_id)) < 0 ) return $batches;
         
         if (!empty($batches)) {
             foreach ($batches as $batch) {
