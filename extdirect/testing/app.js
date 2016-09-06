@@ -61139,6 +61139,10 @@ Ext.define('ConnectorTest.model.Company', {
                 name: 'tva_intra'
             },
             {
+                name: 'typent_id',
+                type: 'ini'
+            },
+            {
                 name: 'local_id'
             },
             {
@@ -61682,6 +61686,13 @@ Ext.define('ConnectorTest.model.Order', {
                 name: 'tracking_number'
             },
             {
+                name: 'customer_type'
+            },
+            {
+                name: 'reduction',
+                type: 'float'
+            },
+            {
                 name: 'app_id'
             }
         ]
@@ -61964,6 +61975,11 @@ Ext.define('ConnectorTest.model.OrderList', {
             },
             {
                 name: 'user_name'
+            },
+            {
+                dateFormat: 'timestamp',
+                name: 'deliver_date',
+                type: 'date'
             }
         ]
     }
@@ -62693,7 +62709,8 @@ Ext.define('ConnectorTest.model.Warehouse', {
                 name: 'description'
             },
             {
-                name: 'stock'
+                name: 'stock',
+                type: 'float'
             }
         ]
     }

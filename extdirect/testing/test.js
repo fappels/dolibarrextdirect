@@ -15,7 +15,9 @@ var appUuid = null,
 	customerId = null,
 	actionId,
 	multiPrices = true,
-	dolibarrVersion = null;
+	dolibarrVersion = null,
+	sellby = Ext.Date.format(new Date(2020,5,30),'U'),
+	eatby = Ext.Date.format(new Date(2020,11,31),'U');
 
 var TIMEOUT = 8000;
 
@@ -1270,8 +1272,8 @@ describe("products", function () {
 						productData.photo = null;
 						//productData.productinfo = 'connectortest';
 						if (dolibarrVersion >= 3.7) {
-							productData.sellby = Ext.Date.format(new Date(),'U');
-							productData.eatby = Ext.Date.format(new Date(),'U');
+							productData.sellby = sellby;
+							productData.eatby = eatby;
 							productData.batch = 'batch1';
 							productData.has_batch = 1;
 						}						
@@ -1510,8 +1512,8 @@ describe("products", function () {
 				record.set('correct_stock_movement',0);	
 				record.set('correct_stock_label','batch');
 				record.set('correct_stock_price','15');
-				record.set('sellby',Ext.Date.format(new Date(),'U'));
-				record.set('eatby',Ext.Date.format(new Date(),'U'));
+				record.set('sellby',sellby);
+				record.set('eatby',eatby);
 				record.set('batch','batch2');		
 				record.set('batch_info','batch2 info');
 				productStore.sync();
@@ -2021,7 +2023,9 @@ describe("shipment", function ()
 		testresult = null,
 		shipmentRef = null,
 		shipmentLineIds = [],
-		orderstatusIds = [];
+		orderstatusIds = [],
+        sellbys = [],
+        batches = [];
 
     beforeEach(function ()
     {
@@ -2182,6 +2186,8 @@ describe("shipment", function ()
                     {
                         testresults[index] = record.get('description');
                         shipmentLineIds[index] = record.get('origin_line_id');
+                        sellbys[index] = record.get('sellby');
+                        batches[index] = record.get('batch');
                     });
                     delete shipmentLines;
                     flag = true;
@@ -2202,6 +2208,11 @@ describe("shipment", function ()
                 {
                     expect(testresult).toBe('connectortest');
                 }
+                if (index == 3)
+                {
+                	expect(Ext.Date.format(sellbys[index],'U')).toBe(sellby);
+                	expect(batches[index]).toBe('batch2');
+                }                
             });
         });
     });
@@ -2256,7 +2267,115 @@ describe("shipment", function ()
 			}
         });
     });
-
+    
+    it("update shipmentline", function() {
+		var updateRecord = null;
+		
+		runs(function() {
+			flag = false;
+			updateRecord = Ext.getStore('shipmentline').findRecord('origin_line_id',shipmentLineIds[0]);
+			updateRecord.set('qty_toship',1);
+			Ext.getStore('shipmentline').sync();
+			Ext.getStore('shipmentline').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult+=record.get('qty_shipped');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe(5);
+		});
+	});
+    
+	it("update shipmentline remove batch1", function() {
+		var updateRecord = null;
+		
+		runs(function() {
+			flag = false;
+			updateRecord = Ext.getStore('shipmentline').findRecord('origin_line_id',shipmentLineIds[2]);
+			updateRecord.set('qty_toship',0);
+			updateRecord.set('batch','batch1');
+			Ext.getStore('shipmentline').sync();
+			Ext.getStore('shipmentline').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult+=record.get('qty_shipped');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe(4);
+		});
+	});
+	
+	it("update shipmentline update batch2 qty", function() {
+		var updateRecord = null;
+		
+		runs(function() {
+			flag = false;
+			updateRecord = Ext.getStore('shipmentline').findRecord('origin_line_id',shipmentLineIds[3]);
+			updateRecord.set('qty_toship',2);
+			updateRecord.set('batch','batch2');
+			Ext.getStore('shipmentline').sync();
+			Ext.getStore('shipmentline').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult+=record.get('qty_shipped');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe(5);
+		});
+	});
+    
+    it("destroy shipmentLine", function() {
+		if (dolibarrVersion >= 3.6) {	
+			Ext.getStore('shipmentline').setDestroyRemovedRecords(true);
+			Ext.getStore('shipmentline').setSyncRemovedRecords(true);
+			runs(function() {
+				flag = false;
+				Ext.getStore('shipmentline').clearFilter();
+				Ext.getStore('shipmentline').filter([Ext.create('Ext.util.Filter',{property:"origin_id",value:shipmentId})]);
+				Ext.getStore('shipmentline').load({
+					callback: function (records) {
+						Ext.getStore('shipmentline').remove(records[0]); // remove first line
+						Ext.getStore('shipmentline').sync();
+						Ext.getStore('shipmentline').load({
+							callback: function (records) {
+								testresult = records.length;
+								flag = true;
+							}
+						});
+					}
+				});
+			});
+			
+			waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+			
+			runs(function () {
+				expect(testresult).toBe(2);
+			});
+		}
+	});
+    
+	
     it("update shipment", function ()
     {
         var record = Ext.getStore('shipment').find('ref', shipmentRef);
@@ -2349,14 +2468,12 @@ describe("shipment", function ()
         runs(function ()
         {
             expect(testresults).toContain(warehouseIds[1]);
-            expect(shipped).toBe(6);
+            expect(shipped).toBe(4);
+            expect(testresults.length).toBe(2);
+            expect(asked).toBe(4);
             if (dolibarrVersion >= 3.7) {
-            	expect(testresults.length).toBe(4);
-                expect(asked).toBe(10);
                 expect(testresult).toBe('batch2');
             } else {
-            	expect(testresults.length).toBe(3);
-                expect(asked).toBe(8);
                 expect(testresult).toBe(null);
             }           
         });
@@ -2785,11 +2902,11 @@ describe("Purchase Order", function () {
 			expect(testresults).toContain(warehouseIds[2]);
 			if (dolibarrVersion >= 3.7) {
 				expect(testresults.length).toBe(5);
-				expect(stock).toBe(27);
+				expect(stock).toBe(29);
 				expect(asked).toBe(14);
 			} else {
 				expect(testresults.length).toBe(4);
-				expect(stock).toBe(19);
+				expect(stock).toBe(21);
 				expect(asked).toBe(12);
 			}	
 			expect(photo).toMatch('jpeg');
@@ -2825,10 +2942,10 @@ describe("Purchase Order", function () {
 			
 			if (dolibarrVersion >= 3.7) {
 				expect(testresults.length).toBe(3);
-				expect(stock).toBe(17);
+				expect(stock).toBe(19);
 			} else {
 				expect(testresults.length).toBe(3);
-				expect(stock).toBe(14);
+				expect(stock).toBe(16);
 			}
 		});
 	});
@@ -2970,6 +3087,31 @@ describe("delete shipments and orders", function () {
 		testresult = null;
 	});
 	
+	it("destroy shipment", function() {
+		var record = Ext.getStore('shipment').find('id',shipmentId);
+		
+		Ext.getStore('shipment').setDestroyRemovedRecords(true);
+		Ext.getStore('shipment').setSyncRemovedRecords(true);
+		runs(function() {
+			flag = false;
+			Ext.getStore('shipment').removeAt(record);
+			Ext.getStore('shipment').sync();
+			Ext.getStore('shipment').load({
+				callback: function (records,operation,success) {
+					testresult = Ext.getStore('shipment').find('id',shipmentId);
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(record).toBe(0);
+			expect(testresult).toBe(-1);
+		});
+	});	
+	
 	it("destroy orderLines", function() {
 		Ext.getStore('orderline').setDestroyRemovedRecords(true);
 		Ext.getStore('orderline').setSyncRemovedRecords(true);
@@ -2995,31 +3137,6 @@ describe("delete shipments and orders", function () {
 		
 		runs(function () {
 			expect(testresult).toBe(0);
-		});
-	});	
-	
-	it("destroy shipment", function() {
-		var record = Ext.getStore('shipment').find('id',shipmentId);
-		
-		Ext.getStore('shipment').setDestroyRemovedRecords(true);
-		Ext.getStore('shipment').setSyncRemovedRecords(true);
-		runs(function() {
-			flag = false;
-			Ext.getStore('shipment').removeAt(record);
-			Ext.getStore('shipment').sync();
-			Ext.getStore('shipment').load({
-				callback: function (records,operation,success) {
-					testresult = Ext.getStore('shipment').find('id',shipmentId);
-					flag = true;
-				}
-			});
-		});
-		
-		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
-		
-		runs(function () {
-			expect(record).toBe(0);
-			expect(testresult).toBe(-1);
 		});
 	});
 	
