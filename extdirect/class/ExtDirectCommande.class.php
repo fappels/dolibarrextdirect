@@ -657,23 +657,28 @@ class ExtDirectCommande extends Commande
             if (!$this->error) {
                 foreach ($this->lines as $line) {
                 	$isService = false;
+                	(!$line->fk_product) ? $isFreeLine = true : $isFreeLine = false;
                     $myprod = new ExtDirectProduct($this->_user->login);
-                    if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+                    if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                     if (ExtDirect::checkDolVersion() >= 3.5) {
-                        if (($result = $myprod->load_stock()) < 0) return $result;
+                        if (!$isFreeLine && ($result = $myprod->load_stock()) < 0) return $result;
                     } 
                     if ($line->product_type == 1) {
                     	$isService = true;
                     }
-                    if ($isService || isset($warehouse_id) || ($myprod->stock_reel == 0)) {
-                        if ($isService || $warehouse_id == -1) {
+                    if ($isService || $isFreeLine || isset($warehouse_id) || ($myprod->stock_reel == 0)) {
+                        if ($isService || $isFreeLine || $warehouse_id == -1) {
                             // get orderline with complete stock
                             $row = null;
                             $row->id = $line->rowid;
                             $row->origin_id = $line->fk_commande;
                             $row->origin_line_id = $line->rowid;
                             if (empty($line->label)) {
-                                $row->label = $line->product_label;
+                            	if ($isFreeLine) {
+                            		$row->label = $line->desc;
+                            	} else {
+                            		$row->label = $line->product_label;
+                            	}
                             } else {
                                 $row->label = $line->label;
                             } 
@@ -709,9 +714,15 @@ class ExtDirectCommande extends Commande
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                             $row->stock = (int) $myprod->stock_reel;
-                            $isService ? $row->warehouse_id = -1 : $row->warehouse_id = $warehouse_id;
+                            if ($isService) {
+                            	$row->warehouse_id = -1; // service is not stocked
+                            } else if ($isFreeLine) {
+                            	$row->warehouse_id = 0; // freeline is not in a specific stock location
+                            } else {
+                            	$row->warehouse_id = $warehouse_id;
+                            }
                             $row->has_photo = 0;
-                            if (!empty($photoSize)) {
+                            if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
                             array_push($results, $row);
@@ -760,7 +771,7 @@ class ExtDirectCommande extends Commande
                             $row->stock = (int) $myprod->stock_warehouse[$warehouse_id]->real;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_photo = 0;
-                            if (!empty($photoSize)) {
+                            if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
                             // split orderlines by batch
