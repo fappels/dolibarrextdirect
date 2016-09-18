@@ -554,7 +554,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->date_end = $line->date_end;
                             // qty shipped for product line
                             $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
-                            $warehouse_id ? $row->stock = price2num($myprod->stock_warehouse[$warehouse_id]->real, 5) : $row->stock = price2num($myprod->stock_reel, 5);
+                            $warehouse_id ? $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
+                            $row->total_stock = $myprod->stock_reel;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_batch = $myprod->status_batch;
                             $row->has_photo = 0;
@@ -563,10 +564,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             }
                             array_push($results, $row);
                         } else {
-                            // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
+                        	// read list of oderlines split by warehouse stock (to show stock available in all warehouse)
                             foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-                                $stockReal = price2num($stock_warehouse->real, 5);
-                                
                                 $row = null;
                                 $row->id = $line->id.'_'.$warehouse;
                                 $row->origin_id = $this->id;
@@ -598,7 +597,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_end = $line->date_end;
                                 // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
                                 $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
-                                $row->stock = $stockReal;
+                                $row->stock = (float) $stock_warehouse->real;
+                                $row->total_stock = $myprod->stock_reel;
                                 $row->warehouse_id = $warehouse;
                                 $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
