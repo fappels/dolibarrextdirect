@@ -2,6 +2,7 @@ extdirect/langs/en_US/mobilid.lang
 extdirect/langs/es_ES/mobilid.lang
 extdirect/langs/fr_FR/mobilid.lang
 extdirect/langs/nl_NL/mobilid.lang
+extdirect/langs/it_IT/mobilid.lang
 DolibarrExtdirect.phpproj
 .vs/config/applicationhost.config
 .vs/DolibarrExtdirect/v14/.suo

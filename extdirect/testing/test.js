@@ -2434,6 +2434,60 @@ describe("shipment", function ()
             expect(testresult).toBe(shipmentRef);
         });
     });
+    
+    it("check stock after shipment validation", function ()
+    {
+        if (dolibarrVersion >= 3.7)
+        {
+            var productStore = Ext.getStore('product'),
+                productStock = 0,
+                batchStock = 0,
+				productId;
+
+            runs(function ()
+            {
+                flag = false;
+                productStore.clearFilter();
+                productStore.filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
+				                     Ext.create('Ext.util.Filter', { property: "ref", value: 'CT0003' })]);
+                productStore.load({
+                    callback: function (records)
+                    {
+                        Ext.Array.each(records, function (record)
+                        {
+                            productStock = record.get('stock_reel');
+                            productId = record.getId();
+                        });
+                        Ext.getStore('productbatchlist').clearFilter();
+                        Ext.getStore('productbatchlist').filter([Ext.create('Ext.util.Filter', { property: "warehouse_id", value: warehouseIds[1] }),
+				                                            Ext.create('Ext.util.Filter', { property: "product_id", value: productId })]);
+                        Ext.getStore('productbatchlist').load({
+                            callback: function (records)
+                            {
+                                Ext.Array.each(records, function (record, index)
+                                {
+                                    testresults[index] = record.get('batch');
+                                    batchStock += record.get('stock_reel');
+                                });
+                                flag = true;
+                            }
+                        });
+                    }
+                });
+
+                
+            });
+
+            waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+            runs(function ()
+            {
+                expect(testresults).toContain('batch1');
+                expect(testresults).toContain('batch2');
+                expect(batchStock).toBe(productStock);
+            });
+        }
+    });
 
     it("read shipmentline by origin Id", function ()
     {
