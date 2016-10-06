@@ -350,17 +350,24 @@ class ExtDirectCommande extends Commande
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
+        $barcode = null;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
                 if ($filter->property == 'ref') $ref=$filter->value;
                 if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
+                if ($filter->property == 'barcode') $barcode = $filter->value;
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison";
-        $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."commande as c";
+        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison";
+        $sql.= " FROM ".MAIN_DB_PREFIX."commande as c";
+        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
+        if ($barcode) {
+        	$sql.= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON c.rowid = cd.fk_commande";
+        	$sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
+        }
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
@@ -389,6 +396,9 @@ class ExtDirectCommande extends Commande
         if ($contactTypeId > 0) {
             $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
             $sql.= " AND ec.fk_socpeople = ".$contactId;
+        }
+    	if ($barcode) {
+            $sql.= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."')";
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
