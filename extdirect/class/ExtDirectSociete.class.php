@@ -387,7 +387,13 @@ class ExtDirectSociete extends Societe
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
         }        
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
+        if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
+        	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe_commerciaux as sc ON s.rowid = sc.fk_soc';
+        }
         $sql .= ' WHERE s.entity IN ('.getEntity('societe', 1).')';
+    	if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
+        	$sql .= ' AND sc.fk_user = '.$this->_user->id;
+        }
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
             $sql .= ' AND (';
