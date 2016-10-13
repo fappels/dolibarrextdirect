@@ -235,6 +235,9 @@ $API = array(
             ),
             'readIncotermCodes'=>array(
                     'len'=>1
+            ),
+        	'readConstants'=>array(
+                    'len'=>1
             )
         )
     ),

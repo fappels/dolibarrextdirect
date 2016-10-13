@@ -36,6 +36,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectCommande extends Commande
 {
     private $_user;
+    private $_orderConstants = ['STOCK_MUST_BE_ENOUGH_FOR_ORDER','STOCK_CALCULATE_ON_VALIDATE_ORDER'];
     
     /** Constructor
      *
@@ -59,6 +60,39 @@ class ExtDirectCommande extends Commande
         }
     }
     
+    /**
+     *	Load order related constants
+     * 
+     *	@param			stdClass	$params		filter with elements
+     *		constant	name of specific constant
+     *
+     *	@return			stdClass result data with specific constant value
+     */
+    public function readConstants(stdClass $params)
+    {
+    	if (!isset($this->db)) return CONNECTERROR;
+    	if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
+    	
+    	$results = array();
+        $row = new stdClass;
+        $entity = ($this->_user->entity > 0) ? $this->_user->entity : 1;
+    	
+    	if (isset($params->filter)) {
+    		if ($filter->property == 'constant') {
+    			$row->constant = $filter->value;
+    			$row->value = dolibarr_get_const($this->db, $constant, $entity);
+    			array_push($results, $row);
+    		}
+    	} else {
+    		foreach ($this->_orderConstants as $orderConstant) {
+    			$row = null;
+    			$row->constant = $orderConstant;
+    			$row->value = dolibarr_get_const($this->db, $orderConstant, $entity);
+    			array_push($results, $row);
+    		}
+    	}
+    	return $results;
+    }
     
     /**
      *    Load order from database into memory
