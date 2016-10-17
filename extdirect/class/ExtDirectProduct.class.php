@@ -1161,12 +1161,15 @@ class ExtDirectProduct extends Product
      * 
      * @param array &$results array to store batches
      * @param object $row object with product data to add to results
-     * @param int $id product id
+     * @param int $id object id
      * @param int $warehouseId warehouse id
      * @param int $productStockId produc stock id
+     * @param bool $includeNoBatch include empty batch with missing qty
+     * @param int $batchId only get a specific batch
+     * 
      * @return int < 0 if error > 0 if OK
      */
-    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false) {
+    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false, $batchId = null) {
         require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
         $batches = array();
         $batchesQty = 0;
@@ -1178,7 +1181,6 @@ class ExtDirectProduct extends Product
         
         if (!empty($batches)) {
             foreach ($batches as $batch) {
-                $row->id = $id.'_'.$batch->id;
                 $row->product_id = $this->id;
                 $row->warehouse_id = $warehouseId;
                 $row->batch_id = $batch->id;
@@ -1190,7 +1192,13 @@ class ExtDirectProduct extends Product
                 $row->qty_stock = (int) $batch->qty; //deprecated
                 $row->stock = (float) $batch->qty;
                 $row->batch_info = $batch->import_key;
-                array_push($results, clone $row);
+                if (empty($batchId)) {
+                	$row->id = $id.'_'.$batch->id;
+                	array_push($results, clone $row);
+                } else if ($batchId == $batch->id) {
+                	$row->id = $id;
+                	array_push($results, clone $row);
+                }
                 $batchesQty += $batch->qty;
             }
         } else if(isset($row->id)) {

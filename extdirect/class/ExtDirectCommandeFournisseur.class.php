@@ -494,6 +494,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 if ($filter->property == 'order_id') $order_id=$filter->value;
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
                 if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+                if ($filter->property == 'batch_id') $batchId=$filter->value;
             }
         }
     
@@ -565,7 +566,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             if (!empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
-                            array_push($results, $row);
+                        	if (empty($batchId)) {
+                                array_push($results, $row);
+                            } else {
+                                if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId)) < 0) return $res;
+                            }
                         } else {
                         	// read list of oderlines split by warehouse stock (to show stock available in all warehouse)
                             foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
@@ -608,7 +613,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
-                                array_push($results, $row);
+	                            if (empty($batchId)) {
+	                                array_push($results, $row);
+	                            } else {
+	                                if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $stock_warehouse->id, false, $batchId)) < 0) return $res;
+	                            }
                             }
                         }
                     }
