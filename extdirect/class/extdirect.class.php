@@ -596,4 +596,40 @@ class ExtDirect
         	}
         }
     }
+    
+	/**
+     *	Load Dolibarr constants
+     * 
+     *	@param			DoliDb		$db					Database handle
+     *	@param			stdClass	$params				filter with elements
+     *		constant	name of specific constant
+     *  @param			user		$user				user
+     *  @param			array		$moduleConstants 	default module constants
+     *
+     *	@return			array of stdClass result data with specific constant value or module constants
+     */
+    public static function readConstants(DoliDb $db, stdClass $params, user $user, $moduleConstants = [])
+    {
+    	$constants = [];
+    	$results = array();
+        $row = new stdClass;
+        $entity = ($user->entity > 0) ? $user->entity : 1;
+        $constants += $moduleConstants;
+    	
+    	if (isset($params->filter)) {
+    		if ($filter->property == 'constant') {
+    			$row->constant = $filter->value;
+    			$row->value = dolibarr_get_const($db, $constant, $entity);
+    			array_push($results, $row);
+    		}
+    	} else {
+    		foreach ($constants as $constant) {
+    			$row = null;
+    			$row->constant = $constant;
+    			$row->value = dolibarr_get_const($db, $constant, $entity);
+    			array_push($results, $row);
+    		}
+    	}
+    	return $results;
+    }
 }

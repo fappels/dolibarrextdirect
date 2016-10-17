@@ -36,6 +36,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectExpedition extends Expedition
 {
     private $_user;
+    private $_shipmentConstants = ['STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT','STOCK_CALCULATE_ON_SHIPMENT'];
     
     const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
@@ -65,6 +66,23 @@ class ExtDirectExpedition extends Expedition
         }
     }
     
+/**
+     *	Load shipping related constants
+     * 
+     *	@param			stdClass	$params		filter with elements
+     *		constant	name of specific constant
+     *
+     *	@return			stdClass result data with specific constant value
+     */
+    public function readConstants(stdClass $params)
+    {
+    	if (!isset($this->db)) return CONNECTERROR;
+    	if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
+    	
+    	$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_shipmentConstants);
+    	
+    	return $results;
+    }
     
     /**
      *    Load shipment from database into memory

@@ -73,24 +73,8 @@ class ExtDirectCommande extends Commande
     	if (!isset($this->db)) return CONNECTERROR;
     	if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
     	
-    	$results = array();
-        $row = new stdClass;
-        $entity = ($this->_user->entity > 0) ? $this->_user->entity : 1;
+    	$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_orderConstants);
     	
-    	if (isset($params->filter)) {
-    		if ($filter->property == 'constant') {
-    			$row->constant = $filter->value;
-    			$row->value = dolibarr_get_const($this->db, $constant, $entity);
-    			array_push($results, $row);
-    		}
-    	} else {
-    		foreach ($this->_orderConstants as $orderConstant) {
-    			$row = null;
-    			$row->constant = $orderConstant;
-    			$row->value = dolibarr_get_const($this->db, $orderConstant, $entity);
-    			array_push($results, $row);
-    		}
-    	}
     	return $results;
     }
     
@@ -829,7 +813,6 @@ class ExtDirectCommande extends Commande
                             }
                         }                        
                     } else {
-                        $qtyToAsk=$line->qty;
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
 							$row = null;
 							$row->id = $line->rowid.'_'.$warehouse;
@@ -848,12 +831,7 @@ class ExtDirectCommande extends Commande
 							$row->barcode= $myprod->barcode?$myprod->barcode:'';
 							$row->product_type = $line->product_type;
 							// limit qty asked to stock qty
-							if ($qtyToAsk > $stock_warehouse->real) {
-								$row->qty_asked = $stock_warehouse->real;
-								$qtyToAsk = price2num($line->qty - $stock_warehouse->real, 5);
-							} else {
-								$row->qty_asked = $qtyToAsk;
-							}
+							$row->qty_asked = $line->qty;
 							$row->tax_tx = $line->tva_tx;
 							$row->localtax1_tx = $line->localtax1_tx;
 							$row->localtax2_tx = $line->localtax2_tx;
