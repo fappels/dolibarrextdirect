@@ -3,10 +3,4 @@ extdirect/langs/es_ES/mobilid.lang
 extdirect/langs/fr_FR/mobilid.lang
 extdirect/langs/nl_NL/mobilid.lang
 extdirect/langs/it_IT/mobilid.lang
-DolibarrExtdirect.phpproj
-.vs/config/applicationhost.config
-.vs/DolibarrExtdirect/v14/.suo
-DolibarrExtdirect.sln
-WebEssentials2015-Settings.json
-Menu and Topbar app (Windows Phone 8.1)1/.vs/Menu and Topbar app (Windows Phone 8.1)1/v14/.suo
-Menu and Topbar app (Windows Phone 8.1)1/Menu and Topbar app (Windows Phone 8.1)1.sln
+.vscode/*

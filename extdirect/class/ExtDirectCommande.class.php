@@ -1103,7 +1103,11 @@ class ExtDirectCommande extends Commande
             if ($params->origin_line_id) {
                 // delete 
                 $this->id = $params->origin_id;
-                if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (ExtDirect::checkDolVersion(0,'5.0','')) {
+                	if (($result = $this->deleteline($this->_user, $params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                } else {
+                	if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
             } else {
                 return PARAMETERERROR;
             }
