@@ -43,6 +43,9 @@ $API = array(
             ),
             'readStateConstants'=>array(
                     'len'=>1
+            ),
+        	'readConstants'=>array(
+                    'len'=>1
             )
         )
     ),

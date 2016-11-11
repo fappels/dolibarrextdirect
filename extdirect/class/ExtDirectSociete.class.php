@@ -34,6 +34,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectSociete extends Societe
 {
     private $_user;
+    private $_constants = ['SOCIETE_CODECLIENT_ADDON'];
         
     /** Constructor
      *
@@ -58,6 +59,24 @@ class ExtDirectSociete extends Societe
                 parent::__construct($db);
             }
         }
+    }
+    
+	/**
+     *	Load order related constants
+     * 
+     *	@param			stdClass	$params		filter with elements
+     *		constant	name of specific constant
+     *
+     *	@return			stdClass result data with specific constant value
+     */
+    public function readConstants(stdClass $params)
+    {
+    	if (!isset($this->db)) return CONNECTERROR;
+    	if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
+    	
+    	$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_constants);
+    	
+    	return $results;
     }
     
 
