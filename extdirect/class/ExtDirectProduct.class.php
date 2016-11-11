@@ -1303,7 +1303,7 @@ class ExtDirectProduct extends Product
         }
         
         if (empty($conf->product->multidir_output[(int) $this->entity])) {
-            $dir = DOL_DOCUMENT_ROOT.'/documents/produit'; // for unit testing
+            $dir = DOL_DATA_ROOT.'/produit'; // for unit testing
         } else {
             $dir = $conf->product->multidir_output[(int) $this->entity];
         }
