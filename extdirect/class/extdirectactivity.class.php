@@ -238,43 +238,45 @@ class ExtDirectActivity extends CommonObject
         $stopTime = array();
         $activityId = array();
         
-        // get available activity names and init start-stop time
-        $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
-        dol_syslog(get_class($this)."::getDurations sql=".$sql, LOG_DEBUG);
-        $resql=$this->db->query($sql);
-        if ($resql) {
-            $num = $this->db->num_rows($resql);
-            $i = 0;
-            while ($i < $num) {
-                $obj = $this->db->fetch_object($resql);
-                $startTime[$obj->activity_name] = 0;
-                $stopTime[$obj->activity_name] = -1;
-                $activityId[$obj->activity_name] = 0;
-                $i++;
+        if (count($this->dataset) > 0) {
+            // get available activity names and init start-stop time
+            $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
+            dol_syslog(get_class($this)."::getDurations sql=".$sql, LOG_DEBUG);
+            $resql=$this->db->query($sql);
+            if ($resql) {
+                $num = $this->db->num_rows($resql);
+                $i = 0;
+                while ($i < $num) {
+                    $obj = $this->db->fetch_object($resql);
+                    $startTime[$obj->activity_name] = 0;
+                    $stopTime[$obj->activity_name] = -1;
+                    $activityId[$obj->activity_name] = 0;
+                    $i++;
+                }
+                $this->db->free($resql);
+            } else {
+                $this->error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::getDurations ".$this->error, LOG_ERR);
+                return -1;
             }
-            $this->db->free($resql);
-        } else {
-            $this->error="Error ".$this->db->lasterror();
-            dol_syslog(get_class($this)."::getDurations ".$this->error, LOG_ERR);
-            return -1;
-        }
-        
-        // calculate activity durations
-        foreach ($this->dataset as &$data) {
-            $data['duration'] = '';
             
-            if (($data['status'] === 'START')) {// && ($startTime[$data['activity_name']] === 0)) {
-                $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
-                $stopTime[$data['activity_name']] = 0;
-                $activityId[$data['activity_name']] = $data['activity_id'];
+            // calculate activity durations
+            foreach ($this->dataset as &$data) {
+                $data['duration'] = '';
+                
+                if (($data['status'] === 'START')) {// && ($startTime[$data['activity_name']] === 0)) {
+                    $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
+                    $stopTime[$data['activity_name']] = 0;
+                    $activityId[$data['activity_name']] = $data['activity_id'];
+                }
+                if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'ERROR') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
+                                && ($stopTime[$data['activity_name']] === 0) && ($activityId[$data['activity_name']] === $data['activity_id'])) {
+                    $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
+                    $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
+                    $startTime[$data['activity_name']] = 0;
+                    $activityId[$data['activity_name']] = 0;
+                }            
             }
-            if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'ERROR') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
-                            && ($stopTime[$data['activity_name']] === 0) && ($activityId[$data['activity_name']] === $data['activity_id'])) {
-                $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
-                $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
-                $startTime[$data['activity_name']] = 0;
-                $activityId[$data['activity_name']] = 0;
-            }            
         }
         return 1;
     }    
