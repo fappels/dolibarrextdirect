@@ -1269,18 +1269,29 @@ class ExtDirectProduct extends Product
                     $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
                 } else {
                     $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
-                }                
-                $imgData = base64_encode(file_get_contents($filename));
-                $row->photo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                }
             } else if ($format == 'small') {
                 $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
+                if (!file_exists($filename)) {
+                    // no small thumb available, return original size for small pics (< 20KB) else return mini size
+                    if (dol_filesize($dir.$photoFile) > 20480) {
+                        $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
+                        $row->photo_size = 'mini';
+                    } else {
+                        $filename=$dir.$photoFile;
+                        $row->photo_size = '';
+                    }
+                }
+            } else {
+                $filename=$dir.$photoFile;
+            }
+            if (file_exists($filename)) {
                 $imgData = base64_encode(file_get_contents($filename));
                 $row->photo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
             } else {
-                $filename=$dir.$photoFile;
-                $imgData = base64_encode(file_get_contents($filename));
-                $row->photo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
-            }                
+                $row->has_photo = 0;
+                $row->photo_size = '';
+            }
         }
     }
     
