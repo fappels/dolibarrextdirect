@@ -487,11 +487,12 @@ class ExtDirectExpedition extends Expedition
                 foreach ($this->lines as $key => $line) {
                 	if (ExtDirect::checkDolVersion() < 3.6) {
 			    		$row->id = $key; // no line id available
-			    		$row->origin_line_id = null;
+                        $row->line_id = $key; 
 			    	} else {
 			    		$row->id = $line->line_id;
-			    		$row->origin_line_id = $line->line_id;
+                        $row->line_id = $line->line_id;
 			    	}
+                    $row->origin_line_id = $line->fk_origin_line;
                     $row->description = $line->description;
                     $row->product_id = $line->fk_product;
                     $row->product_ref = $line->product_ref; // deprecated
@@ -536,7 +537,9 @@ class ExtDirectExpedition extends Expedition
         $paramArray = ExtDirect::toArray($param);
         $batches = array();
         $qtyShipped = 0;
-        foreach ($paramArray as $params) {
+        foreach ($paramArray as &$params) {
+            // TODO make prepare fields function for shipment lines, will create a 'detail_batch object array'
+            // TODO rewrite with to develop ExpeditionLigne::create function, this function will create a line included batch lines when detail_batch array available
             $this->id=$params->origin_id;
             dol_syslog(get_class($this).'::'.__FUNCTION__." line id=".$params->origin_line_id, LOG_DEBUG);
             if ($params->origin_id > 0) {
@@ -549,7 +552,7 @@ class ExtDirectExpedition extends Expedition
                             }
                         }
                         if ($finishBatch) {
-                            if (($res = $this->finishBatches($batches, $qtyShipped)) < 0) return $res;
+                            if (($res = $this->finishBatches($batches)) < 0) return $res;
                             unset($batches);
                             $batches = array();
                             $qtyShipped = $params->qty_toship;
@@ -565,6 +568,7 @@ class ExtDirectExpedition extends Expedition
                 } else {
                     // no batch
                     if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return $result;
+                    $params->line_id=$result;
                 }                
             } else {
                 return PARAMETERERROR;
@@ -572,7 +576,7 @@ class ExtDirectExpedition extends Expedition
         }
 
         if (!empty($conf->productbatch->enabled) && !empty($batches)) {
-            if (($res = $this->finishBatches($batches, $qtyShipped)) < 0) return $res;
+            if (($res = $this->finishBatches($batches)) < 0) return $res;
         }
     
         if (is_array($param)) {
@@ -603,9 +607,9 @@ class ExtDirectExpedition extends Expedition
                  return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
 	        // Add a protection to refuse deleting if shipment is not in draft status
-			if (($this->statut == self::STATUS_DRAFT) && ($params->origin_line_id)) {
+			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
             	$line = new ExtDirectExpeditionLine($this->db);
-            	$line->id = $params->origin_line_id;
+            	$line->id = $params->line_id;
             	$line->entrepot_id = $params->warehouse_id;
             	$line->fk_product = $params->product_id;
             	$line->detail_batch->batch = $params->batch;
@@ -628,12 +632,12 @@ class ExtDirectExpedition extends Expedition
      * private method to create batch shipment lines
      *
      * @param array $batches array with batch objects
-     * @param int $qtyShipped qty items of batch to ship
+     *
      * @return int > 0 OK < 0 KO
      * 
      */
 
-    private function finishBatches($batches,$qtyShipped)
+    private function finishBatches($batches)
     {
         // write related batch info
         require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
@@ -649,16 +653,21 @@ class ExtDirectExpedition extends Expedition
 			}
 		}
 		foreach ($stockLocationQty as $stockLocation => $qty) {
-			dol_syslog(get_class($this).'::'.__FUNCTION__." stock location = ".$stockLocation." qty = ".$qty, LOG_DEBUG);
+			
 			if (($result = $this->create_line($stockLocation, $stockLocationOriginLineId[$stockLocation], $qty)) < 0)  {
 				return $result;
 			} else {
 				// create shipment batch lines for stockLocation
-				$shipmentLineId = $this->db->last_insert_id(MAIN_DB_PREFIX."expeditiondet");
+                if (ExtDirect::checkDolVersion(0, '4.0', '')) {
+                    $shipmentLineId = $result;
+                } else {
+                    $shipmentLineId = $this->db->last_insert_id(MAIN_DB_PREFIX."expeditiondet");
+                }
+                dol_syslog(get_class($this).'::'.__FUNCTION__." stock location = ".$stockLocation." qty = ".$qty." shipmentLineId = ".$shipmentLineId, LOG_DEBUG);
 		        // store colleted batches
 		        foreach ($batches as $batch) {
 		        	if ($batch->warehouse_id == $stockLocation) {
-		        		if (ExtDirect::checkDolVersion() >= 3.8) {
+		        		if (ExtDirect::checkDolVersion(0, '3.8', '')) {
 			                $expeditionLineBatch = new ExpeditionLineBatch($this->db);
 			            } else {
 			                $expeditionLineBatch = new ExpeditionLigneBatch($this->db);
@@ -697,9 +706,9 @@ class ExtDirectExpedition extends Expedition
                  return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
 	        // Add a protection to refuse deleting if shipment is not in draft status
-			if (($this->statut == self::STATUS_DRAFT) && ($params->origin_line_id)) {
+			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
             	$line = new ExtDirectExpeditionLine($this->db);
-            	$line->id = $params->origin_line_id;
+            	$line->id = $params->line_id;
                 if (($result = $line->delete()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
@@ -734,6 +743,7 @@ class ExtDirectExpedition extends Expedition
         if (!empty($batches)) {
              foreach ($batches as $batch) {
                 $row->id = $lineId.'_'.$batch->id;
+                $row->line_id = $lineId;
                 $row->batch_id = $batch->fk_origin_stock;
                 $row->sellby = $batch->sellby;
                 $row->eatby = $batch->eatby;
