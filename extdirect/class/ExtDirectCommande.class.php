@@ -961,6 +961,7 @@ class ExtDirectCommande extends Commande
                     $orderLine->pa_ht,
                     $orderLine->label
                 )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                $params->id=$result;
             } else {
                 if (($result = $this->addline(
                     $orderLine->fk_commande,
@@ -986,7 +987,7 @@ class ExtDirectCommande extends Commande
                     $orderLine->pa_ht,
                     $orderLine->label
                 )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            }            
+            }
         }
     
         if (is_array($param)) {

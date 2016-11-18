@@ -667,7 +667,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 false,
                 $orderLine->date_start,
                 $orderLine->date_end
-            )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);            
+            )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);   
+            $params->id = $result;         
         }
     
         if (is_array($param)) {
