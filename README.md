@@ -126,4 +126,4 @@ Demo data from dev/initdemo should work, only add two multiprice levels in produ
 **Supported Dolibarr Versions:**
 
 - Min version:	3.3
-- Max version:	5.0 alpha
+- Max version:	5.0 beta

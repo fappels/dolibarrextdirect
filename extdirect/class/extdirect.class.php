@@ -471,8 +471,8 @@ class ExtDirect
      * method to check dolibarr compatibility
      *
      * @param Number $validate 0 = return version, 1 = return validation
-     * @param string $minVersion 0 = return version, 1 = return validation
-     * @param string $maxVersion 0 = return version, 1 = return validation
+     * @param string $minVersion >=
+     * @param string $maxVersion <=
      *
      * @return return validation 0 (not valid) or 1 (valid) or string with major.minor version
      */
@@ -485,7 +485,7 @@ class ExtDirect
         if($validate) 
         {
             $minVersion = '3.3';
-            $maxVersion = '4.0'; // tested version
+            $maxVersion = '5.0'; // tested version
         }
         if (empty($minVersion) && empty($maxVersion)) {
             return $dolMajorMinorVersion;
