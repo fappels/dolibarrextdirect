@@ -83,6 +83,12 @@ class ExtDirectFormProduct extends FormProduct
         $limit = 0;
         $start = 0;
         $contentValue = '';
+        if (ExtDirect::checkDolVersion(0,'5.0')) {
+            $statusFilter = 'warehouseopen, warehouseinternal';
+        } else {
+            $statusFilter = '';
+        }
+        
         
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -95,10 +101,11 @@ class ExtDirectFormProduct extends FormProduct
                 if ($filter->property == 'batch_id') $fkBatch=$filter->value;
                 if ($filter->property == 'batch') $batch=$this->db->escape($filter->value);
                 if ($filter->property == 'sumstock') $sumStock=$filter->value;
-                if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));  
+                if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));
+                if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);  
             }
         }
-        if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $contentValue, $sumStock, $limit, $start)) < 0) return $result;
+        if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $limit, $start)) < 0) return $result;
         
         if ($start == 0) {
             // create allwarehouse record with total warehouse stock, only for first page
@@ -290,15 +297,35 @@ class ExtDirectFormProduct extends FormProduct
      * @param	int		$fk_product		Add quantity of stock in label for product with id fk_product. Nothing if 0.
      * @param	int		$fk_batch		Add quantity of batch stock in label for product with batch id fk_batch. Nothing if 0.
      * @param   int     $batch          Add quantity of batch stock in label for product with batch name batch. Nothing if '' batch name precedes batch_id.
+     * @param   string  $statusFilter   warehouse status filter, following comma separated filter options can be used
+     *										'warehouseopen' = select products from open warehouses,
+	 *										'warehouseclosed' = select products from closed warehouses, 
+	 *										'warehouseinternal' = select products from warehouses for internal correct/transfer only
      * @param   string  $contentValue   content search string
      * @param	boolean	$sumStock		sum total stock of a warehouse, default true
      * @param   int     $limit          paging limit
      * @param   int     $start          paging start
      * @return  int  		    		Nb of loaded lines, 0 if already loaded, <0 if KO
      */
-    private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
+    private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
     {
-        dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
+        dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
+        
+        $warehouseStatus = array();
+
+		if (preg_match('/warehouseclosed/', $statusFilter)) 
+		{
+			$warehouseStatus[] = Entrepot::STATUS_CLOSED;
+		}
+		if (preg_match('/warehouseopen/', $statusFilter)) 
+		{
+			$warehouseStatus[] = Entrepot::STATUS_OPEN_ALL;
+		}
+		if (preg_match('/warehouseinternal/', $statusFilter)) 
+		{
+			$warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
+		}
+        
         $sql = "SELECT e.rowid, e.label, e.description, e.statut";
         if (!empty($fk_product)) 
         {
@@ -332,7 +359,14 @@ class ExtDirectFormProduct extends FormProduct
         }
         
         $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
-        $sql.= " AND e.statut > 0";
+        if (count($warehouseStatus))
+		{
+			$sql.= " AND e.statut IN (".implode(',',$warehouseStatus).")";
+		}
+		else
+		{
+			$sql.= " AND e.statut > 0";
+		}
         if (!empty($contentValue)) {
             $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
         }

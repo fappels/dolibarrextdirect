@@ -155,7 +155,7 @@ class ExtDirectProduct extends Product
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
                     if (ExtDirect::checkDolVersion() >= 3.5) {
-                        $this->load_stock();
+                        $this->load_stock('warehouseopen, warehouseinternal');
                     } 
                     if (ExtDirect::checkDolVersion() >= 3.8) {
                         $row->pmp = $this->pmp;
@@ -197,9 +197,9 @@ class ExtDirectProduct extends Product
                         // fetch total qty of batch in all warehouses
                         $formProduct = new FormProduct($this->db);                        
                         if (ExtDirect::checkDolVersion() >= 3.5) {
-                            $this->load_stock();
+                            $this->load_stock('warehouseopen, warehouseinternal');
                         }
-                        $warehouses = $formProduct->loadWarehouses();
+                        $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
                         $qty = 0;
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
                             if (! empty($this->stock_warehouse[$warehouseId]->id)) {
@@ -479,7 +479,7 @@ class ExtDirectProduct extends Product
                 // check batch or non batch
                 if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
                     //! Stock
-                    $this->load_stock();
+                    $this->load_stock('warehouseopen, warehouseinternal');
                     $originalQty = $param->stock_reel;
                     $stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
                     $createNewBatchFromZeroStock = false;
@@ -804,10 +804,16 @@ class ExtDirectProduct extends Product
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
         if ($multiprices) {
         	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
         }
         $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
+        if ($conf->global->ENTREPOT_EXTRA_STATUS) {
+            $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
+        } else {
+            $sql.= " AND e.statut > 0";
+        }
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
             $sql .= ' AND (';
@@ -978,15 +984,15 @@ class ExtDirectProduct extends Product
         if (empty($conf->productbatch->enabled) || empty($id) || !isset($warehouseId)) return PARAMETERERROR;
         
         $this->id = $id;
-        if (($res = $this->load_stock()) < 0) return $res; 
+        if (($res = $this->load_stock('warehouseopen, warehouseinternal')) < 0) return $res; 
                
         if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
             require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
             $formProduct = new FormProduct($this->db);
-            $formProduct->loadWarehouses($id);
+            $formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal');
             foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
                 if ($includeNoBatch) {
-                    $row->id = 'X';
+                    $row->id = 'X_'.$warehouseId;
                     $row->product_id = $id;
                     $row->batch_id = 0;
                     $row->batch = $langs->transnoentities('BatchDefaultNumber');
@@ -997,7 +1003,7 @@ class ExtDirectProduct extends Product
             }
         } else {
             if ($includeNoBatch) {
-                $row->id = 'X';
+                $row->id = 'X_'.$warehouseId;
                 $row->product_id = $id;
                 $row->batch_id = 0;
                 $row->batch = $langs->transnoentities('BatchDefaultNumber');
