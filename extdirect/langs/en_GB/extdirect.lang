@@ -1,0 +1,34 @@
+# Dolibarr language file - en_US - extdirect
+CHARSET = UTF-8
+DirectConnect = Ext.direct connector
+Module202002Name = Ext.direct connector
+Module202002Desc = Connect to external applications which use Ext.direct data interface
+Applications=Applications
+DirectConnectSetup=Ext.direct connector setup
+Parameters=Parameters
+Value=Value
+AutoAsignAbility=Enable Automatic User Login Assignment <i>[not recommended]</i></br> <b><font color="red">Warning:</font> Anyone who has access to your URL has access to your data.</b>
+Modify=Modify
+AutoUser=User to assign to all device connections
+AppId=Application ID
+RequestId=Requester
+AppName=Name
+AppVersion=Version
+Ack=Accepted
+DateC=First Connected
+DateLastConnect=Last Connected
+DevPlatform=Device Platform
+DevType=Device Type
+User=User ID
+removeAll=Remove All
+None=None
+Refresh=Refresh
+All=All
+Authentication=Authentication
+Activities=Activities
+ActivityName=Activity
+Status=Status
+Clear=Clear
+DolibarrCompatibilityError=This version has not been tested for compatibility
+AllLocations=All Locations
+ActivitiesFromUser=Show activities from user
