@@ -194,13 +194,12 @@ class ExtDirectProduct extends Product
                     //! Average price value for product entry into stock (PMP)
                     $row->pmp= $this->pmp;
                     if (! empty($conf->productbatch->enabled) && ! empty($batch)) {
-                        // fetch total qty of batch in all warehouses
+                        // fetch qty and warehouse of first batch found
                         $formProduct = new FormProduct($this->db);                        
                         if (ExtDirect::checkDolVersion() >= 3.5) {
                             $this->load_stock('warehouseopen, warehouseinternal');
                         }
                         $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
-                        $qty = 0;
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
                             if (! empty($this->stock_warehouse[$warehouseId]->id)) {
                                 $productBatch = new Productbatch($this->db);
@@ -211,11 +210,12 @@ class ExtDirectProduct extends Product
                                     $row->eatby = $productBatch->eatby;
                                     $row->batch = $productBatch->batch;
                                     $row->batch_info = $productBatch->import_key;
-                                    $qty = $qty + (float) $productBatch->qty;
+                                    $row->warehouse_id = $warehouseId;
+                                    $row->stock_reel = $productBatch->qty;
+                                    break;
                                 }
                             }
                         }
-                        $row->stock_reel = $qty;
                     } else {
                         $row->stock_reel = (float) $this->stock_reel;
                     }
@@ -223,7 +223,7 @@ class ExtDirectProduct extends Product
                     
                 //! Stock alert
                 $row->seuil_stock_alerte= $this->seuil_stock_alerte;
-                $row->warehouse_id=$warehouse;
+                if (empty($row->warehouse_id)) $row->warehouse_id = $warehouse;
                 //! Duree de validite du service
                 $row->duration_value= $this->duration_value;
                 //! Unite de duree
@@ -851,7 +851,7 @@ class ExtDirectProduct extends Product
                         if (! empty($conf->productbatch->enabled)) {
                             $sql .= " p.tobatch = 0 OR ps.rowid NOT IN (";
                             $sql .= " SELECT fk_product_stock FROM ".MAIN_DB_PREFIX."product_batch";
-                            $sql .= " WHERE ((batch = '' ) OR (batch IS NULL) OR (import_key = '' ) OR (import_key IS NULL)))";
+                            $sql .= " WHERE ((batch = '' ) OR (batch IS NULL)))";
                             $sql .= " AND ps.rowid IN (";
                             $sql .= " SELECT fk_product_stock FROM ".MAIN_DB_PREFIX."product_batch )";
                             $sql .= " AND (p.barcode <> '' OR p.barcode IS NOT NULL)";
@@ -863,7 +863,7 @@ class ExtDirectProduct extends Product
                         if (! empty($conf->productbatch->enabled)) {
                             $sql .= " (p.tobatch = 0 AND (p.barcode = '' OR p.barcode IS NULL)) OR ps.rowid IN (";
                             $sql .= " SELECT fk_product_stock FROM ".MAIN_DB_PREFIX."product_batch";
-                            $sql .= " WHERE ((batch = '' ) OR (batch IS NULL) OR (import_key = '' ) OR (import_key IS NULL)))";
+                            $sql .= " WHERE ((batch = '' ) OR (batch IS NULL)))";
                             $sql .= " OR p.barcode = '' OR p.barcode IS NULL";
                         } else {
                             $sql .= "p.barcode = '' OR p.barcode IS NULL";
