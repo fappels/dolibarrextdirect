@@ -427,6 +427,7 @@ describe("Activities", function () {
 			};
 			Ext.getStore('activities').add(activityData);
 			Ext.getStore('activities').sync();
+			Ext.getStore('activities').filter([Ext.create('Ext.util.Filter', { property: "app_id", value: appUuid })]);
 			Ext.getStore('activities').load({
 				callback: function (records) {
 					Ext.Array.each(records,function(record){
