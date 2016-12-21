@@ -99,6 +99,7 @@ class ExtDirectProduct extends Product
         $ref_ext = '';
         $batch = '';
         $photoSize = '';
+        $warehouse = NULL;
 
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -809,7 +810,7 @@ class ExtDirectProduct extends Product
         	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
         }
         $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
-        if ($conf->global->ENTREPOT_EXTRA_STATUS) {
+        if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
             $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
         } else {
             $sql.= " AND e.statut > 0";
@@ -1252,10 +1253,15 @@ class ExtDirectProduct extends Product
         // get photo
         global $conf;
         
+        $maxNum = 0;
         if (empty($productObj)) $productObj=$this;
-        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion() <= 3.6))
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion(0,'','3.6')))
         {
-            $pdir = get_exdir($productObj->id,2) . $productObj->id ."/photos/";
+            if (ExtDirect::checkDolVersion(0,'','3.7')) {
+                $pdir = get_exdir($productObj->id, 2) . $productObj->id ."/photos/";
+            } else {
+                $pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
+            }
         }
         else
         {

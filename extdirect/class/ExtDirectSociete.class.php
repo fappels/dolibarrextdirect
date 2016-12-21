@@ -34,7 +34,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectSociete extends Societe
 {
     private $_user;
-    private $_constants = ['SOCIETE_CODECLIENT_ADDON'];
+    private $_constants = array('SOCIETE_CODECLIENT_ADDON');
         
     /** Constructor
      *
@@ -541,7 +541,7 @@ class ExtDirectSociete extends Societe
         $results = array();
         $row = new stdClass;
         
-        $rowid=null;
+        $id=null;
         $ref=null;
         $ref_ext=null;
         $ref_int=null;
@@ -582,8 +582,14 @@ class ExtDirectSociete extends Societe
                 $row->name          = $this->name;
                 $row->ref_ext       = $this->ref_ext;
             
-                $row->date_create   = $this->datec;
-                $row->date_update   = $this->date_update;
+                if (ExtDirect::checkDolVersion(0,'3.6','')) {
+                    $row->date_create   = $this->date_creation;
+                    $row->date_update   = $this->date_modification;
+                } else {
+                    $row->date_create   = $this->datec;
+                    $row->date_update   = $this->date_update;
+                }
+                
             
                 $row->address       = $this->address;
                 $row->zip           = $this->zip;

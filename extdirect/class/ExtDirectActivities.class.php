@@ -98,8 +98,8 @@ class ExtDirectActivities extends ExtDirectActivity
         $results = array();
         $row = new stdClass;
         
+        $listfilter = "";
         if (isset($param->filter)) {
-            $listfilter = "";
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'app_id') {
                     $listfilter .= " AND ea.`app_id` = '".$filter->value."'";
@@ -111,8 +111,7 @@ class ExtDirectActivities extends ExtDirectActivity
                     $listfilter .= " AND `activity_id` = ".$filter->value;
                 }
             }           
-        }
-        
+        }        
         
         // check if server user is set, if not return empty result
         if (($resql = $this->fetchList($listfilter, 'rowid')) < 0) return $resql;
