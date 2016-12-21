@@ -608,9 +608,9 @@ class ExtDirect
      *
      *	@return			array of stdClass result data with specific constant value or module constants
      */
-    public static function readConstants(DoliDb $db, stdClass $params, user $user, $moduleConstants = [])
+    public static function readConstants(DoliDb $db, stdClass $params, user $user, $moduleConstants = array())
     {
-    	$constants = [];
+    	$constants =  array();
     	$results = array();
         $row = new stdClass;
         $entity = ($user->entity > 0) ? $user->entity : 1;

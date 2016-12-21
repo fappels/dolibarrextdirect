@@ -36,7 +36,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectCommande extends Commande
 {
     private $_user;
-    private $_orderConstants = ['STOCK_MUST_BE_ENOUGH_FOR_ORDER','STOCK_CALCULATE_ON_VALIDATE_ORDER'];
+    private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER','STOCK_CALCULATE_ON_VALIDATE_ORDER');
     
     /** Constructor
      *

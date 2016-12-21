@@ -36,7 +36,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectExpedition extends Expedition
 {
     private $_user;
-    private $_shipmentConstants = ['STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT','STOCK_CALCULATE_ON_SHIPMENT'];
+    private $_shipmentConstants = array('STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT','STOCK_CALCULATE_ON_SHIPMENT');
     
     const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
