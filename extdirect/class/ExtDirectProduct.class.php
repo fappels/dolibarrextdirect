@@ -812,8 +812,6 @@ class ExtDirectProduct extends Product
         $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
         if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
             $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
-        } else {
-            $sql.= " AND e.statut > 0";
         }
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
