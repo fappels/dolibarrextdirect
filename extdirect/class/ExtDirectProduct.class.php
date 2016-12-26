@@ -293,6 +293,7 @@ class ExtDirectProduct extends Product
                 $row->pu_supplier = $supplierProduct->fourn_unitprice;
                 $row->supplier_id = $supplierProduct->fourn_id;
                 $row->vat_supplier = $supplierProduct->tva_tx;
+                $row->default_reduction_percent = $this->default_discount;
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize);
@@ -1117,6 +1118,7 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'pu_supplier', 'fourn_unitprice');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'vat_supplier', 'fourn_tva_tx');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_id', 'fourn_id');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'default_reduction_percent', '$this->default_discount');
         return $diff;
     }
     
