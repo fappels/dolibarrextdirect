@@ -1268,17 +1268,28 @@ class ExtDirectProduct extends Product
             $pdir = $productObj->ref.'/';
         }
         $dir = $conf->product->multidir_output[(int) $productObj->entity] . '/'. $pdir;
-        
+        //dol_syslog(get_class($this)."::fetchPhoto dir=".$dir, LOG_DEBUG);
         $photos = $this->liste_photos($dir,$maxNum);
         
         if (!empty($photos)) {
             $row->has_photo = 1;
             $row->photo_size = $format;
             $photoFile = $photos[$num]['photo'];
+            //dol_syslog(get_class($this)."::fetchPhoto photoFile=".$photoFile, LOG_DEBUG);
             $photo_parts = pathinfo($photoFile);
             if ($format == 'mini') {
                 if (ExtDirect::checkDolVersion() <= 3.6) {
                     $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
+                    if (!file_exists($filename)) {
+                        // no small thumb available, return original size for small pics (< 20KB) else return mini size
+                        if (dol_filesize($dir.$photoFile) > 204800) {
+                            $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
+                            $row->photo_size = 'mini';
+                        } else {
+                            $filename=$dir.$photoFile;
+                            $row->photo_size = '';
+                        }
+                    }
                 } else {
                     $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
                 }
@@ -1286,7 +1297,7 @@ class ExtDirectProduct extends Product
                 $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
                 if (!file_exists($filename)) {
                     // no small thumb available, return original size for small pics (< 20KB) else return mini size
-                    if (dol_filesize($dir.$photoFile) > 20480) {
+                    if (dol_filesize($dir.$photoFile) > 204800) {
                         $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
                         $row->photo_size = 'mini';
                     } else {
