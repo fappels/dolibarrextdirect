@@ -100,6 +100,7 @@ class ExtDirectProduct extends Product
         $batch = '';
         $photoSize = '';
         $warehouse = NULL;
+        $socid = NULL;
 
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -112,6 +113,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'batch_id') $batchId = $filter->value;
                 else if ($filter->property == 'ref_supplier') $refSupplier = $filter->value;
                 else if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+                else if ($filter->property == 'customer_id' && !empty($filter->value)) $socid = $filter->value;
             }
         }
         
@@ -127,6 +129,12 @@ class ExtDirectProduct extends Product
                 $row->type= $this->type;
                 $row->note= $this->note;
                 //! Selling price
+                $row->price= $this->price?$this->price:'';              // Price net
+                $row->price_ttc= $this->price_ttc?$this->price_ttc:'';          // Price with tax
+                //! Default VAT rate of product
+                $row->tva_tx= $this->tva_tx?$this->tva_tx:'';
+                //! Base price ('TTC' for price including tax or 'HT' for net price)
+                $row->price_base_type= $this->price_base_type;
                 if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
                     //! Arrays for multiprices
                     $row->price=$this->multiprices[$multiprices_index]?$this->multiprices[$multiprices_index]:'';
@@ -134,13 +142,21 @@ class ExtDirectProduct extends Product
                     $row->tva_tx=$this->multiprices_tva_tx[$multiprices_index]?$this->multiprices_tva_tx[$multiprices_index]:'';
                     $row->price_base_type=$this->multiprices_base_type[$multiprices_index];
                     $row->multiprices_index=$multiprices_index;
-                } else {
-                    $row->price= $this->price?$this->price:'';              // Price net
-                    $row->price_ttc= $this->price_ttc?$this->price_ttc:'';          // Price with tax
-                    //! Default VAT rate of product
-                    $row->tva_tx= $this->tva_tx?$this->tva_tx:'';
-                    //! Base price ('TTC' for price including tax or 'HT' for net price)
-                    $row->price_base_type= $this->price_base_type;
+                } else if (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) { // Price by customer
+
+                    require_once DOL_DOCUMENT_ROOT . '/product/class/productcustomerprice.class.php';
+
+                    $prodcustprice = new Productcustomerprice($this->db);
+
+                    if (($result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid))) <= 0) ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
+                    if ($result) {
+                        if (count($prodcustprice->lines) > 0) {
+                            $row->price = price($prodcustprice->lines [0]->price);
+                            $row->price_ttc = price($prodcustprice->lines [0]->price_ttc);
+                            $row->price_base_type = $prodcustprice->lines [0]->price_base_type;
+                            $row->tva_tx = $prodcustprice->lines [0]->tva_tx;
+                        }
+                    }
                 }
                 $row->price_min= $this->price_min;         // Minimum price net
                 $row->price_min_ttc= $this->price_min_ttc;     // Minimum price with tax
@@ -783,6 +799,7 @@ class ExtDirectProduct extends Product
         $dataNotComplete=false;        
         $photoSize = '';
         $multiprices=false;
+        $categorieFilter = false;
         
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -793,6 +810,7 @@ class ExtDirectProduct extends Product
         }
         foreach ($param->filter as $key => $filter) {
         	if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiprices=true;
+            if (($filter->property == 'categorie_id')) $categorieFilter=true;
         }
         
         $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity';
@@ -803,8 +821,11 @@ class ExtDirectProduct extends Product
         }
         $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
+        if ($categorieFilter) {
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
+        }
+        
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
         if ($multiprices) {
         	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
@@ -819,11 +840,7 @@ class ExtDirectProduct extends Product
             foreach ($param->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value) && ($filter->property != 'type')) {
-                    if ($filter->property == 'categorie_id') {
-                        $sql .= 'c.rowid IS NULL';
-                    } else {
-                        $sql .= '1';
-                    }                    
+                    $sql .= '1';                    
                 } else {
                     if ($filter->property == 'warehouse_id') {
                         $sql .= 'ps.fk_entrepot = '.$value;
