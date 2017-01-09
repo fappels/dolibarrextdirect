@@ -749,6 +749,17 @@ class ExtDirectSociete extends Societe
                     $sql .= "(s.ape = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 else if ($filter->property == 'idprof4') 
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'content') {
+                    $contentValue = strtolower($this->db->escape($filter->value));
+                    
+                    if (ExtDirect::checkDolVersion() >= 3.4) {
+                        $sql.= " (LOWER(s.zip) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
+                    } else {
+                        $sql.= " (LOWER(s.cp) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
+                    }
+                }
                 else break;
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
