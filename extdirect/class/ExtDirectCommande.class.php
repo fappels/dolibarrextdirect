@@ -905,7 +905,7 @@ class ExtDirectCommande extends Commande
             $this->prepareOrderLineFields($params, $orderLine);
             if (($result = $this->fetch($orderLine->fk_commande)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             $this->fetch_thirdparty();
-            if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
+            if ((! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) || ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
             	if (!empty($this->thirdparty->tva_assuj)) {
                 	$tva_tx = $orderLine->tva_tx;
                 } else {
