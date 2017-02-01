@@ -1138,7 +1138,7 @@ class ExtDirectProduct extends Product
     }
     
     /**
-     * private method to fetch id from given barcode
+     * private method to fetch id from given barcode, search in barcode and ref field
      *
      * @param string $barcode barcode to fetch id from
      * @return integer $id rowid of product
@@ -1150,9 +1150,9 @@ class ExtDirectProduct extends Product
         $couldBeEAN = false;
         if ((strlen($barcode) == 13) || (strlen($barcode) == 8)) {
             $couldBeEAN = true;
-            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."'";
+            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."' OR ref = '".$barcode."'";
         } else {
-            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."'";
+            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR ref = '".$barcode."'";
         }        
         $resql = $this->db->query($sql);
         if ( $resql ) {
