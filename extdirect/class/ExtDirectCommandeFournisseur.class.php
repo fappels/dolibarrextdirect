@@ -1,6 +1,6 @@
 <?PHP
 
-/*
+/**
  * Copyright (C) 2013-2016  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,7 +29,8 @@ require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
-/** ExtDirectCommandeFournisseur class
+/** 
+ * ExtDirectCommandeFournisseur class
  * 
  * Orders Class to with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
  * 
@@ -43,7 +44,14 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectCommandeFournisseur extends CommandeFournisseur
 {
     private $_user;
-    
+    private $_orderConstants = array('STOCK_CALCULATE_ON_SUPPLIER_BILL',
+        'STOCK_CALCULATE_ON_SUPPLIER_VALIDATE_ORDER',
+        'STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER', 
+        'SUPPLIER_ORDER_USE_DISPATCH_STATUS',
+        'STOCK_USE_VIRTUAL_STOCK',
+        'STOCK_ALLOW_NEGATIVE_TRANSFER',
+        'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE');
+
     /** 
      * Constructor     
      * 
@@ -66,6 +74,23 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         }
     }
     
+    /**
+     * Load order related constants
+     * 
+     * @param   stdClass    $params filter with elements
+     *                      constant	name of specific constant
+     *
+     * @return  stdClass result data with specific constant value
+     */
+    public function readConstants(stdClass $params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
+
+        $results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_orderConstants);
+
+        return $results;
+    }
     
     /**
      *    Load order from database into memory
@@ -129,6 +154,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->order_method_id = $this->methode_commande_id;
                 $row->order_method = $this->methode_commande;
                 $row->reduction_percent = $this->remise_percent;
+                $row->reduction = 0;
+                foreach ($this->lines as $line) {
+                    if ($line->remise_percent > 0) {
+                        $tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type);	
+                        $noDiscountHT = $tabprice[0];
+                        $row->reduction += round($noDiscountHT - $line->total_ht, 2);
+                    }
+                }
                 $row->payment_condition_id = $this->cond_reglement_id;
                 $row->payment_type_id = $this->mode_reglement_id;
                 $row->total_net = $this->total_ht;
@@ -140,7 +173,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     array_push($results, $row);
                 } else {
                     // filter on order status
-                    foreach($orderstatus_ids as $orderstatus_id) {
+                    foreach ($orderstatus_ids as $orderstatus_id) {
                         if ($orderstatus_id == $row->orderstatus_id) {
                             array_push($results, $row);
                         }
@@ -560,6 +593,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
                             $warehouse_id ? $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
                             $row->total_stock = $myprod->stock_reel;
+                            $row->desiredstock = $myprod->desiredstock;
                             $row->warehouse_id = $warehouse_id;
                             $row->has_batch = $myprod->status_batch;
                             $row->has_photo = 0;
@@ -607,17 +641,18 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
                                 $row->stock = (float) $stock_warehouse->real;
                                 $row->total_stock = $myprod->stock_reel;
+                                $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse;
                                 $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
-	                            if (empty($batchId)) {
-	                                array_push($results, $row);
-	                            } else {
-	                                if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $stock_warehouse->id, false, $batchId)) < 0) return $res;
-	                            }
+                                if (empty($batchId)) {
+                                    array_push($results, $row);
+                                } else {
+                                    if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $stock_warehouse->id, false, $batchId)) < 0) return $res;
+                                }
                             }
                         }
                     }

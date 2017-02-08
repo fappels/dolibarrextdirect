@@ -401,4 +401,37 @@ class ExtDirectFormProduct extends FormProduct
             return -1;
         }
     }
+
+    /**
+     * Public method to read a list of supplier reputations
+     *
+     * @return stdClass result data or error number
+     */
+    public function readSupplierReputations()
+    {
+        if (!isset($this->db)) {
+            return CONNECTERROR;
+        }
+        $results = array();
+
+        if (ExtDirect::checkDolVersion(0, '5.0', '')) {
+            dol_include_once('/fourn/class/fournisseur.product.class.php');
+
+            $supplierProduct = new ProductFournisseur($db);
+            if (! is_array($result = $supplierProduct->reputations)) {
+                return ExtDirect::getDolError($result, $this->errors, $this->error);
+            }
+            // add empty type
+            $id = 0;
+            foreach ($result as $code => $label) {
+                $row = new stdClass;
+                $row->id = $id++;
+                $row->code = $code;
+                $row->label = html_entity_decode($label);
+                $results[]= $row;
+            }
+        }
+        
+        return $results;
+    }
 }

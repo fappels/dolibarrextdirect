@@ -423,6 +423,8 @@ class ExtDirectSociete extends Societe
                     $sql .= "s.nom = '".$this->db->escape($filter->value)."'";
                 else if ($filter->property == 'client') 
                     $sql .= "s.client = ".$filter->value;
+                else if ($filter->property == 'supplier') 
+                    $sql .= "s.fournisseur = ".$filter->value;
                 else if ($filter->property == 'town') {
                     if (ExtDirect::checkDolVersion() >= 3.4) {
                         $sql .= "s.town = '".$this->db->escape($filter->value)."'";

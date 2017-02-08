@@ -29,14 +29,17 @@ require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/price.lib.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
-/** ExtDirectCommande class
+/** 
+ * ExtDirectCommande class
  * 
  * Orders Class to with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectCommande extends Commande
 {
     private $_user;
-    private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER','STOCK_CALCULATE_ON_VALIDATE_ORDER');
+    private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
+        'STOCK_CALCULATE_ON_VALIDATE_ORDER',
+        'STOCK_USE_VIRTUAL_STOCK');
     
     /** Constructor
      *

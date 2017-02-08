@@ -240,6 +240,7 @@ class ExtDirectProduct extends Product
                     
                 //! Stock alert
                 $row->seuil_stock_alerte= $this->seuil_stock_alerte;
+                $row->desiredstock= $this->desiredstock;
                 if (empty($row->warehouse_id)) $row->warehouse_id = $warehouse;
                 //! Duree de validite du service
                 $row->duration_value= $this->duration_value;
@@ -309,6 +310,7 @@ class ExtDirectProduct extends Product
                 $row->pu_supplier = $supplierProduct->fourn_unitprice;
                 $row->supplier_id = $supplierProduct->fourn_id;
                 $row->vat_supplier = $supplierProduct->tva_tx;
+                $row->supplier_reputation = $supplierProduct->supplier_reputation;
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize);
@@ -420,7 +422,13 @@ class ExtDirectProduct extends Product
                                 $supplier, 
                                 0, 
                                 $this->fourn_ref, 
-                                $this->fourn_tva_tx
+                                $this->fourn_tva_tx,
+                                0,
+                                $this->fourn_remise_percent,
+                                0,
+                                0,
+                                0,
+                                $this->supplier_reputation
                 )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
             }
             // add photo
@@ -716,7 +724,13 @@ class ExtDirectProduct extends Product
 	                                    $supplier, 
 	                                    0, 
 	                                    $this->fourn_ref, 
-	                                    $this->fourn_tva_tx
+	                                    $this->fourn_tva_tx,
+                                        0,
+                                        $this->fourn_remise_percent,
+                                        0,
+                                        0,
+                                        0,
+                                        $this->supplier_reputation
 	                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
 	                }
                 }
@@ -769,7 +783,7 @@ class ExtDirectProduct extends Product
     }
     
     /**
-     * public method to read a list of products
+     * Public method to read a list of products
      *
      * @param stdClass $param 
      *       property filter to filter on:
@@ -783,7 +797,7 @@ class ExtDirectProduct extends Product
      *       property sort with properties field names and directions:
      *       property limit for paging with sql LIMIT and START values
      *              
-     * @return     stdClass result data or -1
+     * @return stdClass result data or -1
      */
     public function readProductList(stdClass $param) 
     {
@@ -809,15 +823,19 @@ class ExtDirectProduct extends Product
             $filterSize = count($param->filter);
         }
         foreach ($param->filter as $key => $filter) {
-        	if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiprices=true;
+            if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiprices=true;
             if (($filter->property == 'categorie_id')) $categorieFilter=true;
+            if (($filter->property == 'supplier_id')) $supplierFilter=true;
         }
         
-        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity';
-        if ($multiprices){
-        	$sql .= ', pp.price, pp.price_ttc';
+        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity, p.seuil_stock_alerte';
+        if ($supplierFilter) {
+            $sql .= ', sp.price, sp.ref_fourn';
+            if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
+        } else if ($multiprices) {
+            $sql .= ', pp.price, pp.price_ttc';
         } else {
-        	$sql .= ', p.price, p.price_ttc';
+            $sql .= ', p.price, p.price_ttc';
         }
         $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
@@ -825,10 +843,13 @@ class ExtDirectProduct extends Product
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
         }
+        if ($supplierFilter) {
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_fournisseur_price as sp ON p.rowid = sp.fk_product';
+        }
         
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
         if ($multiprices) {
-        	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
         }
         $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
         if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
@@ -858,6 +879,8 @@ class ExtDirectProduct extends Product
                         $sql .= "p.fk_product_type = ".$value;
                     } else if ($filter->property == 'categorie_id') {
                         $sql .= "c.rowid = ".$value;
+                    } else if (($filter->property == 'supplier_id') && !empty($value)) {
+                        $sql .= "p.fk_soc = ".$value;
                     } else if ($filter->property == 'content') {
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
@@ -901,7 +924,7 @@ class ExtDirectProduct extends Product
         $sql .= " ORDER BY ";
         if (isset($param->sort)) {
             $sorterSize = count($param->sort);
-            foreach($param->sort as $key => $sort) {
+            foreach ($param->sort as $key => $sort) {
                 $sql .= $sort->property. ' '.$sort->direction;
                 if ($key < ($sorterSize-1)) {
                     $sql .= ",";
@@ -938,12 +961,18 @@ class ExtDirectProduct extends Product
                 } else {
                     $row->stock = (float) $obj->reel;
                 }
+                $row->seuil_stock_alerte = $obj->seuil_stock_alerte;
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize, 0, $obj); 
                 }
-                $row->price		= $obj->price;
-                $row->price_ttc	= $obj->price_ttc;
+                $row->price     = $obj->price;
+                if ($supplierFilter) {
+                    $row->supplier_ref = $obj->ref_fourn;
+                    if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
+                } else {
+                    $row->price_ttc = $obj->price_ttc;
+                }
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -1134,6 +1163,8 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'pu_supplier', 'fourn_unitprice');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'vat_supplier', 'fourn_tva_tx');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_id', 'fourn_id');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'desiredstock', 'desiredstock');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_reputation', 'supplier_reputation');
         return $diff;
     }
     
