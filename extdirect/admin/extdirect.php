@@ -22,7 +22,11 @@
  *  \brief      Administration Page/configuration for module dolibarrExtDirect
  */
 
-require("../../main.inc.php");
+// Load Dolibarr environment
+if (false === (@include '../../main.inc.php')) {  // From htdocs directory
+	require '../../../main.inc.php'; // From "custom" directory
+}
+
 require_once(DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php");
 dol_include_once("/extdirect/class/extdirect.class.php");
 dol_include_once("/extdirect/class/extdirectactivity.class.php");
