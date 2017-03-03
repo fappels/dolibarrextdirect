@@ -819,61 +819,63 @@ class ExtDirectCommande extends Commande
                         }                        
                     } else {
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-							$row = null;
-							$row->id = $line->rowid.'_'.$warehouse;
-							$row->origin_id = $line->fk_commande;
-							$row->origin_line_id = $line->rowid;
-							if (empty($line->label)) {
-								$row->label = $line->product_label;
-							} else {
-								$row->label = $line->label;
-							} 
-							$row->description = $line->desc;
-							$row->product_id = $line->fk_product;
-							$row->ref = $line->product_ref;
-							$row->product_label = $line->product_label;
-							$row->product_desc = $line->product_desc;
-							$row->barcode= $myprod->barcode?$myprod->barcode:'';
-							$row->product_type = $line->product_type;
-							// limit qty asked to stock qty
-							$row->qty_asked = $line->qty;
-							$row->tax_tx = $line->tva_tx;
-							$row->localtax1_tx = $line->localtax1_tx;
-							$row->localtax2_tx = $line->localtax2_tx;
-							$row->total_net = $line->total_ht;
-							$row->total_inc = $line->total_ttc;
-							$row->total_tax = $line->total_tva;
-							$row->total_localtax1 = $line->total_localtax1;
-							$row->total_localtax2 = $line->total_localtax2;
-							if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
-								//! Arrays for multiprices
-								$row->product_price=$myprod->multiprices[$multiprices_index];
-								$row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
-								$row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
-							} else {
-								$row->product_price = $myprod->price;
-								$row->product_price_ttc = $myprod->price_ttc;
-								$row->price_base_type = $myprod->price_base_type;
-							}
-							$row->rang = $line->rang;
-							$row->price = $line->price;
-							$row->subprice = $line->subprice;
-							$row->reduction_percent = $line->remise_percent;
-							$this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-							$row->stock = (float) $stock_warehouse->real;
-							$row->total_stock = $myprod->stock_reel;
-							$row->warehouse_id = $warehouse;
-							$row->has_photo = 0;
-							if (!empty($photoSize)) {
-								$myprod->fetchPhoto($row, $photoSize);
-							}
-							// split orderlines by batch
-							$row->has_batch = $myprod->status_batch;
-							if (empty($conf->productbatch->enabled)) {
-								array_push($results, $row);
-							} else {
-								if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
-							}
+                            if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stock_warehouse->real > 0)) {
+                                $row = null;
+                                $row->id = $line->rowid.'_'.$warehouse;
+                                $row->origin_id = $line->fk_commande;
+                                $row->origin_line_id = $line->rowid;
+                                if (empty($line->label)) {
+                                    $row->label = $line->product_label;
+                                } else {
+                                    $row->label = $line->label;
+                                } 
+                                $row->description = $line->desc;
+                                $row->product_id = $line->fk_product;
+                                $row->ref = $line->product_ref;
+                                $row->product_label = $line->product_label;
+                                $row->product_desc = $line->product_desc;
+                                $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                                $row->product_type = $line->product_type;
+                                // limit qty asked to stock qty
+                                $row->qty_asked = $line->qty;
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
+                                    //! Arrays for multiprices
+                                    $row->product_price=$myprod->multiprices[$multiprices_index];
+                                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+                                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+                                } else {
+                                    $row->product_price = $myprod->price;
+                                    $row->product_price_ttc = $myprod->price_ttc;
+                                    $row->price_base_type = $myprod->price_base_type;
+                                }
+                                $row->rang = $line->rang;
+                                $row->price = $line->price;
+                                $row->subprice = $line->subprice;
+                                $row->reduction_percent = $line->remise_percent;
+                                $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                                $row->stock = (float) $stock_warehouse->real;
+                                $row->total_stock = $myprod->stock_reel;
+                                $row->warehouse_id = $warehouse;
+                                $row->has_photo = 0;
+                                if (!empty($photoSize)) {
+                                    $myprod->fetchPhoto($row, $photoSize);
+                                }
+                                // split orderlines by batch
+                                $row->has_batch = $myprod->status_batch;
+                                if (empty($conf->productbatch->enabled)) {
+                                    array_push($results, $row);
+                                } else {
+                                    if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
+                                }
+                            }
                         }
                     }
                 }
