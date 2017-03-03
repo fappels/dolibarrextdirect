@@ -1,6 +1,8 @@
 <?php
-
-// tell Ext what php methods are available
+/**
+* Tell Ext what php methods are available
+*
+*/
 
 $API = array(
     'ExtDirectSociete'=>array(
@@ -44,7 +46,7 @@ $API = array(
             'readStateConstants'=>array(
                     'len'=>1
             ),
-        	'readConstants'=>array(
+            'readConstants'=>array(
                     'len'=>1
             )
         )
@@ -152,10 +154,13 @@ $API = array(
             'readProductType'=>array(
                     'len'=>1
             ),
-        	'readPriceBaseType'=>array(
+            'readPriceBaseType'=>array(
                     'len'=>1
             ),
             'readBarcodeType'=>array(
+                    'len'=>1
+            ),
+            'readSupplierReputations'=>array(
                     'len'=>1
             )
         )
@@ -239,7 +244,7 @@ $API = array(
             'readIncotermCodes'=>array(
                     'len'=>1
             ),
-        	'readConstants'=>array(
+            'readConstants'=>array(
                     'len'=>1
             )
         )
@@ -278,6 +283,9 @@ $API = array(
             ),
             'destroyOrderLine'=>array(
                     'len'=>1
+            ),
+            'readConstants'=>array(
+                    'len'=>1
             )
         )
     ),
@@ -295,13 +303,13 @@ $API = array(
             'destroyShipment'=>array(
                     'len'=>1
             ),
-        	'readShipmentList'=>array(
+            'readShipmentList'=>array(
                     'len'=>1
             ),
-        	'readShipmentStatus'=>array(
+            'readShipmentStatus'=>array(
                     'len'=>1
             ),
-        	'readContactTypes'=>array(
+            'readContactTypes'=>array(
                     'len'=>1
             ),
             'readShipmentLine'=>array(
@@ -316,7 +324,7 @@ $API = array(
             'destroyShipmentLine'=>array(
                     'len'=>1
             ),
-        	'readConstants'=>array(
+            'readConstants'=>array(
                     'len'=>1
             )
         )

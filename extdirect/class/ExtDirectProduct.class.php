@@ -99,8 +99,10 @@ class ExtDirectProduct extends Product
         $ref_ext = '';
         $batch = '';
         $photoSize = '';
-        $warehouse = NULL;
-        $socid = NULL;
+        $refSupplier = null;
+        $refSupplierId = null;
+        $warehouse = null;
+        $socid = null;
 
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
@@ -112,6 +114,7 @@ class ExtDirectProduct extends Product
                 else if ($filter->property == 'batch') $batch = $filter->value;
                 else if ($filter->property == 'batch_id') $batchId = $filter->value;
                 else if ($filter->property == 'ref_supplier') $refSupplier = $filter->value;
+                else if ($filter->property == 'ref_supplier_id') $refSupplierId = $filter->value;
                 else if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
                 else if ($filter->property == 'customer_id' && !empty($filter->value)) $socid = $filter->value;
             }
@@ -291,8 +294,10 @@ class ExtDirectProduct extends Product
                 
                 // supplier fields
                 $supplierProduct = new ProductFournisseur($this->db);
-                if (! isset($refSupplier)) {
+                if (empty($refSupplier) && empty($refSupplierId)) {
                     $supplierProduct->find_min_price_product_fournisseur($this->id);
+                } else if ($refSupplierId > 0) {
+                    $supplierProduct->fetch_product_fournisseur_price($refSupplierId);
                 } else {
                     $supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
                     foreach ($supplierProducts as $prodsupplier) {
@@ -830,7 +835,7 @@ class ExtDirectProduct extends Product
         
         $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity, p.seuil_stock_alerte';
         if ($supplierFilter) {
-            $sql .= ', sp.price, sp.ref_fourn';
+            $sql .= ', sp.price, sp.ref_fourn, sp.rowid as ref_fourn_id';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
         } else if ($multiprices) {
             $sql .= ', pp.price, pp.price_ttc';
@@ -880,7 +885,7 @@ class ExtDirectProduct extends Product
                     } else if ($filter->property == 'categorie_id') {
                         $sql .= "c.rowid = ".$value;
                     } else if (($filter->property == 'supplier_id') && !empty($value)) {
-                        $sql .= "p.fk_soc = ".$value;
+                        $sql .= "sp.fk_soc = ".$value;
                     } else if ($filter->property == 'content') {
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
@@ -946,7 +951,7 @@ class ExtDirectProduct extends Product
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
                 $row = new stdClass;
-                $row->id        = $obj->id.'_'.$obj->fk_entrepot;
+                
                 $row->product_id= (int) $obj->id;
                 $row->ref       = $obj->ref;
                 $row->label     = $obj->label;
@@ -968,9 +973,12 @@ class ExtDirectProduct extends Product
                 }
                 $row->price     = $obj->price;
                 if ($supplierFilter) {
-                    $row->supplier_ref = $obj->ref_fourn;
+                    $row->ref_supplier = $obj->ref_fourn;
+                    $row->ref_supplier_id = $obj->ref_fourn_id;
+                    $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_fourn_id;
                     if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
                 } else {
+                    $row->id        = $obj->id.'_'.$obj->fk_entrepot;
                     $row->price_ttc = $obj->price_ttc;
                 }
                 array_push($results, $row);

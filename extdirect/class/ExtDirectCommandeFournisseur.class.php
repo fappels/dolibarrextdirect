@@ -348,10 +348,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     } 
     
     /**
-     * public method to read a list of orders
+     * Public method to read a list of orders
      *
      * @param stdClass $params to filter on order status and ref
-     * @return     stdClass result data or error number
+     *
+     * @return stdClass result data or error number
      */
     public function readOrderList(stdClass $params) 
     {
@@ -364,6 +365,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $ref = null;
         $contactTypeId = 0;
         $barcode = null;
+        $productId = null;
+        $supplierId = null;
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
@@ -371,15 +375,19 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
                 if ($filter->property == 'barcode') $barcode = $filter->value;
+                if ($filter->property == 'product_id') $productId = $filter->value;
+                if ($filter->property == 'supplier_id') $supplierId = $filter->value;
             }
         }
         
         $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code";
         $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
+        if ($barcode || $productId) {
+            $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
+        }
         if ($barcode) {
-        	$sql.= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
-        	$sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
+            $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
         }
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."c_input_method as cim ON c.fk_input_method = cim.rowid";
@@ -414,6 +422,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if ($barcode) {
             $sql.= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_supplier = '".$this->db->escape($barcode)."')";
         }
+        if ($productId) {
+            $sql.= " AND cd.fk_product = ".$productId;
+        }
+        if ($supplierId) {
+            $sql.= " AND c.fk_soc = ".$supplierId;
+        }
         $sql .= " ORDER BY c.date_commande DESC";
         
         dol_syslog(get_class($this)."::readOrderList sql=".$sql, LOG_DEBUG);
@@ -433,9 +447,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
                 $row->status        = $obj->status;
                 if ($langs->transnoentitiesnoconv($obj->mode_code)) {
-                	$row->mode		= $langs->transnoentitiesnoconv($obj->mode_code);
+                    $row->mode      = $langs->transnoentitiesnoconv($obj->mode_code);
                 } else {
-                	$row->mode		= $obj->mode_label;
+                    $row->mode      = $obj->mode_label;
                 }
                 
                 array_push($results, $row);
