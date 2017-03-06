@@ -597,7 +597,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $row->total_tax = $line->total_tva;
                             $row->total_localtax1 = $line->total_localtax1;
                             $row->total_localtax2 = $line->total_localtax2;
-                            $row->product_price = $line->pu_ht;
+                            $row->subprice = $line->pu_ht;
                             $row->rang = $line->id;
                             $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                             $row->reduction_percent = $line->remise_percent;
@@ -645,7 +645,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->total_tax = $line->total_tva;
                                 $row->total_localtax1 = $line->total_localtax1;
                                 $row->total_localtax2 = $line->total_localtax2;
-                                $row->product_price = $line->pu_ht;
+                                $row->subprice = $line->pu_ht;
                                 $row->rang = $line->id;
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
