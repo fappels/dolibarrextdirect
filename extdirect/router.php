@@ -79,7 +79,7 @@ function doRpc($cdata)
             'method'=>$method
         );
 
-        require_once("class/$action.class.php");
+        dol_include_once("/extdirect/class/$action.class.php");
         $o = new $action($_SESSION['dol_login']);
         if (isset($mdef['len'])) {
             $params = isset($cdata->data) && is_array($cdata->data) ? $cdata->data : array();
