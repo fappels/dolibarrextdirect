@@ -917,6 +917,8 @@ class ExtDirectProduct extends Product
                         $photoSize = $value;
                     } else if ($filter->property == 'multiprices_index' && !empty($value) && $multiprices) {
                         $sql .= 'pp.price_level = '.$value;
+                    } else {
+                        $sql .= '1';
                     }
                 }    
                 if ($key < ($filterSize-1)) {
