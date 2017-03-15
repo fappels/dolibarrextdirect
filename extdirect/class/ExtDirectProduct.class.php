@@ -240,7 +240,9 @@ class ExtDirectProduct extends Product
                         $row->stock_reel = (float) $this->stock_reel;
                     }
                 }
-                    
+                // add compatibility with orderline model
+                $row->stock = $row->stock_reel;
+                $row->total_stock = (float) $this->stock_reel;                  
                 //! Stock alert
                 $row->seuil_stock_alerte= $this->seuil_stock_alerte;
                 $row->desiredstock= $this->desiredstock;
@@ -833,9 +835,9 @@ class ExtDirectProduct extends Product
             if (($filter->property == 'supplier_id')) $supplierFilter=true;
         }
         
-        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel, p.entity, p.seuil_stock_alerte';
+        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel as stock, p.entity, p.seuil_stock_alerte, p.stock as total_stock';
         if ($supplierFilter) {
-            $sql .= ', sp.price, sp.ref_fourn, sp.rowid as ref_fourn_id';
+            $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
         } else if ($multiprices) {
             $sql .= ', pp.price, pp.price_ttc';
@@ -963,11 +965,12 @@ class ExtDirectProduct extends Product
                 } else {
                     $row->warehouse_id = $obj->fk_entrepot;
                 }
-                if (empty($obj->reel)) {
+                if (empty($obj->stock)) {
                     $row->stock = 0;
                 } else {
-                    $row->stock = (float) $obj->reel;
+                    $row->stock = (float) $obj->stock;
                 }
+                $row->total_stock = (float) $obj->total_stock;
                 $row->seuil_stock_alerte = $obj->seuil_stock_alerte;
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
@@ -975,15 +978,20 @@ class ExtDirectProduct extends Product
                 }
                 $row->price     = $obj->price;
                 if ($supplierFilter) {
-                    $row->ref_supplier = $obj->ref_fourn;
-                    $row->ref_supplier_id = $obj->ref_fourn_id;
-                    $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_fourn_id;
+                    $row->ref_supplier = $obj->ref_supplier;
+                    $row->ref_supplier_id = $obj->ref_supplier_id;
+                    $row->qty_supplier = $obj->qty_supplier;
+                    $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
                     if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
+                    if (!empty($row->ref_supplier_id)) {
+                        array_push($results, $row);
+                    }
                 } else {
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot;
                     $row->price_ttc = $obj->price_ttc;
+                    array_push($results, $row);
                 }
-                array_push($results, $row);
+                
             }
             $this->db->free($resql);
             return $results;
