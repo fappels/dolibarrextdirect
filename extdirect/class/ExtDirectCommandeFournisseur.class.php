@@ -560,80 +560,165 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     }
                 }
                 
-                foreach ($this->lines as $line) {   
-                    if ((!isset($id) || ($id == $line->id)) && ($line->fk_product > 0)) {
-                        $myprod = new ExtDirectProduct($this->_user->login);
-                        if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                        if (ExtDirect::checkDolVersion() >= 3.5) {
-                            if (($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
-                        }
-                        
-                        if (!empty($warehouse_id) || ($myprod->stock_reel == 0)) {
-                            // get orderline with stock of warehouse 
-                            $row = null;
-                            $row->id = $line->id;
-                            $row->origin_id = $this->id;
-                            $row->origin_line_id = $line->id;
-                            $row->label = $line->product_label;
-                            $row->description = $line->description;
-                            $row->product_id = $line->fk_product;
-                            $row->ref = $line->product_ref;
-                            $row->product_label = $line->product_label;
-                            $row->product_desc = $line->product_desc;
-                            $row->product_type = $line->product->type;
-                            $row->barcode = $myprod->barcode?$myprod->barcode:'';
-                            $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                            if (ExtDirect::checkDolVersion(0,'','3.6')) {
-                                //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
-                                $row->qty_asked = $productAskedQty[$line->fk_product];
-                            } else {
-                                $row->qty_asked = $line->qty;
-                            }                            
-                            $row->tax_tx = $line->tva_tx;
-                            $row->localtax1_tx = $line->localtax1_tx;
-                            $row->localtax2_tx = $line->localtax2_tx;
-                            $row->total_net = $line->total_ht;
-                            $row->total_inc = $line->total_ttc;
-                            $row->total_tax = $line->total_tva;
-                            $row->total_localtax1 = $line->total_localtax1;
-                            $row->total_localtax2 = $line->total_localtax2;
-                            $row->subprice = $line->pu_ht;
-                            $row->rang = $line->id;
-                            $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                            $row->reduction_percent = $line->remise_percent;
-                            $row->ref_supplier = $line->ref_supplier;
-                            $row->date_start = $line->date_start;
-                            $row->date_end = $line->date_end;
-                            // qty shipped for product line
-                            $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
-                            $warehouse_id ? $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
-                            $row->total_stock = $myprod->stock_reel;
-                            $row->desiredstock = $myprod->desiredstock;
-                            $row->warehouse_id = $warehouse_id;
-                            $row->has_batch = $myprod->status_batch;
-                            $row->has_photo = 0;
-                            if (!empty($photoSize)) {
-                                $myprod->fetchPhoto($row, $photoSize);
-                            }
-                        	if (empty($batchId)) {
-                                array_push($results, $row);
-                            } else {
-                                if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId)) < 0) return $res;
-                            }
+                foreach ($this->lines as $line) {
+                    if (!isset($id) || ($id == $line->id)) {
+                        if ($line->fk_product) {
+                            $isFreeLine = false;
+                            $myprod = new ExtDirectProduct($this->_user->login);
+                            if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+                            if (ExtDirect::checkDolVersion() >= 3.5) {
+                                if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                            } 
                         } else {
-                        	// read list of oderlines split by warehouse stock (to show stock available in all warehouse)
-                            foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
+                            $isFreeLine = true;
+                        }
+                        if ($line->product_type == 1) {
+                            $isService = true;
+                        } else {
+                            $isService = false;
+                        }
+                        if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0)) {
+                            if (($warehouse_id == -1 || $isService || $isFreeLine )) {
+                                // get orderline with complete stock
                                 $row = null;
-                                $row->id = $line->id.'_'.$warehouse;
+                                $row->id = $line->id;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;
-                                $row->label = $line->product_label;
+                                if (empty($line->label)) {
+                                    $row->label = $line->product_label;
+                                } else {
+                                    $row->label = $line->label;
+                                }
                                 $row->description = $line->description;
                                 $row->product_id = $line->fk_product;
                                 $row->ref = $line->product_ref;
                                 $row->product_label = $line->product_label;
                                 $row->product_desc = $line->product_desc;
-                                $row->product_type = $line->product->type;
+                                $row->product_type = $line->product_type;
+                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                if (ExtDirect::checkDolVersion(0,'','3.6')) {
+                                    //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
+                                    $row->qty_asked = $productAskedQty[$line->fk_product];
+                                } else {
+                                    $row->qty_asked = $line->qty;
+                                }                            
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                $row->subprice = $line->pu_ht;
+                                if (isset($line->rang)) {
+                                    $row->rang = $line->rang;
+                                } else {
+                                    $row->rang = $line->id;
+                                }
+                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                                $row->reduction_percent = $line->remise_percent;
+                                $row->ref_supplier = $line->ref_supplier;
+                                $row->date_start = $line->date_start;
+                                $row->date_end = $line->date_end;
+                                // qty shipped for product line
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                                $row->stock = $myprod->stock_reel;
+                                $row->total_stock = $row->stock;
+                                $row->desiredstock = $myprod->desiredstock;
+                                if ($isService) {
+                                    $row->warehouse_id = -1; // service is not stocked
+                                } else if ($isFreeLine) {
+                                    $row->warehouse_id = 0; // freeline is not in a specific stock location
+                                } else {
+                                    $row->warehouse_id = $warehouse_id;
+                                }
+                                $row->has_batch = $myprod->status_batch;
+                                $row->has_photo = 0;
+                                if (!$isFreeLine && !empty($photoSize)) {
+                                    $myprod->fetchPhoto($row, $photoSize);
+                                }
+                                array_push($results, $row);
+                            } else {
+                                // get orderline with stock of warehouse 
+                                $row = null;
+                                $row->id = $line->id;
+                                $row->origin_id = $this->id;
+                                $row->origin_line_id = $line->id;
+                                if (empty($line->label)) {
+                                    $row->label = $line->product_label;
+                                } else {
+                                    $row->label = $line->label;
+                                }
+                                $row->description = $line->description;
+                                $row->product_id = $line->fk_product;
+                                $row->ref = $line->product_ref;
+                                $row->product_label = $line->product_label;
+                                $row->product_desc = $line->product_desc;
+                                $row->product_type = $line->product_type;
+                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                if (ExtDirect::checkDolVersion(0,'','3.6')) {
+                                    //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
+                                    $row->qty_asked = $productAskedQty[$line->fk_product];
+                                } else {
+                                    $row->qty_asked = $line->qty;
+                                }                            
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                $row->subprice = $line->pu_ht;
+                                if (isset($line->rang)) {
+                                    $row->rang = $line->rang;
+                                } else {
+                                    $row->rang = $line->id;
+                                }
+                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                                $row->reduction_percent = $line->remise_percent;
+                                $row->ref_supplier = $line->ref_supplier;
+                                $row->date_start = $line->date_start;
+                                $row->date_end = $line->date_end;
+                                // qty shipped for product line
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                                $warehouse_id ? $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
+                                $row->total_stock = $myprod->stock_reel;
+                                $row->desiredstock = $myprod->desiredstock;
+                                $row->warehouse_id = $warehouse_id;
+                                $row->has_batch = $myprod->status_batch;
+                                $row->has_photo = 0;
+                                if (!empty($photoSize)) {
+                                    $myprod->fetchPhoto($row, $photoSize);
+                                }
+                                if (empty($batchId)) {
+                                    array_push($results, $row);
+                                } else {
+                                    if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId)) < 0) return $res;
+                                }
+                            }
+                        } else {
+                            // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
+                            foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
+                                $row = null;
+                                $row->id = $line->id.'_'.$warehouse;
+                                $row->origin_id = $this->id;
+                                $row->origin_line_id = $line->id;
+                                if (empty($line->label)) {
+                                    $row->label = $line->product_label;
+                                } else {
+                                    $row->label = $line->label;
+                                }
+                                $row->description = $line->description;
+                                $row->product_id = $line->fk_product;
+                                $row->ref = $line->product_ref;
+                                $row->product_label = $line->product_label;
+                                $row->product_desc = $line->product_desc;
+                                $row->product_type = $line->product_type;
                                 $row->barcode = $myprod->barcode?$myprod->barcode:'';
                                 $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
                                 $row->qty_asked = $line->qty;
@@ -646,7 +731,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->total_localtax1 = $line->total_localtax1;
                                 $row->total_localtax2 = $line->total_localtax2;
                                 $row->subprice = $line->pu_ht;
-                                $row->rang = $line->id;
+                                if (isset($line->rang)) {
+                                    $row->rang = $line->rang;
+                                } else {
+                                    $row->rang = $line->id;
+                                }
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
                                 $row->ref_supplier = $line->ref_supplier;
@@ -683,14 +772,21 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      * Ext.direct method to Create Orderlines
      *
      * @param unknown_type $param object or object array with product model(s)
+     *
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
     public function createOrderLine($param) 
     {
+        global $conf, $mysoc;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
         $orderLine = new CommandeFournisseurLigne($this->db);
         
+         // set global $mysoc required for private calculation
+        $mysoc = new Societe($this->db);
+        $mysoc->setMysoc($conf);
+
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
     
@@ -698,14 +794,20 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             // prepare fields
             $this->prepareOrderLineFields($params, $orderLine);
             $this->id = $params->origin_id;
-            if (($result = $this->fetch($this->id)) < 0)   return $result; //fetch multicurrency data
+            if (($result = $this->fetch($this->id)) < 0)   return $result;
+            $this->fetch_thirdparty();
+            $tva_tx = get_default_tva($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
+            $tva_npr = get_default_npr($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
+            if (empty($tva_tx)) $tva_npr=0;
+            $localtax1_tx = get_localtax($tva_tx, 1, $mysoc, $this->thirdparty, $tva_npr);
+            $localtax2_tx = get_localtax($tva_tx, 2, $mysoc, $this->thirdparty, $tva_npr);
             if (($result = $this->addline(
                 $orderLine->desc,
                 $orderLine->subprice,
                 $orderLine->qty,
-                $orderLine->tva_tx,
-                $orderLine->localtax1_tx,
-                $orderLine->localtax2_tx,
+                $tva_tx,
+                $localtax1_tx,
+                $localtax2_tx,
                 $orderLine->fk_product,
                 $params->ref_supplier_id,
                 $orderLine->ref_fourn,           
@@ -732,14 +834,22 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      * Ext.direct method to update orderlines
      *
      * @param unknown_type $param object or object array with order model(s)
+     *
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
     public function updateOrderLine($param) 
     {
+        global $conf, $mysoc;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
         $orderlineUpdated = false;
+
+        // set global $mysoc required for price calculation
+        $mysoc = new Societe($this->db);
+        $mysoc->setMysoc($conf);
+
         $paramArray = ExtDirect::toArray($param);
     
         foreach ($paramArray as &$params) {
@@ -747,32 +857,38 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if (($this->id=$params->origin_id) > 0) {
                 // get old orderline
                 if (($result = $this->fetch($this->id)) < 0)    return $result;
+                $this->fetch_thirdparty();
                 if (!$this->error) {
                     
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->id == $params->origin_line_id) {
-                        	if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer)) {
-	                            if ($this->statut == 0) {
-	                                // update fields
-	                                if (($result = $this->updateline(
-	                                                $orderLine->id,
-	                                                $orderLine->desc,
-	                                                $orderLine->subprice,
-	                                                $orderLine->qty,
-	                                                $orderLine->remise_percent,
-	                                                $orderLine->tva_tx,
-	                                                $orderLine->total_localtax1,
-	                                                $orderLine->total_localtax2,
-	                                                'HT',
-	                                                $orderLine->info_bits,
-	                                                $orderLine->product_type,
-	                                                false,
-	                                                $orderLine->date_start,
-	                                                $orderLine->date_end
-	                                )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-	                            }
-                        	}
-                        	
+                            if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer)) {
+                                if ($this->statut == 0) {
+                                    // update fields
+                                    $tva_tx = get_default_tva($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
+                                    $tva_npr = get_default_npr($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
+                                    if (empty($tva_tx)) $tva_npr=0;
+                                    $localtax1_tx = get_localtax($tva_tx, 1, $mysoc, $this->thirdparty, $tva_npr);
+                                    $localtax2_tx = get_localtax($tva_tx, 2, $mysoc, $this->thirdparty, $tva_npr);
+                                    if (($result = $this->updateline(
+                                        $orderLine->id,
+                                        $orderLine->desc,
+                                        $orderLine->subprice,
+                                        $orderLine->qty,
+                                        $orderLine->remise_percent,
+                                        $tva_tx,
+                                        $localtax1_tx,
+                                        $localtax2_tx,
+                                        'HT',
+                                        $orderLine->info_bits,
+                                        $orderLine->product_type,
+                                        false,
+                                        $orderLine->date_start,
+                                        $orderLine->date_end
+                                    )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                                }
+                            }
+
                             $product = new ExtDirectProduct($this->_user->login);
                             if (($result = $product->fetch($orderLine->fk_product)) <0) return ExtDirect::getDolError($result, $product->errors, $product->error);
                             if (($updated = $this->prepareProductFields($params, $product)) && isset($this->_user->rights->produit->creer)) {
@@ -968,7 +1084,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $diff = false;
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'origin_line_id', 'id');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_id', 'fk_product');
-        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_price', 'subprice');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'subprice', 'subprice');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'product_tax', 'tva_tx');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'description', 'desc');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'qty_asked', 'qty');
