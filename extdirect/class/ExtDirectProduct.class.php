@@ -299,11 +299,20 @@ class ExtDirectProduct extends Product
                 if (empty($refSupplier) && empty($refSupplierId)) {
                     $supplierProduct->find_min_price_product_fournisseur($this->id);
                 } else if ($refSupplierId > 0) {
-                    $supplierProduct->fetch_product_fournisseur_price($refSupplierId);
+                    if (ExtDirect::checkDolVersion(0, '4.0', '')) {
+                        $supplierProduct->fetch_product_fournisseur_price($refSupplierId);
+                    } else {
+                        $supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
+                        foreach ($supplierProducts as $prodsupplier) {
+                            if ($prodsupplier->product_fourn_price_id == $refSupplierId) {
+                                $supplierProduct = $prodsupplier;
+                            }
+                        }
+                    }
                 } else {
                     $supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
                     foreach ($supplierProducts as $prodsupplier) {
-                        if ($prodsupplier->fourn_ref == $refSupplier){
+                        if ($prodsupplier->fourn_ref == $refSupplier) {
                             $supplierProduct = $prodsupplier;
                         }
                     }
