@@ -876,7 +876,7 @@ class ExtDirectProduct extends Product
             $sql .= ' AND (';
             foreach ($param->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
-                if (empty($value) && ($filter->property != 'type')) {
+                if (empty($value) && ($filter->property != 'type') && ($filter->property != 'supplier_id')) {
                     $sql .= '1';                    
                 } else {
                     if ($filter->property == 'warehouse_id') {
@@ -895,8 +895,12 @@ class ExtDirectProduct extends Product
                         $sql .= "p.fk_product_type = ".$value;
                     } else if ($filter->property == 'categorie_id') {
                         $sql .= "c.rowid = ".$value;
-                    } else if (($filter->property == 'supplier_id') && !empty($value)) {
-                        $sql .= "sp.fk_soc = ".$value;
+                    } else if ($filter->property == 'supplier_id') {
+                        if ($value > 0) {
+                            $sql .= "sp.fk_soc = ".$value;
+                        } else {
+                            $sql .= "sp.rowid IS NOT NULL";
+                        }
                     } else if ($filter->property == 'content') {
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
@@ -992,15 +996,12 @@ class ExtDirectProduct extends Product
                     $row->qty_supplier = $obj->qty_supplier;
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
                     if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
-                    if (!empty($row->ref_supplier_id)) {
-                        array_push($results, $row);
-                    }
                 } else {
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot;
                     $row->price_ttc = $obj->price_ttc;
-                    array_push($results, $row);
+                    
                 }
-                
+                array_push($results, $row);
             }
             $this->db->free($resql);
             return $results;
