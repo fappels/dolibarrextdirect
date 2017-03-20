@@ -362,6 +362,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
+        $myUser = new User($this->db);
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
@@ -381,7 +382,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
         
-        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code";
+        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc";
         $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
@@ -447,12 +448,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
                 $row->status        = $obj->status;
-                if ($langs->transnoentitiesnoconv($obj->mode_code)) {
+                if ($obj->mode_code && $langs->transnoentitiesnoconv($obj->mode_code)) {
                     $row->mode      = $langs->transnoentitiesnoconv($obj->mode_code);
                 } else {
                     $row->mode      = $obj->mode_label;
                 }
-                
+                $row->user_id 		= $obj->fk_user_author;
+                if ($myUser->fetch($row->user_id)>0) {
+                    $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
+                }
+                $row->total_inc		= $obj->total_ttc;
                 array_push($results, $row);
             }
             $this->db->free($resql);
