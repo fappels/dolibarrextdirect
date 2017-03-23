@@ -62249,6 +62249,15 @@ Ext.define('ConnectorTest.model.Product', {
             },
             {
                 name: 'stock_reel',
+                // deprecated, TODO refactor
+                type: 'float'
+            },
+            {
+                name: 'stock',
+                type: 'float'
+            },
+            {
+                name: 'total_stock',
                 type: 'float'
             },
             {
@@ -62344,7 +62353,8 @@ Ext.define('ConnectorTest.model.Product', {
                 type: 'int'
             },
             {
-                name: 'price_supplier'
+                name: 'price_supplier',
+                type: 'float'
             },
             {
                 name: 'qty_supplier'
@@ -62356,10 +62366,15 @@ Ext.define('ConnectorTest.model.Product', {
                 name: 'reduction_supplier'
             },
             {
-                name: 'pu_supplier'
+                name: 'pu_supplier',
+                type: 'float'
             },
             {
-                name: 'vat_supplier'
+                name: 'vat_supplier',
+                type: 'float'
+            },
+            {
+                name: 'price_base_type_supplier'
             },
             {
                 name: 'supplier_id'
@@ -62481,6 +62496,10 @@ Ext.define('ConnectorTest.model.ProductList', {
                 type: 'float'
             },
             {
+                name: 'total_stock',
+                type: 'float'
+            },
+            {
                 name: 'categorie'
             },
             {
@@ -62511,6 +62530,10 @@ Ext.define('ConnectorTest.model.ProductList', {
             {
                 name: 'ref_supplier_id',
                 type: 'int'
+            },
+            {
+                name: 'qty_supplier',
+                type: 'float'
             },
             {
                 name: 'supplier_reputation'

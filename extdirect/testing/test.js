@@ -1243,6 +1243,7 @@ describe("products", function () {
 				qty_supplier: 1,
 				supplier_id: 1,
 				vat_supplier: 0,
+				price_base_type_supplier: 'HT',
 				has_photo: 0,
 				photo: null,
 				price: 10,
