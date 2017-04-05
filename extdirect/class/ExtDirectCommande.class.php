@@ -722,6 +722,8 @@ class ExtDirectCommande extends Commande
                             $row->product_desc = $line->product_desc;
                             $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                            $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
@@ -778,6 +780,8 @@ class ExtDirectCommande extends Commande
                             $row->product_desc = $line->product_desc;
                             $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                            $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
@@ -835,6 +839,8 @@ class ExtDirectCommande extends Commande
                                 $row->product_label = $line->product_label;
                                 $row->product_desc = $line->product_desc;
                                 $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                                 $row->product_type = $line->product_type;
                                 // limit qty asked to stock qty
                                 $row->qty_asked = $line->qty;

@@ -283,6 +283,8 @@ class ExtDirectProduct extends Product
                 } else {
                     $row->barcode_type= (int) $this->barcode_type;
                 }
+                // get barcode with checksum included, same when scanned
+                $row->barcode_with_checksum = $this->fetchBarcodeWithChecksum();
                                    
                 // no links to offers in this version
                 // no multilangs in this version
@@ -861,6 +863,8 @@ class ExtDirectProduct extends Product
         if ($supplierFilter) {
             $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
+            $sql .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
+            $sql .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
         } else if ($multiprices) {
             $sql .= ', pp.price, pp.price_ttc';
         } else {
@@ -968,7 +972,7 @@ class ExtDirectProduct extends Product
         } else {
             $sql .= "p.ref ASC";
         }
-
+        
         if ($limit) {
             $sql .= $this->db->plimit($limit, $start);
         }
@@ -1014,6 +1018,7 @@ class ExtDirectProduct extends Product
                     $row->price_ttc = $obj->price_ttc;
                     
                 }
+                $row->qty_ordered = $obj->ordered - $obj->dispatched;
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -1263,13 +1268,14 @@ class ExtDirectProduct extends Product
      * 
      * @return int < 0 if error > 0 if OK
      */
-    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false, $batchId = null) {
+    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false, $batchId = null, $batchValue = '') {
         require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
         $batches = array();
         $batchesQty = 0;
         $stockQty = $row->stock_reel;
         $product_id = $row->product_id;
         $undefinedBatch = clone $row;
+        $num = 0;
         
         if (!empty($productStockId) && ($batches = Productbatch::findAll($this->db, $productStockId, 1, $product_id)) < 0 ) return $batches;
         
@@ -1287,25 +1293,35 @@ class ExtDirectProduct extends Product
                 $row->stock = (float) $batch->qty;
                 $row->batch_info = $batch->import_key;
                 if (empty($batchId)) {
-                	$row->id = $id.'_'.$batch->id;
-                	array_push($results, clone $row);
+                    if (empty($batchValue)) {
+                        $row->id = $id.'_'.$batch->id;
+                        $num++;
+                	    array_push($results, clone $row);
+                    } else if (($batchValue == $batch->batch)) {
+                        $row->id = $id;
+                        $num++;
+                	    array_push($results, clone $row);
+                    }
                 } else if ($batchId == $batch->id) {
                 	$row->id = $id;
+                    $num++;
                 	array_push($results, clone $row);
                 }
                 $batchesQty += $batch->qty;
             }
         } else if(isset($row->id)) {
             // no batch
+            $num++;
             array_push($results, $row);
         }
         
         if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
             // add undefined batch with non batched stock for adding batches
             $undefinedBatch->stock_reel = price2num($stockQty - $batchesQty, 5);
+            $num++;
             array_push($results, $undefinedBatch);
         }
-        return 1;
+        return $num;
     }
     
     /**
@@ -1462,6 +1478,32 @@ class ExtDirectProduct extends Product
         } else {
             $this->error="ErrorBadImageFormat";
             return -3;
+        }
+    }
+
+    /**
+     * public method to fetch barcode with checksum from dolibarr generated barcodes, which are stored without checksum
+     *
+     * @return string barcode with checksum
+     */
+    public function fetchBarcodeWithChecksum() 
+    {
+        $barcodeType = '';
+        if ($this->barcode_type == '1') { // EAN8
+            $barcodeType = 'EAN8'; 
+        } else if ($this->barcode_type == '2') { // EAN13
+            $barcodeType = 'EAN13';
+        } else if ($this->barcode_type == '3') { // UPC
+            $barcodeType = 'UPC-A';
+        }
+
+        if (!empty($barcodeType) && !empty($this->barcode)) {
+            include_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
+            $barcodeObj = new TCPDFBarcode($this->barcode, $barcodeType);
+            $barcode = $barcodeObj->getBarcodeArray();
+            return $barcode['code'];
+        } else {
+            return $this->barcode;
         }
     }
 }
