@@ -540,6 +540,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $productAskedQty = array();
         $photoSize = '';
         $includePhoto = false;
+        $batch = '';
     
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -548,6 +549,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
                 if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
                 if ($filter->property == 'batch_id') $batchId=$filter->value;
+                if ($filter->property == 'batch') $batch=$filter->value;
             }
         }
     
@@ -602,6 +604,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->product_type = $line->product_type;
                                 $row->barcode = $myprod->barcode?$myprod->barcode:'';
                                 $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                                 if (ExtDirect::checkDolVersion(0,'','3.6')) {
                                     //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
                                     $row->qty_asked = $productAskedQty[$line->fk_product];
@@ -664,6 +667,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->product_type = $line->product_type;
                                 $row->barcode = $myprod->barcode?$myprod->barcode:'';
                                 $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                                 if (ExtDirect::checkDolVersion(0,'','3.6')) {
                                     //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
                                     $row->qty_asked = $productAskedQty[$line->fk_product];
@@ -701,7 +705,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
                                 if (empty($batchId)) {
-                                    array_push($results, $row);
+                                    if (empty($batch)) {
+                                        array_push($results, $row);
+                                    } else {
+                                        if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res;
+                                    }
                                 } else {
                                     if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId)) < 0) return $res;
                                 }
@@ -726,6 +734,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->product_type = $line->product_type;
                                 $row->barcode = $myprod->barcode?$myprod->barcode:'';
                                 $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                                 $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
@@ -758,7 +767,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
                                 if (empty($batchId)) {
-                                    array_push($results, $row);
+                                    if (empty($batch)) {
+                                        array_push($results, $row);
+                                    } else {
+                                        if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
+                                        if ($res == 0) {
+                                            array_push($results, $row);
+                                        }
+                                    }
                                 } else {
                                     if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $stock_warehouse->id, false, $batchId)) < 0) return $res;
                                 }
