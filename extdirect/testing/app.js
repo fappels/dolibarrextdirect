@@ -61793,6 +61793,9 @@ Ext.define('ConnectorTest.model.OrderLine', {
                 type: 'int'
             },
             {
+                name: 'barcode_with_checksum'
+            },
+            {
                 name: 'product_tax'
             },
             {
@@ -62314,6 +62317,9 @@ Ext.define('ConnectorTest.model.Product', {
                 type: 'int'
             },
             {
+                name: 'barcode_with_checksum'
+            },
+            {
                 name: 'warehouse_id',
                 type: 'int'
             },
@@ -62541,6 +62547,10 @@ Ext.define('ConnectorTest.model.ProductList', {
             {
                 name: 'seuil_stock_alerte',
                 type: 'int'
+            },
+            {
+                name: 'qty_ordered',
+                type: 'float'
             }
         ]
     }
