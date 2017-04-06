@@ -294,15 +294,16 @@ if ($mode == $tabs['tab1']->mode) {
     print '<td>'.$langs->trans("Status").'</td>';
     print '<td>'.$langs->trans("Duration").'</td>';
     print '<td>'.$langs->trans("User").'</td>';
-    print '<td>'.$langs->trans("Origin").'</td>';
+    if (!empty($activityFilter)) {
+        print '<td>'.$langs->trans("Origin").'</td>';
+    }
+    
     print '</tr>'."\n";
     if (! empty($extDirect->dataset)) {
         $i=0;
         foreach ($extDirect->dataset as $data) {
             $var=!$var;
-            $originId = $data['activity_id'];
-            $originType = $data['activity_name'];
-            $origin = $extDirect->getActivityOrigin($originId, $originType);
+            
             print '<tr '.$bc[$var].'>';
             print '<td>'.$data['requestid'].'</td>';
             print '<td>'.$data['app_name'].'</td>';
@@ -312,7 +313,12 @@ if ($mode == $tabs['tab1']->mode) {
             print '<td>'.$data['status'].'</td>';
             print '<td>'.$data['duration'].'</td>';
             print '<td>'.$data['firstname'].$data['lastname'].'</td>';
-            print '<td>'.$origin.'</td>';
+            if (!empty($activityFilter)) {     
+                $originId = $data['activity_id'];
+                $originType = $data['activity_name'];
+                $origin = $extDirect->getActivityOrigin($originId, $originType);
+                print '<td>'.$origin.'</td>';
+            }
             print '</tr>'."\n";
             $i++;
         }
