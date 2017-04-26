@@ -25,20 +25,23 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/translate.class.php';
 
-/** ExtDirectTranslate class
+/** 
+ * ExtDirectTranslate class
  * 
- * Class to load .lang files into Extjs or sencha touch data models using Ext.direct connector
+ * Class to load .lang files into Extjs or sencha touch data models 
+ * using Ext.direct connector
  */
 class ExtDirectTranslate
 {
     private $_translate;
     private $_user;
     
-    /** Constructor
+    /** 
+     * Constructor
      *
      * @param string $login user name
-     * @return number
      *
+     * @return number
      */
     function __construct($login) 
     {
@@ -55,8 +58,9 @@ class ExtDirectTranslate
     /**
      *    Load language file
      *
-     *    @param    stdClass    $param  optional parameter (filter,...)
-     *    @return   stdClass                result data or <0 if KO, 0 if already loaded, >0 if OK
+     *    @param stdClass $param optional parameter (filter,...)
+     *
+     *    @return stdClass result data or <0 if KO, 0 if already loaded, >0 if OK
      */
     function load(stdClass $param) 
     {
@@ -71,14 +75,22 @@ class ExtDirectTranslate
         
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
-                if ($filter->property == 'domain') $domain=$filter->value;
-                else if ($filter->property == 'dir') $dir=$filter->value;
+                if ($filter->property == 'domain') {
+                    $domain=$filter->value;
+                } else if ($filter->property == 'dir') {
+                    $dir=$filter->value;
+                }
             }
         }
         
         if (($dir != '') && ($domain != '')) {
+            if (! is_dir($conf->file->dol_document_root['main'].'/'.$dir)) {
+                $dir = 'custom/'.$dir;
+            }
             $this->_translate = new Translate($conf->file->dol_document_root['main'].'/'.$dir, $conf);
-            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) 
+                && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')
+            ) {
                 $this->_translate->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
             } else {
                 $this->_translate->setDefaultLang($langs->getDefaultLang());

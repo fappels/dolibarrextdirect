@@ -22,7 +22,12 @@
  *  \brief      Administration Page/configuration for module dolibarrExtDirect
  */
 
-require("../../main.inc.php");
+// Load Dolibarr environment
+if (false === (@include '../../main.inc.php')) {  // From htdocs directory
+	require '../../../main.inc.php'; // From "custom" directory
+    $custom = true;
+}
+
 require_once(DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php");
 dol_include_once("/extdirect/class/extdirect.class.php");
 dol_include_once("/extdirect/class/extdirectactivity.class.php");
@@ -147,7 +152,7 @@ if ($action && !$refresh && !(($action == 'selectall') || ($action == 'selectnon
 $title = $langs->trans('DirectConnectSetup');
 $tabsTitle = $langs->trans('DirectConnect');
 $tabs = array('tab1' => $authentication,'tab2' => $activities);
-$head = extdirect_admin_prepare_head($tabs);
+$head = extdirect_admin_prepare_head($tabs, $custom);
 
 llxHeader('', $title);
 $linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
@@ -289,11 +294,16 @@ if ($mode == $tabs['tab1']->mode) {
     print '<td>'.$langs->trans("Status").'</td>';
     print '<td>'.$langs->trans("Duration").'</td>';
     print '<td>'.$langs->trans("User").'</td>';
+    if (!empty($activityFilter)) {
+        print '<td>'.$langs->trans("Origin").'</td>';
+    }
+    
     print '</tr>'."\n";
     if (! empty($extDirect->dataset)) {
         $i=0;
         foreach ($extDirect->dataset as $data) {
             $var=!$var;
+            
             print '<tr '.$bc[$var].'>';
             print '<td>'.$data['requestid'].'</td>';
             print '<td>'.$data['app_name'].'</td>';
@@ -303,6 +313,12 @@ if ($mode == $tabs['tab1']->mode) {
             print '<td>'.$data['status'].'</td>';
             print '<td>'.$data['duration'].'</td>';
             print '<td>'.$data['firstname'].$data['lastname'].'</td>';
+            if (!empty($activityFilter)) {     
+                $originId = $data['activity_id'];
+                $originType = $data['activity_name'];
+                $origin = $extDirect->getActivityOrigin($originId, $originType);
+                print '<td>'.$origin.'</td>';
+            }
             print '</tr>'."\n";
             $i++;
         }
@@ -321,13 +337,18 @@ $db->close();
  *  @param  Array   $tabs       tab names
  *  @return array               head array with tabs
  */
-function extdirect_admin_prepare_head($tabs)
+function extdirect_admin_prepare_head($tabs, $custom)
 {
     $h = 0;
     $head = array();
     
     foreach ($tabs as $key => $value) {
-        $head[$h][0] = DOL_URL_ROOT."/extdirect/admin/extdirect.php?mode=".$value->mode;
+        if ($custom) {
+            $head[$h][0] = DOL_URL_ROOT."/custom/extdirect/admin/extdirect.php?mode=".$value->mode;
+        } else {
+            $head[$h][0] = DOL_URL_ROOT."/extdirect/admin/extdirect.php?mode=".$value->mode;
+        }
+        
         $head[$h][1] = $value->title;
         $head[$h][2] = $key;
         $h++;

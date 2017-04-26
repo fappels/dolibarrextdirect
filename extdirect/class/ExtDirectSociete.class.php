@@ -417,35 +417,44 @@ class ExtDirectSociete extends Societe
             // TODO improve sql command to allow random property type
             $sql .= ' AND (';
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'id') 
-                    $sql .= 's.rowid = '.$filter->value;
-                else if ($filter->property == 'ref') 
-                    $sql .= "s.nom = '".$this->db->escape($filter->value)."'";
-                else if ($filter->property == 'client') 
-                    $sql .= "s.client = ".$filter->value;
-                else if ($filter->property == 'town') {
-                    if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql .= "s.town = '".$this->db->escape($filter->value)."'";
+                $value = $this->db->escape($filter->value);
+                if (empty($value)) {
+                    $sql .= '1';                    
+                } else {
+                    if ($filter->property == 'id') 
+                        $sql .= 's.rowid = '.$value;
+                    else if ($filter->property == 'ref') 
+                        $sql .= "s.nom = '".$this->db->escape($value)."'";
+                    else if ($filter->property == 'client') 
+                        $sql .= "s.client = ".$value;
+                    else if ($filter->property == 'supplier') 
+                        $sql .= "s.fournisseur = ".$value;
+                    else if ($filter->property == 'town') {
+                        if (ExtDirect::checkDolVersion() >= 3.4) {
+                            $sql .= "s.town = '".$this->db->escape($value)."'";
+                        } else {
+                            $sql .= "s.ville = '".$this->db->escape($value)."'";
+                        }
+                    } 
+                    else if ($filter->property == 'stcomm_id') 
+                        $sql .= "s.fk_stcomm = ".$value;
+                    else if ($filter->property == 'categorie_id') {
+                        //allow filtering on non categorized societe
+                        if ($value == 0) {
+                            $sql .= "c.rowid IS NULL";
+                        } else {
+                            $sql .= "c.rowid = ".$value;
+                        }
+                    } else if ($filter->property == 'content') {
+                        $contentValue = strtolower($value);
+                        $sql.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
+                        if (ExtDirect::checkDolVersion() >= 3.4) {
+                            $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
+                        } else {
+                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
+                        }
                     } else {
-                        $sql .= "s.ville = '".$this->db->escape($filter->value)."'";
-                    }
-                } 
-                else if ($filter->property == 'stcomm_id') 
-                    $sql .= "s.fk_stcomm = ".$filter->value;
-                else if ($filter->property == 'categorie_id') {
-                    //allow filtering on non categorized societe
-                    if ($filter->value == 0) {
-                        $sql .= "c.rowid IS NULL";
-                    } else {
-                        $sql .= "c.rowid = ".$filter->value;
-                    }
-                } else if ($filter->property == 'content') {
-                    $contentValue = strtolower($filter->value);
-                    $sql.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
-                    if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
-                    } else {
-                       $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
+                       $sql .= '1';
                     }
                 }
                 if ($key < ($filterSize-1)) {
@@ -749,6 +758,17 @@ class ExtDirectSociete extends Societe
                     $sql .= "(s.ape = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 else if ($filter->property == 'idprof4') 
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
+                else if ($filter->property == 'content') {
+                    $contentValue = strtolower($this->db->escape($filter->value));
+                    
+                    if (ExtDirect::checkDolVersion() >= 3.4) {
+                        $sql.= " (LOWER(s.zip) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
+                    } else {
+                        $sql.= " (LOWER(s.cp) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
+                    }
+                }
                 else break;
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';

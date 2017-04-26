@@ -29,14 +29,17 @@ require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/price.lib.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
-/** ExtDirectCommande class
+/** 
+ * ExtDirectCommande class
  * 
  * Orders Class to with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectCommande extends Commande
 {
     private $_user;
-    private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER','STOCK_CALCULATE_ON_VALIDATE_ORDER');
+    private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
+        'STOCK_CALCULATE_ON_VALIDATE_ORDER',
+        'STOCK_USE_VIRTUAL_STOCK');
     
     /** Constructor
      *
@@ -269,8 +272,10 @@ class ExtDirectCommande extends Commande
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->set_date($this->_user, $this->date_commande)) < 0) return $result;
                 if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                if (($this->availability_id > 0) && 
+                if (ExtDirect::checkDolVersion(0,'','4.0') && ($this->availability_id > 0) && 
                     ($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (ExtDirect::checkDolVersion(0,'5.0','') && ($this->availability_id > 0) && 
+                    ($result = $this->availability($this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->remise_percent) && 
                     ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->cond_reglement_id) &&
@@ -717,6 +722,8 @@ class ExtDirectCommande extends Commande
                             $row->product_desc = $line->product_desc;
                             $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                            $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
@@ -773,6 +780,8 @@ class ExtDirectCommande extends Commande
                             $row->product_desc = $line->product_desc;
                             $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                            $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
@@ -814,61 +823,65 @@ class ExtDirectCommande extends Commande
                         }                        
                     } else {
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-							$row = null;
-							$row->id = $line->rowid.'_'.$warehouse;
-							$row->origin_id = $line->fk_commande;
-							$row->origin_line_id = $line->rowid;
-							if (empty($line->label)) {
-								$row->label = $line->product_label;
-							} else {
-								$row->label = $line->label;
-							} 
-							$row->description = $line->desc;
-							$row->product_id = $line->fk_product;
-							$row->ref = $line->product_ref;
-							$row->product_label = $line->product_label;
-							$row->product_desc = $line->product_desc;
-							$row->barcode= $myprod->barcode?$myprod->barcode:'';
-							$row->product_type = $line->product_type;
-							// limit qty asked to stock qty
-							$row->qty_asked = $line->qty;
-							$row->tax_tx = $line->tva_tx;
-							$row->localtax1_tx = $line->localtax1_tx;
-							$row->localtax2_tx = $line->localtax2_tx;
-							$row->total_net = $line->total_ht;
-							$row->total_inc = $line->total_ttc;
-							$row->total_tax = $line->total_tva;
-							$row->total_localtax1 = $line->total_localtax1;
-							$row->total_localtax2 = $line->total_localtax2;
-							if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
-								//! Arrays for multiprices
-								$row->product_price=$myprod->multiprices[$multiprices_index];
-								$row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
-								$row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
-							} else {
-								$row->product_price = $myprod->price;
-								$row->product_price_ttc = $myprod->price_ttc;
-								$row->price_base_type = $myprod->price_base_type;
-							}
-							$row->rang = $line->rang;
-							$row->price = $line->price;
-							$row->subprice = $line->subprice;
-							$row->reduction_percent = $line->remise_percent;
-							$this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-							$row->stock = (float) $stock_warehouse->real;
-							$row->total_stock = $myprod->stock_reel;
-							$row->warehouse_id = $warehouse;
-							$row->has_photo = 0;
-							if (!empty($photoSize)) {
-								$myprod->fetchPhoto($row, $photoSize);
-							}
-							// split orderlines by batch
-							$row->has_batch = $myprod->status_batch;
-							if (empty($conf->productbatch->enabled)) {
-								array_push($results, $row);
-							} else {
-								if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
-							}
+                            if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stock_warehouse->real > 0)) {
+                                $row = null;
+                                $row->id = $line->rowid.'_'.$warehouse;
+                                $row->origin_id = $line->fk_commande;
+                                $row->origin_line_id = $line->rowid;
+                                if (empty($line->label)) {
+                                    $row->label = $line->product_label;
+                                } else {
+                                    $row->label = $line->label;
+                                } 
+                                $row->description = $line->desc;
+                                $row->product_id = $line->fk_product;
+                                $row->ref = $line->product_ref;
+                                $row->product_label = $line->product_label;
+                                $row->product_desc = $line->product_desc;
+                                $row->barcode= $myprod->barcode?$myprod->barcode:'';
+                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
+                                $row->product_type = $line->product_type;
+                                // limit qty asked to stock qty
+                                $row->qty_asked = $line->qty;
+                                $row->tax_tx = $line->tva_tx;
+                                $row->localtax1_tx = $line->localtax1_tx;
+                                $row->localtax2_tx = $line->localtax2_tx;
+                                $row->total_net = $line->total_ht;
+                                $row->total_inc = $line->total_ttc;
+                                $row->total_tax = $line->total_tva;
+                                $row->total_localtax1 = $line->total_localtax1;
+                                $row->total_localtax2 = $line->total_localtax2;
+                                if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
+                                    //! Arrays for multiprices
+                                    $row->product_price=$myprod->multiprices[$multiprices_index];
+                                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+                                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+                                } else {
+                                    $row->product_price = $myprod->price;
+                                    $row->product_price_ttc = $myprod->price_ttc;
+                                    $row->price_base_type = $myprod->price_base_type;
+                                }
+                                $row->rang = $line->rang;
+                                $row->price = $line->price;
+                                $row->subprice = $line->subprice;
+                                $row->reduction_percent = $line->remise_percent;
+                                $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                                $row->stock = (float) $stock_warehouse->real;
+                                $row->total_stock = $myprod->stock_reel;
+                                $row->warehouse_id = $warehouse;
+                                $row->has_photo = 0;
+                                if (!empty($photoSize)) {
+                                    $myprod->fetchPhoto($row, $photoSize);
+                                }
+                                // split orderlines by batch
+                                $row->has_batch = $myprod->status_batch;
+                                if (empty($conf->productbatch->enabled)) {
+                                    array_push($results, $row);
+                                } else {
+                                    if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
+                                }
+                            }
                         }
                     }
                 }
@@ -905,7 +918,7 @@ class ExtDirectCommande extends Commande
             $this->prepareOrderLineFields($params, $orderLine);
             if (($result = $this->fetch($orderLine->fk_commande)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             $this->fetch_thirdparty();
-            if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
+            if ((! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) || ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
             	if (!empty($this->thirdparty->tva_assuj)) {
                 	$tva_tx = $orderLine->tva_tx;
                 } else {

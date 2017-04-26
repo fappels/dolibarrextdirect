@@ -4,6 +4,7 @@
  */
 if (!defined('NOREQUIRESOC'))       define('NOREQUIRESOC', '1');
 if (!defined('NOTOKENRENEWAL'))     define('NOTOKENRENEWAL', '1');
+if (!defined('NOCSRFCHECK'))        define('NOCSRFCHECK', '1');
 if (!defined('NOREQUIREMENU'))      define('NOREQUIREMENU', '1');    // If there is no menu to show
 if (!defined('NOREQUIREHTML'))      define('NOREQUIREHTML', '1');    // If we don't need to load the html.form.class.php
 if (!defined('NOREQUIREAJAX'))      define('NOREQUIREAJAX', '1');
@@ -13,6 +14,7 @@ if (!defined("NOLOGIN"))            define("NOLOGIN", '1');
 // Change this following line to use the correct relative path (../, ../../, etc)
 $res=0;
 if (! $res && file_exists("../main.inc.php")) $res=@include("../main.inc.php");
+if (! $res && file_exists("../../main.inc.php")) $res=@include("../../main.inc.php");
 if (! $res) die("Include of main fails");
 require('class/extdirect.class.php');
 require('config.php');
@@ -78,7 +80,7 @@ function doRpc($cdata)
             'method'=>$method
         );
 
-        require_once("class/$action.class.php");
+        dol_include_once("/extdirect/class/$action.class.php");
         $o = new $action($_SESSION['dol_login']);
         if (isset($mdef['len'])) {
             $params = isset($cdata->data) && is_array($cdata->data) ? $cdata->data : array();
