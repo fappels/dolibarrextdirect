@@ -800,7 +800,12 @@ class ExtDirectProduct extends Product
                 $this->id = $id;
                 $this->ref = $param->ref;
                 // delete product
-                if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (ExtDirect::checkDolVersion(0, '6.0', '')) {
+                    if (($result = $this->delete($this->_user)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                } else {
+                    if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
+                
             } else {
                 return PARAMETERERROR;
             }
