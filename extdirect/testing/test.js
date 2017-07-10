@@ -3119,7 +3119,7 @@ describe("delete Purchase orders", function () {
 		runs(function() {
 			flag = false;
 			Ext.getStore('PurchaseOrderLine').clearFilter();
-			Ext.getStore('PurchaseOrderLine').filter([Ext.create('Ext.util.Filter',{property:"order_id",value:purchaseOrderId})]);
+			Ext.getStore('PurchaseOrderLine').filter([Ext.create('Ext.util.Filter',{property:"order_id",value:purchaseOrderId}), Ext.create('Ext.util.Filter',{property:"warehouse_id",value:-1})]);
 			Ext.getStore('PurchaseOrderLine').load({
 				callback: function (records) {
 					Ext.getStore('PurchaseOrderLine').remove(records);
@@ -3274,7 +3274,7 @@ describe("delete products", function () {
 					Ext.getStore('product').remove(records);
 					Ext.getStore('product').sync();
 					Ext.getStore('product').load({
-						callback: function () {
+						callback: function (records) {
 							testresult = Ext.getStore('product').find('ref','CT0001');
 							flag = true;
 						}
