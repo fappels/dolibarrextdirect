@@ -1250,7 +1250,8 @@ describe("products", function () {
 				price_base_type: 'HT',
 				tva_tx: 20,
 				multiprices_index: priceIndex,
-				desiredstock: 20
+				desiredstock: 20,
+				unit_id: 0
 			};
 			for (i=0;i<3;i++) {
 				switch (i) {
@@ -1260,6 +1261,7 @@ describe("products", function () {
 						productData.barcode = '123456';
 						productData.has_photo = 1;
 						productData.photo = "data: image\/jpeg;base64,\/9j\/4AAQSkZJRgABAQAAAQABAAD\/\/gA7Q1JFQVRPUjogZ2QtanBlZyB2MS4wICh1c2luZyBJSkcgSlBFRyB2ODApLCBxdWFsaXR5ID0gODAK\/9sAQwAGBAUGBQQGBgUGBwcGCAoQCgoJCQoUDg8MEBcUGBgXFBYWGh0lHxobIxwWFiAsICMmJykqKRkfLTAtKDAlKCko\/9sAQwEHBwcKCAoTCgoTKBoWGigoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgo\/8AAEQgAlgCWAwEiAAIRAQMRAf\/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC\/\/EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29\/j5+v\/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC\/\/EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29\/j5+v\/aAAwDAQACEQMRAD8A+qaKKKACjNFIaAFzRSUooAKKDQKAEPSmb13bc8+lV9Sl8m3DFWYb1BCjJ6ivmf8AaA8U6lYeP7aDTZbe3dYFKpcyTQM7HptdGUfmRWEq3LNQKULq59RilzUFq7vBE0i7ZGQFl9DjpU1bki0ZpKKAFzRSUooAKKKKACiiigAooooAKQ0tNPWgB1FItLQAUUUUAU9SbFuPeRB\/48K+RP2rJFX4jWLHAbCBT6AAZ\/8AQhX1rrkhjtYyNvMyD5jgDnrXx5+1hdJL4+tmiMc2yAHdGcgdPTPpXBUTddL+tmax0i2faMR3Ip9qfiq2myedZW8o6PGrfmKtV3IyYmKUUUUwA0CiigAooooAKKKKACiiigANNpxph60xDlpaRaWkMKKKKAOA+L6xzaLpltNGkkcl\/HlXGQcKx6fhXhXiTRNNNzdkWFqDk9Il\/wAK9w+K7F5\/D0A6tdO+PZYz\/jXlGuRf6ZcqR\/Ea+MzvEThi7RbVkup6WFinHVH0H4Pk83wro7+tpF\/6AK2K5n4by+d4H0Vs9LcL+XH9K6Wvr6MuanGXdI8+StJoXNGaSlFaEhRSZpRQAUUUUAFFFFABRRRQAU3FOpByaBAKWjFFAwooooA838cSi58aafADkWlq7ke7kD+S159rEYk1G5\/3zXY3c32vxlrdxnKoyQL9FXn9TXJ3\/N7cH\/bP86\/Os4r+0ryku7\/DT\/M9bDRtFHpXwfuN3hhrQnm1ndR9GO8fqx\/Ku5ryr4S3Yh1m+tCflniWQfVTg\/8AoX6V6rX2eT1vbYOEvK33HBiY8tRoXNGaSivSMBc0UYooAKKKKACiiigAooooAKQdaWkHWgQtFFFAwNRXEixRSSN0RSxqU1g+NLr7J4bvpAcEpsH1PFZVqnsoSm+ib+4cY8zsebeH2MsFzcufmnmd\/rk1hXHzXEp9WJ\/Wug04eRpkQXYHIyAzAVhzqoncAnOSTyDX5XXk5xTPcpqzZP4TvP7P8X6ZKThHkMTfRhj+ZFe7AV85Xu+JRMgIaMhwfcHNfQum3K3lhb3KHKyxq4\/EV9jwxV5qEqb6P80cGOjaakWzQKDSV9QcIYpRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAAa4r4pztFoMSD7skwB\/Dmu1NcP8V0L6Hb47TD+Vedm3+51fRm1D+JH1OATWHihCeUhwMBhwazVkYnnB+tQy5XIPaokfHWvzKzase4kkT3h3IRxj2r2j4dytL4M00sckRlc+wJxXhl1N8pr234Yn\/iidO\/3T\/M19Rwumqs\/T9Thx\/wxOqpaSlFfbHliClpKUUAFFFFABRRRQAUUUUAFFFFABRRRQAGsLxNp8WpRW1vcbvLaQk7Tg8KTW6az9SIWS3ZjgBzkn\/dNc+JhGpTcJq6f+aKi2ndHEXngrTwCRPcD8Qf6Vz974WtYSSJ5yPoP8K9EvsfOdpPToOvb+tcvqBmwQUVhgjIB7815E8qwielNfj\/mdCxNTuc\/D4Vsrn5WluMdD0H9K9P8IWcen6HFaQFjFESq7jk46\/1rjrFf36AoxIP3tuB0rutC\/wCPNv8Af\/oK9DB4SjQV6cUjGpVnN+8zTooorvMwooooAKKKKACiiigAooooAKKKKACiiigANcJ8Y9Yu9A8D3eqaeU+02zxsoddykb1DAj0IJH413ZrgvjZY3Gp\/D7UbGz8vzpwqqXbA4YH+lYYiSjTcm7JGlPWaRyPhf41eFtetkS\/ul0i\/Iw8F0Tsz32yY2kfXB9qxNR+IrvrSz2+nxyaegIDlyJGH970GOeP1FeJXWi+KdGsRDd6XA0EfSRpon45\/vE46+grIczup2G2WdxuKfZ4SFcds7cYI\/AVxqUcQlKnNW8rM6nCFPpe59Ha\/8V\/CugWzPJqcd7cFcpbWvzuxPYkcL75Irv8A4Ka\/c+J\/h9aazfKqTXU9w2xTkKomdVX3wABnvivjay8O+KdTgeG20y2jjlGwyfaokwMY6Kwzx7GvsT4F2d1p3w40+wv3ie6ty6OY2BAG4lRnA6KQPwrpp16Tn7OMk32OaUbK56CKWkFLXUZBRRR3oAKKKKACiiigAooooAKYCS1PooAKKKKAA1z\/AI40SXxB4avdPtZhBcyp+6lJICt2Jx2roKMVM4qacZK6Y07Hw\/4h+A\/xIjdgmmW2qDeT5kV7GOuOcOVPaueHwN+JO4A+FpuP+nmDB\/8AH6\/QDAoxihRSVkLzPiLw5+z\/APESaZTcWFlpiHgme7RuPpGWr63+HnhpvCnhSy0qacXM8S\/vZgCPMc9Tz+X0FdNiinZbgGKMUtFMAo70maUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAIKDRRQAUooooAQUGiigBTQKKKACiiigAooooA\/\/2Q==";
+						productData.unit_id = 6; // kg
 						break;
 						
 					case 2:
@@ -1445,7 +1447,7 @@ describe("products", function () {
 	
 	
 	it("read product 2 by ref", function() {
-		var photo = '';
+		var photo = '', unitId;
 		
 		runs(function() {
 			flag = false;
@@ -1458,6 +1460,7 @@ describe("products", function () {
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
 						testresult = record.get('ref');
+						unitId = record.get('unit_id');
 						if (record.get('has_photo')) {
 							photo = record.get('photo');
 						}
@@ -1472,6 +1475,9 @@ describe("products", function () {
 		runs(function () {
 			expect(testresult).toBe('CT0002');
 			expect(photo).toMatch('jpeg');
+			if (dolibarrVersion >= 3.8) {
+				expect(unitId).toMatch(6);
+			}
 		});
 	});
 	
@@ -1927,7 +1933,8 @@ describe("order", function () {
 	it("read orderline by Id", function() {
 		var stock=0,
 			asked=0,
-			photo='';
+			photo='',
+			unitIds = [];
 		
 		runs(function() {
 			flag = false;
@@ -1945,7 +1952,7 @@ describe("order", function () {
                         }
                         if (record.get('has_photo')) {
                         	photo=record.get('photo');
-                        }                        
+						}
 					});
 					flag = true;
 				}
@@ -2740,6 +2747,7 @@ describe("Purchase Order", function () {
 						orderData.product_id = productId;
 						orderData.ref_supplier = records[0].get('ref_supplier');
 						orderData.ref_supplier_id = records[0].get('ref_supplier_id');
+						orderData.unit_id = records[0].get('unit_id');
 						orderLine = Ext.create('ConnectorTest.model.OrderLine',orderData);
 						orderLines.push(orderLine);
 						if (index == (productIds.length -1)) {
@@ -2962,7 +2970,8 @@ describe("Purchase Order", function () {
 	it("read orderline by Id", function() {
 		var stock=0,
 			asked=0,
-			photo='';
+			photo='',
+			unitIds = [];
 		
 		runs(function() {
 			flag = false;
@@ -2977,7 +2986,8 @@ describe("Purchase Order", function () {
 						asked+=record.get('qty_asked');
 						if (record.get('has_photo')) {
 							photo=record.get('photo');
-						}		
+						}
+						unitIds.push(record.get('unit_id'));
 					});
 					flag = true;
 				}
@@ -2993,6 +3003,9 @@ describe("Purchase Order", function () {
 				expect(testresults.length).toBe(5);
 				expect(stock).toBe(29);
 				expect(asked).toBe(14);
+				if (dolibarrVersion >= 3.8) {
+					expect(unitIds).toContain(6);
+				}
 			} else {
 				expect(testresults.length).toBe(4);
 				expect(stock).toBe(21);

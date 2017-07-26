@@ -761,6 +761,7 @@ class ExtDirectCommande extends Commande
                             if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
+                            $row->unit_id = $line->fk_unit;
                             array_push($results, $row);
                         } else {
                             // get orderline with stock of warehouse
@@ -813,6 +814,7 @@ class ExtDirectCommande extends Commande
                             if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
+                            $row->unit_id = $line->fk_unit;
                             // split orderlines by batch
                             $row->has_batch = $myprod->status_batch;
                             if (empty($conf->productbatch->enabled)) {
@@ -874,6 +876,7 @@ class ExtDirectCommande extends Commande
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                $row->unit_id = $line->fk_unit;
                                 // split orderlines by batch
                                 $row->has_batch = $myprod->status_batch;
                                 if (empty($conf->productbatch->enabled)) {
@@ -972,7 +975,9 @@ class ExtDirectCommande extends Commande
                     $orderLine->fk_parent_line,
                     $orderLine->fk_fournprice,
                     $orderLine->pa_ht,
-                    $orderLine->label
+                    $orderLine->label,
+                    0,
+                    $orderLine->fk_unit
                 )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 $params->id=$result;
             } else {
@@ -1081,7 +1086,9 @@ class ExtDirectCommande extends Commande
                                 $orderLine->fk_fournprice, 
                                 $orderLine->pa_ht, 
                                 $orderLine->label, 
-                                $orderLine->special_code
+                                $orderLine->special_code,
+                                0,
+                                $orderLine->fk_unit
                             )
                             ) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                             $orderlineUpdated = true;
@@ -1159,5 +1166,6 @@ class ExtDirectCommande extends Commande
         isset($params->label) ? ($orderLine->label = $params->label) : null;
         isset($params->price) ? ($orderLine->price = $params->price) : ($orderLine->price ? null : $orderLine->price = 0);
         isset($params->price_base_type) ? ($orderLine->price_base_type = $params->price_base_type) : $orderLine->price_base_type = 'HT';
+        isset($params->unit_id) ? ($orderLine->fk_unit = $params->unit_id) : null;
     }
 }

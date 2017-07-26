@@ -647,6 +647,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!$isFreeLine && !empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                $row->unit_id = $line->fk_unit;
                                 array_push($results, $row);
                             } else {
                                 // get orderline with stock of warehouse 
@@ -704,6 +705,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                $row->unit_id = $line->fk_unit;
                                 if (empty($batchId)) {
                                     if (empty($batch)) {
                                         array_push($results, $row);
@@ -766,6 +768,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                $row->unit_id = $line->fk_unit;
                                 if (empty($batchId)) {
                                     if (empty($batch)) {
                                         array_push($results, $row);
@@ -839,7 +842,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 0,
                 false,
                 $orderLine->date_start,
-                $orderLine->date_end
+                $orderLine->date_end,
+                0,
+                $orderLine->fk_unit
             )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);   
             $params->id = $result;         
         }
@@ -905,7 +910,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $orderLine->product_type,
                                         false,
                                         $orderLine->date_start,
-                                        $orderLine->date_end
+                                        $orderLine->date_end,
+                                        0,
+                                        $orderLine->fk_unit
                                     )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                                 }
                             }
@@ -1118,6 +1125,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_start', 'date_start');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_end', 'date_end');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'ref_supplier', 'ref_fourn');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'unit_id', 'fk_unit');
         return $diff;
     }
     

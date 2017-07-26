@@ -295,7 +295,8 @@ class ExtDirectProduct extends Product
                 $row->import_key= $this->import_key;
                 $row->date_creation= $this->date_creation;
                 $row->date_modification= $this->date_modification;
-                
+                // product units (pcs, kg, ...)
+                $row->unit_id = $this->fk_unit;
                 // supplier fields
                 $supplierProduct = new ProductFournisseur($this->db);
                 if (empty($refSupplier) && empty($refSupplierId)) {
@@ -1202,6 +1203,7 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'import_key', 'import_key');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'date_creation', 'date_creation');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'date_modification', 'date_modification');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'unit_id', 'fk_unit');
         // has batch
         $diff = ExtDirect::prepareField($diff, $param, $this, 'has_batch', 'status_batch');
         //ExtDirect::prepareField($diff, $param, $this, 'productinfo', 'array_options['options_productinfo']');
