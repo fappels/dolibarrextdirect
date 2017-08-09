@@ -867,7 +867,7 @@ class ExtDirectProduct extends Product
         
         $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel as stock, p.entity, p.seuil_stock_alerte, p.stock as total_stock';
         if ($supplierFilter) {
-            $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier';
+            $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
             $sql .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
             $sql .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
@@ -1017,6 +1017,7 @@ class ExtDirectProduct extends Product
                     $row->ref_supplier = $obj->ref_supplier;
                     $row->ref_supplier_id = $obj->ref_supplier_id;
                     $row->qty_supplier = $obj->qty_supplier;
+                    $row->reduction_percent_supplier = $obj->reduction_percent_supplier;
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
                     if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
                 } else {
