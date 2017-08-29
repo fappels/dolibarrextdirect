@@ -2149,10 +2149,12 @@ describe("shipment", function ()
 		runs(function() {
 			flag = false;
 			Ext.getStore('ShipmentList').clearFilter();
-			Ext.getStore('ShipmentList').filter([Ext.create('Ext.util.Filter',{property:"orderstatus_id",value:orderstatusIds[0]})]);
+			Ext.getStore('ShipmentList').filter([Ext.create('Ext.util.Filter',{property:"orderstatus_id",value:orderstatusIds[0]}),
+				Ext.create('Ext.util.Filter',{property:"origin_id",value:orderId})]);
 			Ext.getStore('ShipmentList').load({
 				callback: function(records) {
 					Ext.Array.each(records, function (record,index) {
+						testresult = records.length;
 						testresults[index] = record.get('ref');
 						if (record.get('ref_int') == 'CT0001') {
 							shipmentRef = record.get('ref');
@@ -2167,7 +2169,8 @@ describe("shipment", function ()
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(testresults).toContain(shipmentRef);	
+			expect(testresults).toContain(shipmentRef);
+			expect(testresult).toBe(1);
 		});
 	});
 
