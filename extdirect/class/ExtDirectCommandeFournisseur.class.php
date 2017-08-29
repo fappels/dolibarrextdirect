@@ -28,6 +28,7 @@ require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/price.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/product/stock/class/entrepot.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** 
@@ -718,7 +719,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             }
                         } else {
                             // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
-                            foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
+                            $warehouseObject = new Entrepot($this->db);
+                            $warehouseList = $warehouseObject->list_array();
+                            foreach ($warehouseList as $warehouse=>$warehouseLabel) {
+                            //foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                                 $row = null;
                                 $row->id = $line->id.'_'.$warehouse;
                                 $row->origin_id = $this->id;
@@ -759,7 +763,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_end = $line->date_end;
                                 // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
                                 $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
-                                $row->stock = (float) $stock_warehouse->real;
+                                $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
                                 $row->total_stock = $myprod->stock_reel;
                                 $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse;
@@ -769,17 +773,19 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
                                 $row->unit_id = $line->fk_unit;
-                                if (empty($batchId)) {
-                                    if (empty($batch)) {
-                                        array_push($results, $row);
-                                    } else {
-                                        if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
-                                        if ($res == 0) {
+                                if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
+                                    if (empty($batchId)) {
+                                        if (empty($batch)) {
                                             array_push($results, $row);
+                                        } else {
+                                            if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
+                                            if ($res == 0) {
+                                                array_push($results, $row);
+                                            }
                                         }
+                                    } else {
+                                        if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $myprod->stock_warehouse[$warehouse]->id, false, $batchId)) < 0) return $res;
                                     }
-                                } else {
-                                    if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $stock_warehouse->id, false, $batchId)) < 0) return $res;
                                 }
                             }
                         }
