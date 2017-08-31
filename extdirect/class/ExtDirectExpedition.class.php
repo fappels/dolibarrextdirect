@@ -390,7 +390,6 @@ class ExtDirectExpedition extends Expedition
         }
         $sql .= " ORDER BY e.date_creation DESC";
         
-        dol_syslog(get_class($this).'::readShipmentList', LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {

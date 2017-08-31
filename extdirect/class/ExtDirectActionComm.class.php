@@ -215,7 +215,6 @@ class ExtDirectActionComm extends ActionComm
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readActionList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {
@@ -389,7 +388,6 @@ class ExtDirectActionComm extends ActionComm
             $sql .= " ORDER BY u.name ASC ";
         }
                 
-        dol_syslog(get_class($this)."::getAllUsers sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {

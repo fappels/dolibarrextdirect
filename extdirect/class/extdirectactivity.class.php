@@ -115,7 +115,6 @@ class ExtDirectActivity extends CommonObject
         $sql.= " ".(! isset($this->status)?'NULL':"'".$this->db->escape($this->status)."'")."";
         $sql.= ")";
         $this->db->begin();
-        dol_syslog(get_class($this)."::create sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if (! $resql) { 
             $error++; $this->errors[]="Error ".$this->db->lasterror(); 
@@ -191,7 +190,6 @@ class ExtDirectActivity extends CommonObject
             $sql.= " ORDER BY ".$orderBy;
         }
     
-        dol_syslog(get_class($this)."::fetchList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -241,7 +239,6 @@ class ExtDirectActivity extends CommonObject
         if (count($this->dataset) > 0) {
             // get available activity names and init start-stop time
             $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
-            dol_syslog(get_class($this)."::getDurations sql=".$sql, LOG_DEBUG);
             $resql=$this->db->query($sql);
             if ($resql) {
                 $num = $this->db->num_rows($resql);
@@ -306,7 +303,6 @@ class ExtDirectActivity extends CommonObject
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_activity as t";
         $sql.= " WHERE t.rowid = ".$id;
 
-        dol_syslog(get_class($this)."::fetch sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql) {
             if ($this->db->num_rows($resql)) {
@@ -375,7 +371,6 @@ class ExtDirectActivity extends CommonObject
 
         $this->db->begin();
 
-        dol_syslog(get_class($this)."::update sql=".$sql, LOG_DEBUG);
         $resql = $this->db->query($sql);
         if (! $resql) { 
             $error++; $this->errors[]="Error ".$this->db->lasterror(); 

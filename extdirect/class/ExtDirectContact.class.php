@@ -237,7 +237,6 @@ class ExtDirectContact extends Contact
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readContactList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {

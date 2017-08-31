@@ -98,7 +98,6 @@ class ExtDirectSociete extends Societe
         $sql .= ' FROM '.MAIN_DB_PREFIX.'c_stcomm as st';
         $sql .= ' WHERE st.active = 1';
 
-        dol_syslog(get_class($this)."::readStComm sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -145,7 +144,6 @@ class ExtDirectSociete extends Societe
         }
         $sql.= " WHERE active = 1";
     
-        dol_syslog(__METHOD__." sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {
@@ -204,7 +202,6 @@ class ExtDirectSociete extends Societe
 		if ($country_id) $sql .= " AND p.rowid = ".$country_id;
 		$sql .= " ORDER BY p.code, d.code_departement";
     
-        dol_syslog(__METHOD__." sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -246,7 +243,6 @@ class ExtDirectSociete extends Societe
         $sql .= ' WHERE cp.active = 1';
         $sql .= ' ORDER BY cp.sortorder';
         
-        dol_syslog(get_class($this)."::readProspectLevel sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -290,7 +286,6 @@ class ExtDirectSociete extends Societe
         $sql.= " FROM ".MAIN_DB_PREFIX.'c_payment_term';
         $sql.= " WHERE active=1";
         $sql.= " ORDER BY sortorder";
-        dol_syslog(get_class($this)."::readPaymentConditions", LOG_DEBUG);
         $resql = $this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -331,7 +326,6 @@ class ExtDirectSociete extends Societe
         $sql.= " FROM ".MAIN_DB_PREFIX."c_paiement";
         $sql.= " WHERE active > 0";
         $sql.= " ORDER BY id";
-        dol_syslog(get_class($this)."::readPaymentTypes", LOG_DEBUG);
         $resql = $this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -481,7 +475,6 @@ class ExtDirectSociete extends Societe
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readSocieteList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {
@@ -779,7 +772,6 @@ class ExtDirectSociete extends Societe
         }
         $sql .= ' ORDER BY town';
 
-        dol_syslog(get_class($this)."::getTowns sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -879,7 +871,6 @@ class ExtDirectSociete extends Societe
         $langs->trans('DiscountNone') ? $row->categorie = $langs->trans('DiscountNone'):$row->categorie = 'None';
         $row->id                = 0;
         array_push($results, $row);
-        dol_syslog(get_class($this)."::getCategories sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql) {
             $num=$this->db->num_rows($resql);

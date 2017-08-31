@@ -454,7 +454,6 @@ class ExtDirectFormProduct extends FormProduct
             $sql.= " FROM ".MAIN_DB_PREFIX."c_units";
             $sql.= " WHERE active > 0";
             $sql.= " ORDER BY rowid";
-            dol_syslog(get_class($this)."::readProductUnits", LOG_DEBUG);
             $resql = $this->db->query($sql);
             if ($resql) {
                 $num = $this->db->num_rows($resql);

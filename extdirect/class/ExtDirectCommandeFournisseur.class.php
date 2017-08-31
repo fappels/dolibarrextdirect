@@ -433,7 +433,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
-        dol_syslog(get_class($this)."::readOrderList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {

@@ -425,7 +425,6 @@ class ExtDirectCommande extends Commande
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
-        dol_syslog(get_class($this)."::readOrderList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -524,7 +523,6 @@ class ExtDirectCommande extends Commande
         $sql .= ' WHERE ca.active = 1';
         $sql .= ' ORDER BY ca.rowid';
         
-        dol_syslog(get_class($this)."::readAvailabilityCodes sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -570,7 +568,6 @@ class ExtDirectCommande extends Commande
 	        $sql .= ' WHERE csm.active > 0';
 	        $sql .= ' ORDER BY csm.rowid';
 	        
-	        dol_syslog(get_class($this)."::readShipmentModes sql=".$sql, LOG_DEBUG);
 	        $resql=$this->db->query($sql);
 	        
 	        if ($resql) {
@@ -617,7 +614,6 @@ class ExtDirectCommande extends Commande
 	        $sql .= ' WHERE ci.active > 0';
 	        $sql .= ' ORDER BY ci.rowid';
 	        
-	        dol_syslog(get_class($this)."::readIncotermCodes sql=".$sql, LOG_DEBUG);
 	        $resql=$this->db->query($sql);
 	        
 	        if ($resql) {
