@@ -443,9 +443,9 @@ class ExtDirectSociete extends Societe
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
                         if (ExtDirect::checkDolVersion() >= 3.4) {
-                            $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
+                            $sql.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')" ;
                         } else {
-                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
+                            $sql.= " OR LOWER(s.ville) like '%".$contentValue."%' OR LOWER(s.cp) like '%".$contentValue."%')" ;
                         }
                     } else {
                        $sql .= '1';

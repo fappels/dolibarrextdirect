@@ -206,10 +206,10 @@ class ExtDirectContact extends Contact
                     $contentValue = $this->db->escape(strtolower($filter->value));
                     if (ExtDirect::checkDolVersion() >= 3.4) {
                         $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(c.town) like '%".$contentValue."%')" ;
+                        $sql.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
                     } else {
                         $sql.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(c.ville) like '%".$contentValue."%')" ;
+                        $sql.= " OR LOWER(c.ville) like '%".$contentValue."%' OR LOWER(c.cp) like '%".$contentValue."%')" ;
                     }
                     
                 } else break;
