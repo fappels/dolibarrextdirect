@@ -970,9 +970,11 @@ class ExtDirectProduct extends Product
         if (isset($param->sort)) {
             $sorterSize = count($param->sort);
             foreach ($param->sort as $key => $sort) {
-                $sql .= $sort->property. ' '.$sort->direction;
-                if ($key < ($sorterSize-1)) {
-                    $sql .= ",";
+                if (!empty($sort->property)) {
+                    $sql .= $sort->property. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sql .= ",";
+                    }
                 }
             }
         } else {
@@ -1089,6 +1091,7 @@ class ExtDirectProduct extends Product
             $formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal');
             foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
                 if ($includeNoBatch) {
+                    $row = new stdClass;
                     $row->id = 'X_'.$warehouseId;
                     $row->product_id = $id;
                     $row->batch_id = 0;
@@ -1096,7 +1099,7 @@ class ExtDirectProduct extends Product
                     $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                     $row->warehouse_id = $warehouseId;
                 }
-                if (($res = $this->fetchBatches($results, clone $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
+                if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
             }
         } else {
             if ($includeNoBatch) {
