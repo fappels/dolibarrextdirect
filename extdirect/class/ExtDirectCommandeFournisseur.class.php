@@ -28,6 +28,7 @@ require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/price.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/product/stock/class/entrepot.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** 
@@ -432,7 +433,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
-        dol_syslog(get_class($this)."::readOrderList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -647,6 +647,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!$isFreeLine && !empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                $row->unit_id = $line->fk_unit;
                                 array_push($results, $row);
                             } else {
                                 // get orderline with stock of warehouse 
@@ -704,6 +705,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
+                                $row->unit_id = $line->fk_unit;
                                 if (empty($batchId)) {
                                     if (empty($batch)) {
                                         array_push($results, $row);
@@ -716,7 +718,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             }
                         } else {
                             // read list of oderlines split by warehouse stock (to show stock available in all warehouse)
-                            foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
+                            $warehouseObject = new Entrepot($this->db);
+                            $warehouseList = $warehouseObject->list_array();
+                            foreach ($warehouseList as $warehouse=>$warehouseLabel) {
+                            //foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                                 $row = null;
                                 $row->id = $line->id.'_'.$warehouse;
                                 $row->origin_id = $this->id;
@@ -757,7 +762,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_end = $line->date_end;
                                 // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
                                 $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
-                                $row->stock = (float) $stock_warehouse->real;
+                                $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
                                 $row->total_stock = $myprod->stock_reel;
                                 $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse;
@@ -766,17 +771,20 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
-                                if (empty($batchId)) {
-                                    if (empty($batch)) {
-                                        array_push($results, $row);
-                                    } else {
-                                        if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
-                                        if ($res == 0) {
+                                $row->unit_id = $line->fk_unit;
+                                if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
+                                    if (empty($batchId)) {
+                                        if (empty($batch)) {
                                             array_push($results, $row);
+                                        } else {
+                                            if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
+                                            if ($res == 0) {
+                                                array_push($results, $row);
+                                            }
                                         }
+                                    } else {
+                                        if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $myprod->stock_warehouse[$warehouse]->id, false, $batchId)) < 0) return $res;
                                     }
-                                } else {
-                                    if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $stock_warehouse->id, false, $batchId)) < 0) return $res;
                                 }
                             }
                         }
@@ -839,7 +847,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 0,
                 false,
                 $orderLine->date_start,
-                $orderLine->date_end
+                $orderLine->date_end,
+                0,
+                $orderLine->fk_unit
             )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);   
             $params->id = $result;         
         }
@@ -905,7 +915,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $orderLine->product_type,
                                         false,
                                         $orderLine->date_start,
-                                        $orderLine->date_end
+                                        $orderLine->date_end,
+                                        0,
+                                        $orderLine->fk_unit
                                     )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                                 }
                             }
@@ -1118,6 +1130,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_start', 'date_start');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_end', 'date_end');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'ref_supplier', 'ref_fourn');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'unit_id', 'fk_unit');
         return $diff;
     }
     

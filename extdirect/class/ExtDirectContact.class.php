@@ -206,10 +206,10 @@ class ExtDirectContact extends Contact
                     $contentValue = $this->db->escape(strtolower($filter->value));
                     if (ExtDirect::checkDolVersion() >= 3.4) {
                         $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(c.town) like '%".$contentValue."%')" ;
+                        $sql.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
                     } else {
                         $sql.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(c.ville) like '%".$contentValue."%')" ;
+                        $sql.= " OR LOWER(c.ville) like '%".$contentValue."%' OR LOWER(c.cp) like '%".$contentValue."%')" ;
                     }
                     
                 } else break;
@@ -224,9 +224,11 @@ class ExtDirectContact extends Contact
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
             foreach($params->sort as $key => $sort) {
-                $sql .= $sort->property. ' '.$sort->direction;
-                if ($key < ($sorterSize-1)) {
-                    $sql .= ",";
+                if (!empty($sort->property)) {
+                    $sql .= $sort->property. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sql .= ",";
+                    }
                 }
             }
         } else {
@@ -237,7 +239,6 @@ class ExtDirectContact extends Contact
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readContactList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {

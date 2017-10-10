@@ -202,9 +202,11 @@ class ExtDirectActionComm extends ActionComm
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
             foreach($params->sort as $key => $sort) {
-                $sql .= $sort->property. ' '.$sort->direction;
-                if ($key < ($sorterSize-1)) {
-                    $sql .= ",";
+                if (!empty($sort->property)) {
+                    $sql .= $sort->property. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sql .= ",";
+                    }
                 }
             }
         } else {
@@ -215,7 +217,6 @@ class ExtDirectActionComm extends ActionComm
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readActionList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {
@@ -389,7 +390,6 @@ class ExtDirectActionComm extends ActionComm
             $sql .= " ORDER BY u.name ASC ";
         }
                 
-        dol_syslog(get_class($this)."::getAllUsers sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {

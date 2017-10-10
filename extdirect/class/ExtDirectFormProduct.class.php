@@ -48,6 +48,7 @@ class ExtDirectFormProduct extends FormProduct
         
         if (!empty($login)) {
             if ($user->fetch('', $login)>0) {
+                $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -433,5 +434,51 @@ class ExtDirectFormProduct extends FormProduct
         }
         
         return $results;
+    }
+
+    /**
+     *    Load the unit labels
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readProductUnits()
+    {
+        global $langs;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+    
+        $results = array();
+        if (ExtDirect::checkDolVersion(0, '3.8', '')) {
+            $sql = "SELECT rowid, label, code, short_label";
+            $sql.= " FROM ".MAIN_DB_PREFIX."c_units";
+            $sql.= " WHERE active > 0";
+            $sql.= " ORDER BY rowid";
+            $resql = $this->db->query($sql);
+            if ($resql) {
+                $num = $this->db->num_rows($resql);
+                $i = 0;
+                while ($i < $num) {
+                    $obj = $this->db->fetch_object($resql);
+                    $row = new stdClass;
+                    $row->id = $obj->rowid;
+                    $row->label = ($langs->transnoentities('unit'.$obj->code)!=$obj->label?$langs->transnoentities('unit'.$obj->code):$obj->label);
+                    $row->short_label = ($langs->transnoentities($obj->short_label)!=$obj->short_label?$langs->transnoentities($obj->short_label):$obj->short_label);
+                    array_push($results, $row);
+                    $i++;
+                }
+                return $results;
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readProductUnits ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        } else {
+            $row = new stdClass;
+            $row->id = 0;
+            $row->label = ($langs->transnoentities('unitP')!='piece'?$langs->transnoentities('unitP'):'piece');
+            $row->short_label = ($langs->transnoentities('p')!='p'?$langs->transnoentities('p'):'p');
+            array_push($results, $row);
+        }
     }
 }

@@ -98,7 +98,6 @@ class ExtDirectSociete extends Societe
         $sql .= ' FROM '.MAIN_DB_PREFIX.'c_stcomm as st';
         $sql .= ' WHERE st.active = 1';
 
-        dol_syslog(get_class($this)."::readStComm sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -145,7 +144,6 @@ class ExtDirectSociete extends Societe
         }
         $sql.= " WHERE active = 1";
     
-        dol_syslog(__METHOD__." sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {
@@ -204,7 +202,6 @@ class ExtDirectSociete extends Societe
 		if ($country_id) $sql .= " AND p.rowid = ".$country_id;
 		$sql .= " ORDER BY p.code, d.code_departement";
     
-        dol_syslog(__METHOD__." sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -246,7 +243,6 @@ class ExtDirectSociete extends Societe
         $sql .= ' WHERE cp.active = 1';
         $sql .= ' ORDER BY cp.sortorder';
         
-        dol_syslog(get_class($this)."::readProspectLevel sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -290,7 +286,6 @@ class ExtDirectSociete extends Societe
         $sql.= " FROM ".MAIN_DB_PREFIX.'c_payment_term';
         $sql.= " WHERE active=1";
         $sql.= " ORDER BY sortorder";
-        dol_syslog(get_class($this)."::readPaymentConditions", LOG_DEBUG);
         $resql = $this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -331,7 +326,6 @@ class ExtDirectSociete extends Societe
         $sql.= " FROM ".MAIN_DB_PREFIX."c_paiement";
         $sql.= " WHERE active > 0";
         $sql.= " ORDER BY id";
-        dol_syslog(get_class($this)."::readPaymentTypes", LOG_DEBUG);
         $resql = $this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -449,9 +443,9 @@ class ExtDirectSociete extends Societe
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
                         if (ExtDirect::checkDolVersion() >= 3.4) {
-                            $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
+                            $sql.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')" ;
                         } else {
-                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
+                            $sql.= " OR LOWER(s.ville) like '%".$contentValue."%' OR LOWER(s.cp) like '%".$contentValue."%')" ;
                         }
                     } else {
                        $sql .= '1';
@@ -468,9 +462,11 @@ class ExtDirectSociete extends Societe
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
             foreach($params->sort as $key => $sort) {
-                $sql .= $sort->property. ' '.$sort->direction;
-                if ($key < ($sorterSize-1)) {
-                    $sql .= ",";
+                if (!empty($sort->property)) {
+                    $sql .= $sort->property. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sql .= ",";
+                    }
                 }
             }
         } else {
@@ -481,7 +477,6 @@ class ExtDirectSociete extends Societe
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readSocieteList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
     
         if ($resql) {
@@ -779,7 +774,6 @@ class ExtDirectSociete extends Societe
         }
         $sql .= ' ORDER BY town';
 
-        dol_syslog(get_class($this)."::getTowns sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -879,7 +873,6 @@ class ExtDirectSociete extends Societe
         $langs->trans('DiscountNone') ? $row->categorie = $langs->trans('DiscountNone'):$row->categorie = 'None';
         $row->id                = 0;
         array_push($results, $row);
-        dol_syslog(get_class($this)."::getCategories sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql) {
             $num=$this->db->num_rows($resql);

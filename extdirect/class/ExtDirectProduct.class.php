@@ -295,7 +295,8 @@ class ExtDirectProduct extends Product
                 $row->import_key= $this->import_key;
                 $row->date_creation= $this->date_creation;
                 $row->date_modification= $this->date_modification;
-                
+                // product units (pcs, kg, ...)
+                $row->unit_id = $this->fk_unit;
                 // supplier fields
                 $supplierProduct = new ProductFournisseur($this->db);
                 if (empty($refSupplier) && empty($refSupplierId)) {
@@ -803,7 +804,12 @@ class ExtDirectProduct extends Product
                 $this->id = $id;
                 $this->ref = $param->ref;
                 // delete product
-                if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (ExtDirect::checkDolVersion(0, '6.0', '')) {
+                    if (($result = $this->delete($this->_user)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                } else {
+                    if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
+                
             } else {
                 return PARAMETERERROR;
             }
@@ -864,7 +870,7 @@ class ExtDirectProduct extends Product
         
         $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel as stock, p.entity, p.seuil_stock_alerte, p.stock as total_stock';
         if ($supplierFilter) {
-            $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier';
+            $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
             $sql .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
             $sql .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
@@ -967,9 +973,11 @@ class ExtDirectProduct extends Product
         if (isset($param->sort)) {
             $sorterSize = count($param->sort);
             foreach ($param->sort as $key => $sort) {
-                $sql .= $sort->property. ' '.$sort->direction;
-                if ($key < ($sorterSize-1)) {
-                    $sql .= ",";
+                if (!empty($sort->property)) {
+                    $sql .= $sort->property. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sql .= ",";
+                    }
                 }
             }
         } else {
@@ -980,7 +988,6 @@ class ExtDirectProduct extends Product
             $sql .= $this->db->plimit($limit, $start);
         }
     
-        dol_syslog(get_class($this)."::readProductList sql=".$sql, LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -1014,6 +1021,7 @@ class ExtDirectProduct extends Product
                     $row->ref_supplier = $obj->ref_supplier;
                     $row->ref_supplier_id = $obj->ref_supplier_id;
                     $row->qty_supplier = $obj->qty_supplier;
+                    $row->reduction_percent_supplier = $obj->reduction_percent_supplier;
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
                     if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
                 } else {
@@ -1086,6 +1094,7 @@ class ExtDirectProduct extends Product
             $formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal');
             foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
                 if ($includeNoBatch) {
+                    $row = new stdClass;
                     $row->id = 'X_'.$warehouseId;
                     $row->product_id = $id;
                     $row->batch_id = 0;
@@ -1093,7 +1102,7 @@ class ExtDirectProduct extends Product
                     $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
                     $row->warehouse_id = $warehouseId;
                 }
-                if (($res = $this->fetchBatches($results, clone $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
+                if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
             }
         } else {
             if ($includeNoBatch) {
@@ -1200,6 +1209,7 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'import_key', 'import_key');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'date_creation', 'date_creation');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'date_modification', 'date_modification');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'unit_id', 'fk_unit');
         // has batch
         $diff = ExtDirect::prepareField($diff, $param, $this, 'has_batch', 'status_batch');
         //ExtDirect::prepareField($diff, $param, $this, 'productinfo', 'array_options['options_productinfo']');

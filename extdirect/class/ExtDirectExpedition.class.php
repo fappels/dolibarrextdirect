@@ -1,6 +1,6 @@
 <?PHP
 
-/*
+/**
  * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -341,18 +341,24 @@ class ExtDirectExpedition extends Expedition
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
+        $originId = 0;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
                 if ($filter->property == 'ref') $ref=$filter->value;
                 if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
+                if ($filter->property == 'origin_id') $originId = $filter->value;
             }
         }
         
         $sql = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_int, ea.status, csm.libelle as mode";
         $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
+        if ($originId) {
+            $sql.= " INNER JOIN ".MAIN_DB_PREFIX."element_element as el ON el.fk_target = e.rowid AND fk_source = " . $originId;
+            $sql.= " AND el.sourcetype = 'commande' AND el.targettype = '".$this->db->escape($this->element)."'";
+        }
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."c_shipment_mode as csm ON e.fk_shipping_method = csm.rowid";
         $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
@@ -384,7 +390,6 @@ class ExtDirectExpedition extends Expedition
         }
         $sql .= " ORDER BY e.date_creation DESC";
         
-        dol_syslog(get_class($this).'::readShipmentList', LOG_DEBUG);
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -553,6 +558,7 @@ class ExtDirectExpedition extends Expedition
                         }
                         if ($finishBatch) {
                             if (($res = $this->finishBatches($batches)) < 0) return $res;
+                            $params->line_id=$res;
                             unset($batches);
                             $batches = array();
                             $qtyShipped = $params->qty_toship;
@@ -633,7 +639,7 @@ class ExtDirectExpedition extends Expedition
      *
      * @param array $batches array with batch objects
      *
-     * @return int > 0 OK < 0 KO
+     * @return line_id > 0 OK < 0 KO
      * 
      */
 
@@ -644,6 +650,7 @@ class ExtDirectExpedition extends Expedition
         
         $stockLocationQty = array(); // associated array with batch qty in stock location
         $stockLocationOriginLineId = array(); // associated array with OriginLineId's
+        $shipmentLineId = 0;
     	foreach ($batches as $batch)
 		{
 			if ($batch->warehouse_id)
@@ -682,7 +689,7 @@ class ExtDirectExpedition extends Expedition
 		        }
 			}
 		}
-		return 1;
+		return shipmentLineId;
     }
     
     /**
