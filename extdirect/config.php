@@ -163,6 +163,10 @@ $API = array(
             'readSupplierReputations'=>array(
                     'len'=>1
             )
+            ,
+            'readProductUnits'=>array(
+                    'len'=>1
+            )
         )
     ),
     'ExtDirectAuthenticate'=>array(
