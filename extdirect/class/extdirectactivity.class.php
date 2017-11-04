@@ -261,13 +261,13 @@ class ExtDirectActivity extends CommonObject
             foreach ($this->dataset as &$data) {
                 $data['duration'] = '';
                 
-                if (($data['status'] === 'START')) {// && ($startTime[$data['activity_name']] === 0)) {
+                if ($data['status'] === 'START') {
                     $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                     $stopTime[$data['activity_name']] = 0;
                     $activityId[$data['activity_name']] = $data['activity_id'];
                 }
-                if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'ERROR') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
-                                && ($stopTime[$data['activity_name']] === 0) && ($activityId[$data['activity_name']] === $data['activity_id'])) {
+                if (($data['status'] === 'VALIDATE' || $data['status'] === 'ERROR' || $data['status'] === 'CANCEL' || $data['status'] === 'DONE' || $data['status'] === 'DRAFT') 
+                                && $stopTime[$data['activity_name']] === 0 && $activityId[$data['activity_name']] === $data['activity_id']) {
                     $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                     $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
                     $startTime[$data['activity_name']] = 0;
