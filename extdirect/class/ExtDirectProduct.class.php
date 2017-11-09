@@ -1504,7 +1504,7 @@ class ExtDirectProduct extends Product
         } else if ($this->barcode_type == '2') { // EAN13
             $barcodeType = 'EAN13';
         } else if ($this->barcode_type == '3') { // UPC
-            $barcodeType = 'UPC-A';
+            $barcodeType = 'UPCA';
         }
 
         if (!empty($barcodeType) && !empty($this->barcode)) {
