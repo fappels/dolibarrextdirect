@@ -121,9 +121,9 @@ At least three warehouses, 2 multiprice indexes and one customer-supplier with r
 Enable barcode module with at least EAN13 activated.
 Enable agenda module.
 Enable customer and supplier order modules with stock increase/decrease enabled.
-Demo data from dev/initdemo should work, only add two multiprice levels in product setup and rename admin username to SuperAdmin.
+Demo data from dev/initdemo should work. Add two multiprice levels and a string extrafield 'test' labeled 'Test' with default value 'test' in product setup. Rename admin username to SuperAdmin.
 
 **Supported Dolibarr Versions:**
 
 - Min version:	3.3
-- Max version:	6.0
+- Max version:	7.0 alpha

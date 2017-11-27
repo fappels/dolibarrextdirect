@@ -26,6 +26,7 @@
 require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
 
@@ -68,8 +69,7 @@ class ExtDirectProduct extends Product
             }
         }
     }
-    
-    
+
     /**
      *    Load products from database into memory
      *
@@ -354,6 +354,75 @@ class ExtDirectProduct extends Product
         return $results;
     }
 
+    /**
+    * public method to read available product optionals (extra fields)
+    *
+    * @return stdClass result data or ERROR
+    */
+    public function readOptionalModel(stdClass $param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        
+        return ExtDirect::readOptionalModel($this);
+    }
+
+    /**
+     * public method to read product or lot optionals (extra fields) from database
+     *
+     *    @param    stdClass    $param  filter with elements:
+     *      id                  Id of product to load
+     *      batch               batch code of product for lot attributes
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readOptionals(stdClass $param)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+        if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+        $results = array();
+        $row = new stdClass;
+        $id = 0;
+        $batch = '';
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'id') $id=$filter->value;
+                else if ($filter->property == 'batch') $batch = $filter->value;
+            }
+        }
+        
+        if ($id > 0) {
+            $extraFields = new ExtraFields($this->db);
+            if (empty($batch)) {
+                if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (! $this->error) {
+                    $extraFields->fetch_name_optionals_label($this->table_element);
+                    foreach ($this->array_options as $key => $value) {
+                        $name = substr($key,8); // strip options_
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $results[] = $row;
+                    }
+                }
+            } else {
+                $productLot = new Productlot($this->db);
+                if (($result = $productLot->fetch(0, $batch, $id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+                if (! $productLot->error) {
+                    $extraFields->fetch_name_optionals_label($productLot->table_element);
+                    foreach ($productLot->array_options as $key => $value) {
+                        $name = substr($key,8); // strip options_
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $results[] = $row;
+                    }
+                }
+            }
+        }
+        return $results;
+    }
 
     /**
      * Ext.direct method to Create product
@@ -376,6 +445,15 @@ class ExtDirectProduct extends Product
             $this->prepareFields($param);
             if (!empty($this->barcode)) {
             	$this->fetch_barcode();
+            }
+            // extrafields defaults
+            $extraFields = ExtDirect::readOptionalModel($this);
+            if (count($extraFields) > 0) {
+                foreach ($extraFields as $extraField) {
+                    if (!empty ($extraField->default)) {
+                        $this->array_options['options_'.$extraField->name] = $extraField->default;
+                    }
+                }
             }
             if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             //! Stock
@@ -1049,7 +1127,7 @@ class ExtDirectProduct extends Product
      *       property sort with properties field names and directions:
      *       property limit for paging with sql LIMIT and START values
      *
-     * @return     stdClass result data or -1
+     * @return     stdClass result data or ERROR
      */
     public function readProductBatchList(stdClass $param)
     {

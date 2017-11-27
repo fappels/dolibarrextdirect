@@ -26,6 +26,7 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/product.lib.php'; // required for showing product units in pdf's from version 4.0
+require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 
 /**
  * Constant to return when there is a database connection error
@@ -631,5 +632,29 @@ class ExtDirect
     		}
     	}
     	return $results;
+    }
+
+    /**
+    * Load available object Optionals (extra fields)
+    *
+    * @return stdClass array result data
+    */
+    public static function readOptionalModel($object) 
+    {
+        $results = array();
+        
+        $extraFields = new ExtraFields($object->db);
+        $optionalLabel = $extraFields->fetch_name_optionals_label($object->table_element);
+        if (count($optionalLabel) > 0) {
+            foreach ($optionalLabel as $name => $label) {
+                $row = new stdClass;
+                $row->name = $name;
+                $row->label = $label;
+                $row->type = $extraFields->attributes[$object->table_element]['type'][$name];
+                $row->default = $extraFields->attributes[$object->table_element]['default'][$name];
+                $results[] = $row;
+            }
+        }
+        return $results;
     }
 }

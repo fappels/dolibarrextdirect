@@ -1209,7 +1209,8 @@ describe("products", function () {
 		productRefs = [],
 		productBarcodes = [],
 		supplierRefs = [],
-		productStore;
+		productStore,
+		optionalModel = [];
 		
 	beforeEach(function() {
 		testresults = [];
@@ -1217,6 +1218,32 @@ describe("products", function () {
         productStore = Ext.getStore('product');
 	});
 		
+	it("read Optional Model", function() {
+		runs(function() {
+			var optional = {};
+			flag = false;
+
+			Ext.getStore('ProductOptionalModel').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						optional.name = record.get('name');
+						optional.label = record.get('label');
+						optionalModel.push(optional);
+					});
+					flag = true;
+				}
+			});
+		});
+
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			Ext.Array.each(optionalModel,function (optional) {
+				expect(optional.label).toBe('Test');
+			});
+		});
+	});
+
 	it("create products", function() {
 		runs(function() {
 			// add 3 products
@@ -1395,6 +1422,30 @@ describe("products", function () {
 			expect(testresults).toContain('CT0001');
 			expect(testresults).toContain('SCT0001');
 			expect(testresults).toContain(12);
+		});
+	});
+
+	it("read product 1 attributes", function() {
+		var optionalStore = Ext.getStore('ProductOptionals');
+
+		runs(function() {
+			flag = false;
+			optionalStore.clearFilter();
+			optionalStore.filter([Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
+			optionalStore.load({
+				callback: function () {
+					Ext.Array.each(optionalModel,function (optional) {
+						testresult = optionalStore.findRecord('name',optional.name);
+					});
+					flag = true;
+				}
+			});
+		});
+
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult.get('value')).toBe('test');
 		});
 	});
 	
