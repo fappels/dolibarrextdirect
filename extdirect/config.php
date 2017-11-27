@@ -130,6 +130,12 @@ $API = array(
             ),
             'readProductBatchList'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
             )
         )
     ),
