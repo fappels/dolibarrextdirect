@@ -218,8 +218,8 @@ class ExtDirectCommande extends Commande
     public function updateOrder($param) 
     {
         global $conf, $langs, $mysoc;
-    	
-    	if (!isset($this->db)) return CONNECTERROR;
+        
+        if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
@@ -237,29 +237,34 @@ class ExtDirectCommande extends Commande
                         $result = $this->set_draft($this->_user);
                         break;
                     case 1:
-                    	// set global $mysoc required to set pdf sender
-                    	$mysoc = new Societe($this->db);
-		                $mysoc->setMysoc($conf);
-                    	if ($params->warehouse_id > 0) {
-                    		$warehouseId = $params->warehouse_id;
-                    	} else {
-                    		$warehouseId = 0;
-                    	}
-                    	$result = $this->valid($this->_user, $warehouseId);
-                    	// PDF generating
+                        // set global $mysoc required to set pdf sender
+                        $mysoc = new Societe($this->db);
+                        $mysoc->setMysoc($conf);
+                        if ($params->warehouse_id > 0) {
+                            $warehouseId = $params->warehouse_id;
+                        } else {
+                            $warehouseId = 0;
+                        }
+                        $result = $this->valid($this->_user, $warehouseId);
+                        // PDF generating
                         if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
-                        	if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                        	$hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
-							$hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
-							$hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
-                        	$outputlangs = $langs;
-							if ($conf->global->MAIN_MULTILANGS)	{
-								$this->fetch_thirdparty();
-								$newlang = $this->thirdparty->default_lang;
-								$outputlangs = new Translate("", $conf);
-								$outputlangs->setDefaultLang($newlang);
-							}
-							$this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                            $hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
+                            $hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
+                            $hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
+                            $outputlangs = $langs;
+                            if ($conf->global->MAIN_MULTILANGS)	{
+                                $this->fetch_thirdparty();
+                                $newlang = $this->thirdparty->default_lang;
+                                $outputlangs = new Translate("", $conf);
+                                $outputlangs->setDefaultLang($newlang);
+                            }
+                            if (ExtDirect::checkDolVersion(0,'3.7','')) {
+                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            } else {
+                                require_once DOL_DOCUMENT_ROOT.'/core/modules/commande/modules_commande.php';
+                                commande_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            }
                         }
                         break;
                     case 3:
@@ -283,9 +288,9 @@ class ExtDirectCommande extends Commande
                 if (isset($this->mode_reglement_id) &&
                     ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->shipping_method_id) &&
-                	($result = $this->setShippingMethod($this->shipping_method_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    ($result = $this->setShippingMethod($this->shipping_method_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->fk_incoterms) &&
-                	($result = $this->setIncoterms($this->fk_incoterms, $this->location_incoterms)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    ($result = $this->setIncoterms($this->fk_incoterms, $this->location_incoterms)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 
             } else {
                 return PARAMETERERROR;

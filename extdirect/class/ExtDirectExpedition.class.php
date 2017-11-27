@@ -202,8 +202,8 @@ class ExtDirectExpedition extends Expedition
     public function updateShipment($param) 
     {
         global $conf, $langs, $mysoc;
-    	
-    	if (!isset($this->db)) return CONNECTERROR;
+        
+        if (!isset($this->db)) return CONNECTERROR;
         
         $paramArray = ExtDirect::toArray($param);
 
@@ -222,23 +222,28 @@ class ExtDirectExpedition extends Expedition
                         
                         break;
                     case 1:
-                    	// set global $mysoc required to set pdf sender
-                    	$mysoc = new Societe($this->db);
-		                $mysoc->setMysoc($conf);
+                        // set global $mysoc required to set pdf sender
+                        $mysoc = new Societe($this->db);
+                        $mysoc->setMysoc($conf);
                         $result = $this->valid($this->_user);
-                		// PDF generating
+                        // PDF generating
                         if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
-                        	$hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
-							$hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
-							$hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
-                        	$outputlangs = $langs;
-							if ($conf->global->MAIN_MULTILANGS)	{
-								$this->fetch_thirdparty();
-								$newlang = $this->thirdparty->default_lang;
-								$outputlangs = new Translate("", $conf);
-								$outputlangs->setDefaultLang($newlang);
-							}
-							$this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            $hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
+                            $hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
+                            $hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
+                            $outputlangs = $langs;
+                            if ($conf->global->MAIN_MULTILANGS)	{
+                                $this->fetch_thirdparty();
+                                $newlang = $this->thirdparty->default_lang;
+                                $outputlangs = new Translate("", $conf);
+                                $outputlangs->setDefaultLang($newlang);
+                            }
+                            if (ExtDirect::checkDolVersion(0,'3.7','')) {
+                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            } else {
+                                require_once DOL_DOCUMENT_ROOT.'/core/modules/expedition/modules_expedition.php';
+                                expedition_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            }
                         }
                         break;
                     case 2:
