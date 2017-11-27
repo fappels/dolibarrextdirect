@@ -111,7 +111,7 @@ class ExtDirectActivity extends CommonObject
         $sql.= " ".(! isset($this->app_version)?'NULL':"'".$this->db->escape($this->app_version)."'").",";
         $sql.= " ".(! isset($this->activity_name)?'NULL':"'".$this->db->escape($this->activity_name)."'").",";
         $sql.= " ".(! isset($this->activity_id)?'NULL':"'".$this->activity_id."'").",";
-        $sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0?'NULL':$this->db->idate($this->datec)).",";
+        $sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0?'NULL':"'".$this->db->idate($this->datec)."'").",";
         $sql.= " ".(! isset($this->status)?'NULL':"'".$this->db->escape($this->status)."'")."";
         $sql.= ")";
         $this->db->begin();
