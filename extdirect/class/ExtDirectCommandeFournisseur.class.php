@@ -187,6 +187,57 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         return $results;
     }
 
+    /**
+    * public method to read available optionals (extra fields)
+    *
+    * @return stdClass result data or ERROR
+    */
+    public function readOptionalModel(stdClass $param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        
+        return ExtDirect::readOptionalModel($this);
+    }
+
+    /**
+     * public method to read order optionals (extra fields) from database
+     *
+     *    @param    stdClass    $param  filter with elements:
+     *      id                  Id of order to load
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readOptionals(stdClass $param)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
+        $results = array();
+        $id = 0;
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'id') $id=$filter->value;
+            }
+        }
+        
+        if ($id > 0) {
+            $extraFields = new ExtraFields($this->db);
+            if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if (! $this->error) {
+                $extraFields->fetch_name_optionals_label($this->table_element);
+                foreach ($this->array_options as $key => $value) {
+                    $row = new stdClass;
+                    $name = substr($key,8); // strip options_
+                    $row->name = $name;
+                    $row->value = $extraFields->showOutputField($name,$value);
+                    $results[] = $row;
+                }
+            }
+        }
+        return $results;
+    }
 
     /**
      * Ext.direct method to Create Order
@@ -792,6 +843,64 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 }
             } else {
                 return 0;
+            }
+        }
+        return $results;
+    }
+
+        /**
+    * public method to read available line optionals (extra fields)
+    *
+    * @return stdClass result data or ERROR
+    */
+    public function readLineOptionalModel(stdClass $param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+
+        $orderLine = new CommandeFournisseurLigne($this->db);
+
+        return ExtDirect::readOptionalModel($orderLine);
+    }
+
+    /**
+     * public method to read order line optionals (extra fields) from database
+     *
+     *    @param    stdClass    $param  filter with elements:
+     *      id                  Id of order to load
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readLineOptionals(stdClass $param)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
+        $results = array();
+        $line_id = 0;
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'line_id') $line_id=$filter->value;
+            }
+        }
+        
+        if ($line_id > 0) {
+            $extraFields = new ExtraFields($this->db);
+            $orderLine = new CommandeFournisseurLigne($this->db);
+            $orderLine->id = $line_id;
+            if (($result = $orderLine->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
+            if (! $orderLine->error) {
+                $extraFields->fetch_name_optionals_label($orderLine->table_element);
+                foreach ($orderLine->array_options as $key => $value) {
+                    if (!empty($value)) {
+                        $row = new stdClass;
+                        $name = substr($key,8); // strip options_
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $results[] = $row;
+                    }
+                }
             }
         }
         return $results;

@@ -256,6 +256,18 @@ $API = array(
             ),
             'readConstants'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
+                    'len'=>1
             )
         )
     ),
@@ -295,6 +307,18 @@ $API = array(
                     'len'=>1
             ),
             'readConstants'=>array(
+                    'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
                     'len'=>1
             )
         )

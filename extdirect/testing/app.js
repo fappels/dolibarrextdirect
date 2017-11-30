@@ -63271,6 +63271,22 @@ Ext.define('ConnectorTest.controller.Main', /**
                     {
                         "name": "readConstants",
                         "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionals",
+                        "len": 1
                     }
                 ],
                 "ExtDirectCommandeFournisseur": [
@@ -63320,6 +63336,22 @@ Ext.define('ConnectorTest.controller.Main', /**
                     },
                     {
                         "name": "readConstants",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionals",
                         "len": 1
                     }
                 ],

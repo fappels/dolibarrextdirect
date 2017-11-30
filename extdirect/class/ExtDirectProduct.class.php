@@ -26,7 +26,6 @@
 require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
-require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
 
@@ -383,7 +382,6 @@ class ExtDirectProduct extends Product
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
         if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
         $results = array();
-        $row = new stdClass;
         $id = 0;
         $batch = '';
         
@@ -401,6 +399,7 @@ class ExtDirectProduct extends Product
                 if (! $this->error) {
                     $extraFields->fetch_name_optionals_label($this->table_element);
                     foreach ($this->array_options as $key => $value) {
+                        $row = new stdClass;
                         $name = substr($key,8); // strip options_
                         $row->name = $name;
                         $row->value = $extraFields->showOutputField($name,$value);
@@ -413,6 +412,7 @@ class ExtDirectProduct extends Product
                 if (! $productLot->error) {
                     $extraFields->fetch_name_optionals_label($productLot->table_element);
                     foreach ($productLot->array_options as $key => $value) {
+                        $row = new stdClass;
                         $name = substr($key,8); // strip options_
                         $row->name = $name;
                         $row->value = $extraFields->showOutputField($name,$value);
