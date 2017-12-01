@@ -300,8 +300,8 @@ class ExtDirectFormProduct extends FormProduct
      * @param   int     $batch          Add quantity of batch stock in label for product with batch name batch. Nothing if '' batch name precedes batch_id.
      * @param   string  $statusFilter   warehouse status filter, following comma separated filter options can be used
      *										'warehouseopen' = select products from open warehouses,
-	 *										'warehouseclosed' = select products from closed warehouses, 
-	 *										'warehouseinternal' = select products from warehouses for internal correct/transfer only
+     *										'warehouseclosed' = select products from closed warehouses, 
+     *										'warehouseinternal' = select products from warehouses for internal correct/transfer only
      * @param   string  $contentValue   content search string
      * @param	boolean	$sumStock		sum total stock of a warehouse, default true
      * @param   int     $limit          paging limit
@@ -311,23 +311,26 @@ class ExtDirectFormProduct extends FormProduct
     private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
     {
         dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
-        
+
         $warehouseStatus = array();
 
-		if (preg_match('/warehouseclosed/', $statusFilter)) 
-		{
-			$warehouseStatus[] = Entrepot::STATUS_CLOSED;
-		}
-		if (preg_match('/warehouseopen/', $statusFilter)) 
-		{
-			$warehouseStatus[] = Entrepot::STATUS_OPEN_ALL;
-		}
-		if (preg_match('/warehouseinternal/', $statusFilter)) 
-		{
-			$warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
-		}
-        
-        $sql = "SELECT e.rowid, e.label, e.description, e.statut";
+        if (preg_match('/warehouseclosed/', $statusFilter)) 
+        {
+            $warehouseStatus[] = Entrepot::STATUS_CLOSED;
+        }
+        if (preg_match('/warehouseopen/', $statusFilter)) 
+        {
+            $warehouseStatus[] = Entrepot::STATUS_OPEN_ALL;
+        }
+        if (preg_match('/warehouseinternal/', $statusFilter)) 
+        {
+            $warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
+        }
+        if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+            $sql = "SELECT e.rowid, e.ref as label, e.description, e.statut";
+        } else {
+            $sql = "SELECT e.rowid, e.label, e.description, e.statut";
+        }
         if (!empty($fk_product)) 
         {
             if (!empty($fk_batch) || !empty($batch)) 
@@ -358,26 +361,38 @@ class ExtDirectFormProduct extends FormProduct
                 $sql.= " AND pb.rowid = ".$fk_batch;
             }
         }
-        
+
         $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
         if (count($warehouseStatus))
-		{
-			$sql.= " AND e.statut IN (".implode(',',$warehouseStatus).")";
-		}
-		else
-		{
-			$sql.= " AND e.statut > 0";
-		}
-        if (!empty($contentValue)) {
-            $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+        {
+            $sql.= " AND e.statut IN (".implode(',',$warehouseStatus).")";
         }
-        
-        if ($sumStock && empty($fk_product)) $sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
-        $sql.= " ORDER BY e.label";        
+        else
+        {
+            $sql.= " AND e.statut > 0";
+        }
+        if (!empty($contentValue)) {
+            if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+                $sql.= " AND (LOWER(e.ref) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+            } else {
+                $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+            }
+        }
+        if ($sumStock && empty($fk_product)) {
+            if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+                $sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut";
+            } else {
+                $sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
+            }
+        }
+        if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+            $sql.= " ORDER BY e.ref";
+        } else {
+            $sql.= " ORDER BY e.label";
+        }
         if (!empty($limit)) {
             $sql .= $this->db->plimit($limit, $start);
         }
-        
         $resql = $this->db->query($sql);
         if ($resql)
         {
