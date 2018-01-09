@@ -1313,12 +1313,30 @@ class ExtDirectProduct extends Product
         $id =0;
         dol_syslog(get_class($this)."::fetch id from barcode=".$barcode);
         $couldBeEAN = false;
-        if ((strlen($barcode) == 13) || (strlen($barcode) == 8)) {
+        if (strlen($barcode) == 13) {
+            $this->barcode_type = 2;
             $couldBeEAN = true;
+        } elseif (strlen($barcode) == 12) {
+            $this->barcode_type = 3;
+            $couldBeEAN = true;
+        } elseif (strlen($barcode) == 8) {
+            $this->barcode_type = 1;
+            $couldBeEAN = true;
+        }
+        if ($couldBeEAN) {
+            $this->barcode = substr($barcode, 0, -1);
+            if ($this->fetchBarcodeWithChecksum() == $barcode) {
+                $couldBeEAN = true;
+            } else {
+                $couldBeEAN = false;
+            }
+        }
+        
+        if ($couldBeEAN) {
             $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."' OR ref = '".$barcode."'";
         } else {
             $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR ref = '".$barcode."'";
-        }        
+        }
         $resql = $this->db->query($sql);
         if ( $resql ) {
             if ($this->db->num_rows($resql) > 0) {
