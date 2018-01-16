@@ -43,7 +43,7 @@ class ExtDirectActivities extends ExtDirectActivity
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {

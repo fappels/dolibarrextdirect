@@ -47,7 +47,7 @@ class ExtDirectSociete extends Societe
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;
                 if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -60,23 +60,23 @@ class ExtDirectSociete extends Societe
             }
         }
     }
-    
-	/**
+
+    /**
      *	Load order related constants
      * 
-     *	@param			stdClass	$params		filter with elements
-     *		constant	name of specific constant
+     *  @param          stdClass    $params     filter with elements
+     *      constant	name of specific constant
      *
-     *	@return			stdClass result data with specific constant value
+     *	@return         stdClass result data with specific constant value
      */
     public function readConstants(stdClass $params)
     {
-    	if (!isset($this->db)) return CONNECTERROR;
-    	if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
-    	
-    	$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_constants);
-    	
-    	return $results;
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
+        
+        $results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_constants);
+        
+        return $results;
     }
     
 
@@ -174,7 +174,7 @@ class ExtDirectSociete extends Societe
     public function readStateConstants(stdClass $param)
     {
         global $langs;
-    
+
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         
@@ -190,18 +190,18 @@ class ExtDirectSociete extends Societe
         $row->label		    = '';
         $row->country_id    = null;
         array_push($results, $row);
-    
+
         $sql = "SELECT d.rowid, d.code_departement as code , d.nom as label, p.rowid as country_id FROM";
         if (ExtDirect::checkDolVersion() >= 3.7) {
             $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_country as p";
         } else {
             $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_pays as p";
         }		
-		$sql .= " WHERE d.fk_region=r.code_region and r.fk_pays=p.rowid";
-		$sql .= " AND d.active = 1 AND r.active = 1 AND p.active = 1";
-		if ($country_id) $sql .= " AND p.rowid = ".$country_id;
-		$sql .= " ORDER BY p.code, d.code_departement";
-    
+        $sql .= " WHERE d.fk_region=r.code_region and r.fk_pays=p.rowid";
+        $sql .= " AND d.active = 1 AND r.active = 1 AND p.active = 1";
+        if ($country_id) $sql .= " AND p.rowid = ".$country_id;
+        $sql .= " ORDER BY p.code, d.code_departement";
+
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -1115,8 +1115,8 @@ class ExtDirectSociete extends Societe
         }
         isset($params->typent_id) ? ($this->typent_id = $params->typent_id) : null;
         /*	$img = str_replace('data:image/png;base64,', '', $params->logo);
-	        $img = str_replace(' ', '+', $img);
-	        $data = base64_decode($img);*/
+            $img = str_replace(' ', '+', $img);
+            $data = base64_decode($img);*/
     }
 }
 

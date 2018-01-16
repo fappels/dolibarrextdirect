@@ -45,7 +45,7 @@ class ExtDirectContact extends Contact
         global $user,$db,$langs;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -76,31 +76,31 @@ class ExtDirectContact extends Contact
                 if ($filter->property == 'id') {
                     if (($result = $this->fetch($filter->value)) < 0)   return $result;
                 } else if ($filter->property == 'company_id') {
-                	// fetch first contact
-                	$sql = 'SELECT rowid as id';
-        			$sql .= ' FROM '.MAIN_DB_PREFIX.'socpeople';
-        			$sql .= ' WHERE fk_soc = '.$filter->value;
-        			$sql .= ' ORDER BY rowid';
-        			$sql .= $this->db->plimit(1, 0);
-        			
-        			$resql=$this->db->query($sql);
-    		        if ($resql) {
-    		        	$num=$this->db->num_rows($resql);
-    		        	if ($num) {
-    		        		$obj = $this->db->fetch_object($resql);
-    		        		if (($result = $this->fetch($obj->id)) < 0)   return $result;
-    		        	} else {
-    		        		return array(); // no results
-    		        	}
-			        } else {
-			            $error="Error ".$this->db->lasterror();
-			            dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);
-			            return SQLERROR;
-			        }
+                    // fetch first contact
+                    $sql = 'SELECT rowid as id';
+                    $sql .= ' FROM '.MAIN_DB_PREFIX.'socpeople';
+                    $sql .= ' WHERE fk_soc = '.$filter->value;
+                    $sql .= ' ORDER BY rowid';
+                    $sql .= $this->db->plimit(1, 0);
+                    
+                    $resql=$this->db->query($sql);
+                    if ($resql) {
+                        $num=$this->db->num_rows($resql);
+                        if ($num) {
+                            $obj = $this->db->fetch_object($resql);
+                            if (($result = $this->fetch($obj->id)) < 0)   return $result;
+                        } else {
+                            return array(); // no results
+                        }
+                    } else {
+                        $error="Error ".$this->db->lasterror();
+                        dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);
+                        return SQLERROR;
+                    }
                 } else {
-                	return PARAMETERERROR;
+                    return PARAMETERERROR;
                 }
-            	if ($result == 0) {
+                if ($result == 0) {
                     return array(); // no results
                 }
                 if (!$this->error) {
@@ -256,8 +256,7 @@ class ExtDirectContact extends Contact
                 $row->town          = $obj->town;
                 if (isset($obj->statut)) {
                     $row->enabled    = $obj->statut;
-                }                
-    
+                }
                 array_push($results, $row);
             }
             $this->db->free($resql);
@@ -324,7 +323,7 @@ class ExtDirectContact extends Contact
                 if (($result = $this->update($id, $this->_user, $call_trigger)) < 0)    return $result;
             } else {
                 return PARAMETERERROR;
-            }            
+            }
         }
         if (is_array($params)) {
             return $paramArray;

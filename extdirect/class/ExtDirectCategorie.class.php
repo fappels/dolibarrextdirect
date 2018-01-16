@@ -51,7 +51,7 @@ class ExtDirectCategorie extends Categorie
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //product.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {

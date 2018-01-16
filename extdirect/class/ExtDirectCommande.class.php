@@ -50,7 +50,7 @@ class ExtDirectCommande extends Commande
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -605,7 +605,7 @@ class ExtDirectCommande extends Commande
         }
     }
     
-	/**
+    /**
      * public method to read a list of shipping modes
      *
      * @return     stdClass result data or error number
@@ -618,42 +618,42 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
-		if (ExtDirect::checkDolVersion(0,'3.7','')) {
-			$sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
-	        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
-	        $sql .= ' WHERE csm.active > 0';
-	        $sql .= ' ORDER BY csm.rowid';
-	        
-	        $resql=$this->db->query($sql);
-	        
-	        if ($resql) {
-	            $num=$this->db->num_rows($resql);
-	
-	            for ($i = 0;$i < $num; $i++) {
-	                $obj = $this->db->fetch_object($resql);
-	                $row = null;
-	
-	                $row->id = $obj->rowid;
-	                $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
-	                $label=($transcode!=null?$transcode:$obj->label);
-	                $row->code = $obj->code;
-	                $row->label = $label;
-	                array_push($results, $row);
-	            }
-	
-	            $this->db->free($resql);
-	            return $results;
-	        } else {
-	            $error="Error ".$this->db->lasterror();
-	            dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
-	            return SQLERROR;
-	        }
-		} else {
-			return $results;
-		}
+        if (ExtDirect::checkDolVersion(0,'3.7','')) {
+            $sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
+            $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
+            $sql .= ' WHERE csm.active > 0';
+            $sql .= ' ORDER BY csm.rowid';
+            
+            $resql=$this->db->query($sql);
+            
+            if ($resql) {
+                $num=$this->db->num_rows($resql);
+
+                for ($i = 0;$i < $num; $i++) {
+                    $obj = $this->db->fetch_object($resql);
+                    $row = null;
+
+                    $row->id = $obj->rowid;
+                    $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
+                    $label=($transcode!=null?$transcode:$obj->label);
+                    $row->code = $obj->code;
+                    $row->label = $label;
+                    array_push($results, $row);
+                }
+
+                $this->db->free($resql);
+                return $results;
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        } else {
+            return $results;
+        }
     }
     
-	/**
+    /**
      * public method to read a list of incoterm codes
      *
      * @return     stdClass result data or error number
@@ -665,35 +665,35 @@ class ExtDirectCommande extends Commande
         $results = array();
         $row = new stdClass;
         if (ExtDirect::checkDolVersion(0,'3.8','')) {
-	        $sql = 'SELECT ci.rowid, ci.code';
-	        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
-	        $sql .= ' WHERE ci.active > 0';
-	        $sql .= ' ORDER BY ci.rowid';
-	        
-	        $resql=$this->db->query($sql);
-	        
-	        if ($resql) {
-	            $num=$this->db->num_rows($resql);
-	
-	            for ($i = 0;$i < $num; $i++) {
-	                $obj = $this->db->fetch_object($resql);
-	                $row = null;
-	
-	                $row->id = $obj->rowid;
-	                $row->code = $obj->code;
-	                array_push($results, $row);
-	            }
-	
-	            $this->db->free($resql);
-	            return $results;
-	        } else {
-	            $error="Error ".$this->db->lasterror();
-	            dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
-	            return SQLERROR;
-	        }
+            $sql = 'SELECT ci.rowid, ci.code';
+            $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
+            $sql .= ' WHERE ci.active > 0';
+            $sql .= ' ORDER BY ci.rowid';
+            
+            $resql=$this->db->query($sql);
+            
+            if ($resql) {
+                $num=$this->db->num_rows($resql);
+
+                for ($i = 0;$i < $num; $i++) {
+                    $obj = $this->db->fetch_object($resql);
+                    $row = null;
+
+                    $row->id = $obj->rowid;
+                    $row->code = $obj->code;
+                    array_push($results, $row);
+                }
+
+                $this->db->free($resql);
+                return $results;
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
+                return SQLERROR;
+            }
         }  else {
-			return $results;
-		}
+            return $results;
+        }
     }
     
     /**
@@ -717,13 +717,13 @@ class ExtDirectCommande extends Commande
         if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
         
-    
+
         $results = array();
         $row = new stdClass;
         $order_id = 0;
         $photoSize = '';
         $onlyProduct = 1;
-    
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $order_id=$filter->value; // deprecated
@@ -734,22 +734,22 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'only_product') $onlyProduct=$filter->value;
             }
         }
-    
+
         if ($order_id > 0) {
             $this->id=$order_id;
             $this->loadExpeditions();
             if (($result = $this->fetch_lines($onlyProduct)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 foreach ($this->lines as $line) {
-                	$isService = false;
-                	(!$line->fk_product) ? $isFreeLine = true : $isFreeLine = false;
+                    $isService = false;
+                    (!$line->fk_product) ? $isFreeLine = true : $isFreeLine = false;
                     $myprod = new ExtDirectProduct($this->_user->login);
                     if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                     if (ExtDirect::checkDolVersion() >= 3.5) {
                         if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
                     } 
                     if ($line->product_type == 1) {
-                    	$isService = true;
+                        $isService = true;
                     }
                     if ($isService || $isFreeLine || isset($warehouse_id) || ($myprod->stock_reel == 0)) {
                         if ($isService || $isFreeLine || $warehouse_id == -1) {
@@ -759,11 +759,11 @@ class ExtDirectCommande extends Commande
                             $row->origin_id = $line->fk_commande;
                             $row->origin_line_id = $line->rowid;
                             if (empty($line->label)) {
-                            	if ($isFreeLine) {
-                            		$row->label = $line->desc;
-                            	} else {
-                            		$row->label = $line->product_label;
-                            	}
+                                if ($isFreeLine) {
+                                    $row->label = $line->desc;
+                                } else {
+                                    $row->label = $line->product_label;
+                                }
                             } else {
                                 $row->label = $line->label;
                             } 
@@ -786,15 +786,15 @@ class ExtDirectCommande extends Commande
                             $row->total_localtax1 = $line->total_localtax1;
                             $row->total_localtax2 = $line->total_localtax2;
                             if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
-			                    //! Arrays for multiprices
-			                    $row->product_price=$myprod->multiprices[$multiprices_index];
-			                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
-			                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
-			                } else {
-			                	$row->product_price = $myprod->price;
-			                	$row->product_price_ttc = $myprod->price_ttc;
-			                	$row->price_base_type = $myprod->price_base_type;
-			                }
+                                //! Arrays for multiprices
+                                $row->product_price=$myprod->multiprices[$multiprices_index];
+                                $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+                                $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+                            } else {
+                                $row->product_price = $myprod->price;
+                                $row->product_price_ttc = $myprod->price_ttc;
+                                $row->price_base_type = $myprod->price_base_type;
+                            }
                             $row->rang = $line->rang;
                             $row->price = $line->price;
                             $row->subprice = $line->subprice;
@@ -803,11 +803,11 @@ class ExtDirectCommande extends Commande
                             $row->stock = $myprod->stock_reel;
                             $row->total_stock = $row->stock;
                             if ($isService) {
-                            	$row->warehouse_id = -1; // service is not stocked
+                                $row->warehouse_id = -1; // service is not stocked
                             } else if ($isFreeLine) {
-                            	$row->warehouse_id = 0; // freeline is not in a specific stock location
+                                $row->warehouse_id = 0; // freeline is not in a specific stock location
                             } else {
-                            	$row->warehouse_id = $warehouse_id;
+                                $row->warehouse_id = $warehouse_id;
                             }
                             $row->has_photo = 0;
                             if (!$isFreeLine && !empty($photoSize)) {
@@ -844,16 +844,16 @@ class ExtDirectCommande extends Commande
                             $row->total_tax = $line->total_tva;
                             $row->total_localtax1 = $line->total_localtax1;
                             $row->total_localtax2 = $line->total_localtax2;
-                        	if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
-			                    //! Arrays for multiprices
-			                    $row->product_price=$myprod->multiprices[$multiprices_index];
-			                    $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
-			                    $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
-			                } else {
-			                	$row->product_price = $myprod->price;
-			                	$row->product_price_ttc = $myprod->price_ttc;
-			                	$row->price_base_type = $myprod->price_base_type;
-			                }
+                            if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
+                                //! Arrays for multiprices
+                                $row->product_price=$myprod->multiprices[$multiprices_index];
+                                $row->product_price_ttc=$myprod->multiprices_ttc[$multiprices_index];
+                                $row->price_base_type=$myprod->multiprices_base_type[$multiprices_index];
+                            } else {
+                                $row->product_price = $myprod->price;
+                                $row->product_price_ttc = $myprod->price_ttc;
+                                $row->price_base_type = $myprod->price_base_type;
+                            }
                             $row->rang = $line->rang;
                             $row->price = $line->price;
                             $row->subprice = $line->subprice;
@@ -1021,47 +1021,47 @@ class ExtDirectCommande extends Commande
         
         // set global $mysoc required for price calculation
         $mysoc = new Societe($this->db);
-		$mysoc->setMysoc($conf);
-		
+        $mysoc->setMysoc($conf);
+        
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
-    
+
         foreach ($paramArray as &$params) {
             // prepare fields
             $this->prepareOrderLineFields($params, $orderLine);
             if (($result = $this->fetch($orderLine->fk_commande)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             $this->fetch_thirdparty();
             if ((! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) || ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
-            	if (!empty($this->thirdparty->tva_assuj)) {
-                	$tva_tx = $orderLine->tva_tx;
+                if (!empty($this->thirdparty->tva_assuj)) {
+                    $tva_tx = $orderLine->tva_tx;
                 } else {
-                	$tva_tx = 0;
-               	}
-				$tva_npr = 0;
+                    $tva_tx = 0;
+                }
+                $tva_npr = 0;
             } else {
-            	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
-				$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+                $tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+                $tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
             }
             
             $info_bits = 0;
-			if ($tva_npr) $info_bits |= 0x01;
-			if (!empty($params->product_price) || !empty($params->product_price_ttc)) {
-				// when product_price is available, use product price for calculating unit price
-				if ($orderLine->price_base_type == 'TTC') {
-					$tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
-					$pu_ht = $tabprice[3];
-					$pu_ttc = $tabprice[5];
-				} else {
-					$tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
-					$pu_ht = $tabprice[3];
-					$pu_ttc = $tabprice[5];
-				}
-			} else {
-				$tabprice = calcul_price_total($orderLine->qty, $orderLine->subprice, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, 'HT', $info_bits, $orderLine->product_type);	
-				$pu_ht = $tabprice[3];
-				$pu_ttc = $tabprice[5];
-			}			
-			
+            if ($tva_npr) $info_bits |= 0x01;
+            if (!empty($params->product_price) || !empty($params->product_price_ttc)) {
+                // when product_price is available, use product price for calculating unit price
+                if ($orderLine->price_base_type == 'TTC') {
+                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+                    $pu_ht = $tabprice[3];
+                    $pu_ttc = $tabprice[5];
+                } else {
+                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+                    $pu_ht = $tabprice[3];
+                    $pu_ttc = $tabprice[5];
+                }
+            } else {
+                $tabprice = calcul_price_total($orderLine->qty, $orderLine->subprice, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, 'HT', $info_bits, $orderLine->product_type);	
+                $pu_ht = $tabprice[3];
+                $pu_ttc = $tabprice[5];
+            }			
+            
             if (ExtDirect::checkDolVersion() >= 3.5) {
                 $this->id = $orderLine->fk_commande;
                 if (($result = $this->addline(
@@ -1117,14 +1117,14 @@ class ExtDirectCommande extends Commande
                 )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
         }
-    
+
         if (is_array($param)) {
             return $paramArray;
         } else {
             return $params;
         }
     }
-    
+
     /**
      * Ext.direct method to update orderlines
      *
@@ -1141,10 +1141,10 @@ class ExtDirectCommande extends Commande
         
         // set global $mysoc required for price calculation
         $mysoc = new Societe($this->db);
-		$mysoc->setMysoc($conf);
-		
+        $mysoc->setMysoc($conf);
+        
         $paramArray = ExtDirect::toArray($param);
-    
+
         foreach ($paramArray as &$params) {
             
             if (($this->id=$params->origin_id) > 0) {
@@ -1152,31 +1152,31 @@ class ExtDirectCommande extends Commande
                 if (($result = $this->fetch($this->id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->fetch_lines()) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 $this->fetch_thirdparty();         
-				
+                
                 if (!$this->error) {
                     foreach ($this->lines as $orderLine) {
                         if ($orderLine->rowid == $params->origin_line_id) {
                             // update fields
                             $this->prepareOrderLineFields($params, $orderLine);
-                        	if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
-			                	if (!empty($this->thirdparty->tva_assuj)) {
-			                		$tva_tx = $orderLine->tva_tx;
-			                	} else {
-			                		$tva_tx = 0;
-			                	}
-								$tva_npr = 0;
-				            } else {
-				            	$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
-								$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
-				            }
-				            
-				            $info_bits = 0;
-							if ($tva_npr) {
-								$info_bits |= 0x01;
-							} else {
-								$info_bits = $orderLine->info_bits;
-							}
-							
+                            if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
+                                if (!empty($this->thirdparty->tva_assuj)) {
+                                    $tva_tx = $orderLine->tva_tx;
+                                } else {
+                                    $tva_tx = 0;
+                                }
+                                $tva_npr = 0;
+                            } else {
+                                $tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+                                $tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+                            }
+                            
+                            $info_bits = 0;
+                            if ($tva_npr) {
+                                $info_bits |= 0x01;
+                            } else {
+                                $info_bits = $orderLine->info_bits;
+                            }
+                            
                             if (($result = $this->updateline(
                                 $orderLine->rowid, 
                                 $orderLine->desc, 

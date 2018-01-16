@@ -64,7 +64,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -374,7 +374,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             return $params;
         }
     }
-        
+
     /**
      * private method to copy order fields into dolibarr object
      * 
@@ -397,7 +397,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
         isset($params->order_date) ? ($this->date_commande = $params->order_date) : null;
         isset($params->order_method_id) ? ($this->methode_commande_id = $params->order_method_id) : null;
-        
     } 
     
     /**
@@ -991,7 +990,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $mysoc->setMysoc($conf);
 
         $paramArray = ExtDirect::toArray($param);
-    
+
         foreach ($paramArray as &$params) {
             
             if (($this->id=$params->origin_id) > 0) {
@@ -1034,14 +1033,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $product = new ExtDirectProduct($this->_user->login);
                             if (($result = $product->fetch($orderLine->fk_product)) <0) return ExtDirect::getDolError($result, $product->errors, $product->error);
                             if (($updated = $this->prepareProductFields($params, $product)) && isset($this->_user->rights->produit->creer)) {
-	                            // update barcode
-	                            if ($updated) {
-	                                $product->setValueFrom('barcode', $product->barcode);
-	                                $product->setValueFrom('fk_barcode_type', $product->barcode_type);
-	                            }
-	                            
+                                // update barcode
+                                if ($updated) {
+                                    $product->setValueFrom('barcode', $product->barcode);
+                                    $product->setValueFrom('fk_barcode_type', $product->barcode_type);
+                                }
+                                
                             }
-                        	// add photo
+                            // add photo
                             $photo = new stdClass;
                             $product->fetchPhoto($photo);
                             if (!empty($params->has_photo) && !empty($params->photo) && empty($photo->has_photo) && isset($this->_user->rights->produit->creer)) {
@@ -1049,54 +1048,54 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             }
                             
                             // update unit price
-                        	$supplierProduct = new ProductFournisseur($this->db);
-                        	$supplierProducts = $supplierProduct->list_product_fournisseur_price($product->id);
-				            if (is_array($supplierProducts)) {
-					            foreach ($supplierProducts as $prodsupplier) {
-					                if ($prodsupplier->fourn_ref == $params->ref_supplier){
-					                    $supplierProduct->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
-					                   	$supplierProduct->fourn_id = $prodsupplier->fourn_id;
-					                	$supplierProduct->fourn_qty = $prodsupplier->fourn_qty;
-				                        if (isset($prodsupplier->fourn_tva_tx)) { // workaround
-				                            $supplierProduct->fourn_tva_tx = $prodsupplier->fourn_tva_tx;
-				                        } else {
-				                            $supplierProduct->fourn_tva_tx = $prodsupplier->tva_tx;
-				                        } 
-				                        $supplierProduct->fetch_product_fournisseur_price($supplierProduct->product_fourn_price_id);
-					                }
-					            }
-				            }
-		                    if (!empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
-			                    $supplier = new Societe($this->db);
-			                    if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;	
-	                    		if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {
-			                    	if (($result = $supplierProduct->update_buyprice(
-				                                    $supplierProduct->fourn_qty, 
-				                                    $supplierProduct->fourn_unitprice * $supplierProduct->fourn_qty,
-				                                    $this->_user, 
-				                                    $params->price_base_type, 
-				                                    $supplier, 
-				                                    0, 
-				                                    $supplierProduct->ref_supplier, 
-				                                    $supplierProduct->fourn_tva_tx
-				                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
-			                    }
-                          	}
-                          	// dispatch
-	                        if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
-		                        if (($result = $this->DispatchProduct(
-		                                        $this->_user,
-		                                        $orderLine->fk_product,
-		                                        $params->qty_shipped,
-		                                        $params->warehouse_id,
-		                                        $params->price, // must be ordered unitprice with discount
-		                                        $params->comment,
-		                                        ExtDirect::dateTimeToDate($params->eatby),
-		                                        ExtDirect::dateTimeToDate($params->sellby),
-		                                        $params->batch,
-		                                        $orderLine->id
-		                        )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-		                    }
+                            $supplierProduct = new ProductFournisseur($this->db);
+                            $supplierProducts = $supplierProduct->list_product_fournisseur_price($product->id);
+                            if (is_array($supplierProducts)) {
+                                foreach ($supplierProducts as $prodsupplier) {
+                                    if ($prodsupplier->fourn_ref == $params->ref_supplier){
+                                        $supplierProduct->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
+                                        $supplierProduct->fourn_id = $prodsupplier->fourn_id;
+                                        $supplierProduct->fourn_qty = $prodsupplier->fourn_qty;
+                                        if (isset($prodsupplier->fourn_tva_tx)) { // workaround
+                                            $supplierProduct->fourn_tva_tx = $prodsupplier->fourn_tva_tx;
+                                        } else {
+                                            $supplierProduct->fourn_tva_tx = $prodsupplier->tva_tx;
+                                        } 
+                                        $supplierProduct->fetch_product_fournisseur_price($supplierProduct->product_fourn_price_id);
+                                    }
+                                }
+                            }
+                            if (!empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
+                                $supplier = new Societe($this->db);
+                                if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;	
+                                if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {
+                                    if (($result = $supplierProduct->update_buyprice(
+                                                    $supplierProduct->fourn_qty, 
+                                                    $supplierProduct->fourn_unitprice * $supplierProduct->fourn_qty,
+                                                    $this->_user, 
+                                                    $params->price_base_type, 
+                                                    $supplier, 
+                                                    0, 
+                                                    $supplierProduct->ref_supplier, 
+                                                    $supplierProduct->fourn_tva_tx
+                                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+                                }
+                            }
+                            // dispatch
+                            if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
+                                if (($result = $this->DispatchProduct(
+                                                $this->_user,
+                                                $orderLine->fk_product,
+                                                $params->qty_shipped,
+                                                $params->warehouse_id,
+                                                $params->price, // must be ordered unitprice with discount
+                                                $params->comment,
+                                                ExtDirect::dateTimeToDate($params->eatby),
+                                                ExtDirect::dateTimeToDate($params->sellby),
+                                                $params->batch,
+                                                $orderLine->id
+                                )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                            }
                         }
                     }
                 }           
@@ -1243,7 +1242,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         return $diff;
     }
     
-	/**
+    /**
      * private method to copy orderline fields into dolibarr supplier product object
      *
      * @param stdclass $params object with fields
@@ -1259,7 +1258,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         return $diff;
     }
     
-	/**
+    /**
      * private method to copy orderline fields into dolibarr product object
      *
      * @param stdclass $params object with fields

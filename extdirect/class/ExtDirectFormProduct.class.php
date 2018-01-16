@@ -47,7 +47,7 @@ class ExtDirectFormProduct extends FormProduct
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -193,13 +193,13 @@ class ExtDirectFormProduct extends FormProduct
         $results = array();
         
         if (! empty($conf->product->enabled)) {
-        	$row = new stdClass;
+            $row = new stdClass;
             $row->id = 0;
             $row->label = $langs->trans("Product") ? $langs->transnoentities("Product") : "Product";
             array_push($results, $row);
         }
         if (! empty($conf->service->enabled)) {
-        	$row = new stdClass;
+            $row = new stdClass;
             $row->id = 1;
             $row->label = $langs->trans("Service") ? $langs->transnoentities("Service") : "Service";
             array_push($results, $row);
@@ -208,7 +208,7 @@ class ExtDirectFormProduct extends FormProduct
         return $results;
     }
     
-	/**
+    /**
      *    Load available price_base_types
      *
      *    @param    stdClass    $params     not used

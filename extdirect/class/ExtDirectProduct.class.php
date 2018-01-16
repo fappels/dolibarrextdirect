@@ -54,7 +54,7 @@ class ExtDirectProduct extends Product
         global $langs,$db,$user,$conf;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //product.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -593,9 +593,9 @@ class ExtDirectProduct extends Product
                     }
                 }
                 $updated = $this->prepareFields($param);
-	            if (!empty($this->barcode)) {
-	            	$this->fetch_barcode();
-	            }
+                if (!empty($this->barcode)) {
+                    $this->fetch_barcode();
+                }
                 if ($updated && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
                 if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
                 // verify
@@ -604,7 +604,7 @@ class ExtDirectProduct extends Product
                 }                
                 // update
                 if ($updated) {
-                	if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }                
                 // check batch or non batch
                 if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
@@ -613,18 +613,18 @@ class ExtDirectProduct extends Product
                     $originalQty = $param->stock_reel;
                     $stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
                     $createNewBatchFromZeroStock = false;
-                	$productBatch = new Productbatch($this->db);
-	               
-	                if (($originalQty < 0) && ($param->batch_id > 0)) {
-	                	// if negative batch qty, remove negative batch and move remaining positive qty
-	                	$productBatch->id = $param->batch_id;
-	                	if (($res = $productBatch->delete($this->_user)) < 0) return ExtDirect::getDolError($res, $productBatch->errors, $productBatch->error);
-	                	$param->correct_stock_nbpiece = $param->correct_stock_nbpiece + $originalQty;
-	                } else if (($param->correct_stock_movement == 1) && ($param->batch_id === 0)) {
-	                	// correct stock - batch stock diff, only update batch qty not stock qty
-	                	$batchCorrectQty = $param->correct_stock_nbpiece;
-	                	$param->correct_stock_nbpiece = 0;
-	                } else if ($stockQty > 0) {
+                    $productBatch = new Productbatch($this->db);
+                    
+                    if (($originalQty < 0) && ($param->batch_id > 0)) {
+                        // if negative batch qty, remove negative batch and move remaining positive qty
+                        $productBatch->id = $param->batch_id;
+                        if (($res = $productBatch->delete($this->_user)) < 0) return ExtDirect::getDolError($res, $productBatch->errors, $productBatch->error);
+                        $param->correct_stock_nbpiece = $param->correct_stock_nbpiece + $originalQty;
+                    } else if (($param->correct_stock_movement == 1) && ($param->batch_id === 0)) {
+                        // correct stock - batch stock diff, only update batch qty not stock qty
+                        $batchCorrectQty = $param->correct_stock_nbpiece;
+                        $param->correct_stock_nbpiece = 0;
+                    } else if ($stockQty > 0) {
                         $batchesQty = 0;
                         if (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$param->warehouse_id]->id)) < 0 ) return $batchesQty;
                         if ($param->batch_id === 0) {
@@ -807,40 +807,40 @@ class ExtDirectProduct extends Product
                     }               
                 }
                 if ($updated) {
-                	// price
-                	if ($this->price_base_type == 'TTC') {
-                		$newSellPrice = $this->price_ttc;
-                	} else {
-                		$newSellPrice = $this->price;
-                	}
-            		if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-	                // supplier fields
-	                if (!empty($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id)) {
-	                    $supplierProduct = new ProductFournisseur($this->db);
-	                    $supplier = new Societe($this->db);
-	                    if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
+                    // price
+                    if ($this->price_base_type == 'TTC') {
+                        $newSellPrice = $this->price_ttc;
+                    } else {
+                        $newSellPrice = $this->price;
+                    }
+                    if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    // supplier fields
+                    if (!empty($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id)) {
+                        $supplierProduct = new ProductFournisseur($this->db);
+                        $supplier = new Societe($this->db);
+                        if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
                         $supplierProduct->id = $this->id;
                         if (empty($this->product_fourn_price_id)) {
                             if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error); 
                         }
-	                    $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
-	                    if (($result = $supplierProduct->update_buyprice(
-	                                    $this->fourn_qty, 
-	                                    $this->fourn_price, 
-	                                    $this->_user, 
-	                                    $param->price_base_type_supplier, 
-	                                    $supplier, 
-	                                    0, 
-	                                    $this->fourn_ref, 
-	                                    $this->fourn_tva_tx,
+                        $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
+                        if (($result = $supplierProduct->update_buyprice(
+                                        $this->fourn_qty, 
+                                        $this->fourn_price, 
+                                        $this->_user, 
+                                        $param->price_base_type_supplier, 
+                                        $supplier, 
+                                        0, 
+                                        $this->fourn_ref, 
+                                        $this->fourn_tva_tx,
                                         0,
                                         $this->fourn_remise_percent,
                                         0,
                                         0,
                                         0,
                                         $this->supplier_reputation
-	                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
-	                }
+                        )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+                    }
                 }
                 
                 // add photo
@@ -1017,7 +1017,7 @@ class ExtDirectProduct extends Product
                             $sql .= " AND (p.barcode <> '' OR p.barcode IS NOT NULL)";
                         } else {
                             $sql .= "p.barcode <> '' OR p.barcode IS NOT NULL";
-                        }                        
+                        }
                     } else if ($filter->property == 'notcomplete' && !empty($value)) {
                         $dataNotComplete = true;
                         if (! empty($conf->productbatch->enabled)) {
@@ -1269,11 +1269,11 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'volume_units', 'volume_units');
         
         $diff = ExtDirect::prepareField($diff, $param, $this, 'accountancy_code_buy', 'accountancy_code_buy');
-		$diff = ExtDirect::prepareField($diff, $param, $this, 'accountancy_code_sell', 'accountancy_code_sell');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'accountancy_code_sell', 'accountancy_code_sell');
         
         //! barcode
-		$diff = ExtDirect::prepareField($diff, $param, $this, 'barcode', 'barcode');
-		$diff = ExtDirect::prepareField($diff, $param, $this, 'barcode_type', 'barcode_type');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'barcode', 'barcode');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'barcode_type', 'barcode_type');
         
         // no links to offers in this version
         // no multilangs in this version
