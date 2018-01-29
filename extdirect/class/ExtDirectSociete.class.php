@@ -385,9 +385,9 @@ class ExtDirectSociete extends Societe
             $filterSize = count($params->filter);
         }
         if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity';
+            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
         } else {
-            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel, s.logo, s.entity';
+            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
         }
         
         $sql .= ', st.libelle as commercial_status';
@@ -442,6 +442,7 @@ class ExtDirectSociete extends Societe
                     } else if ($filter->property == 'content') {
                         $contentValue = strtolower($value);
                         $sql.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
+                        $sql.= " OR LOWER(s.code_client) like '%".$contentValue."%' OR LOWER(s.code_fournisseur) like '%".$contentValue."%'" ;
                         if (ExtDirect::checkDolVersion() >= 3.4) {
                             $sql.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')" ;
                         } else {
@@ -499,6 +500,8 @@ class ExtDirectSociete extends Societe
                 $row->fk_prospectlevel = $obj->fk_prospectlevel;
                 $row->categorie     = $obj->categorie;
                 $row->categorie_id  = $obj->categorie_id;
+                $row->code_client   = $obj->code_client;
+                $row->code_supplier = $obj->code_fournisseur;
                 if (!empty($obj->logo)) {
                     $dir = $conf->societe->multidir_output[(int) $obj->entity]."/".$obj->rowid."/logos/thumbs";
                     $logo_parts = pathinfo($obj->logo);
