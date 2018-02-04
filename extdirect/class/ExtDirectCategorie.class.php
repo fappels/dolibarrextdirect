@@ -254,7 +254,7 @@ class ExtDirectCategorie extends Categorie
         array_push($results, $row);
 
         foreach ($cats as $cat) {
-            $row=null;
+            $row = new stdClass;
             $row->id = $cat->id;
             $row->categorie = $cat->label;
             array_push($results, $row);

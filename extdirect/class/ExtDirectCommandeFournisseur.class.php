@@ -412,7 +412,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         $myUser = new User($this->db);
         $statusFilterCount = 0;
         $ref = null;
@@ -489,7 +488,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
                 $row->id            = (int) $obj->rowid;
                 $row->supplier      = $obj->nom;
                 $row->supplier_id   = (int) $obj->socid;
@@ -528,11 +527,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         $statut;
         for ($statut = 0; $statut < 10; $statut++) {
             $result = $this->LibStatut($statut, 1);
-            $row = null;
+            $row = new stdClass;
             $row->id = $statut;
             $row->status = $result;
             array_push($results, $row);
@@ -556,7 +554,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $row->label = '';
         array_push($results, $row);
         foreach ($result as $id => $label) {
-            $row = null;
+            $row = new stdClass;
             $row->id = $id;
             $row->label = html_entity_decode($label);
             array_push($results, $row);
@@ -585,7 +583,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
             
         $results = array();
-        $row = new stdClass;
         $order_id = 0;
         $productAskedQty = array();
         $photoSize = '';
@@ -637,7 +634,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0)) {
                             if (($warehouse_id == -1 || $isService || $isFreeLine )) {
                                 // get orderline with complete stock
-                                $row = null;
+                                $row = new stdClass;
                                 $row->id = $line->id;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;
@@ -701,7 +698,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 array_push($results, $row);
                             } else {
                                 // get orderline with stock of warehouse 
-                                $row = null;
+                                $row = new stdClass;
                                 $row->id = $line->id;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;
@@ -772,7 +769,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $warehouseList = $warehouseObject->list_array();
                             foreach ($warehouseList as $warehouse=>$warehouseLabel) {
                             //foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-                                $row = null;
+                                $row = new stdClass;
                                 $row->id = $line->id.'_'.$warehouse;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;

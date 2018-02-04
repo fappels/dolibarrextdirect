@@ -92,7 +92,6 @@ class ExtDirectSociete extends Societe
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
 
         $sql = 'SELECT st.id , st.code, st.libelle';
         $sql .= ' FROM '.MAIN_DB_PREFIX.'c_stcomm as st';
@@ -104,7 +103,7 @@ class ExtDirectSociete extends Societe
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
 
                 $transcode=$langs->transnoentities('StatusProspect'.$obj->id);
                 $libelle=($transcode!='StatusProspect'.$obj->id?$transcode:$obj->libelle);
@@ -236,8 +235,7 @@ class ExtDirectSociete extends Societe
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
-
+        
         $sql = 'SELECT cp.code , cp.label';
         $sql .= ' FROM '.MAIN_DB_PREFIX.'c_prospectlevel as cp';
         $sql .= ' WHERE cp.active = 1';
@@ -250,7 +248,7 @@ class ExtDirectSociete extends Societe
 
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
 
                 $transcode=$langs->transnoentities($obj->code);
                 $label=($transcode!=null?$transcode:$obj->label);
@@ -372,7 +370,6 @@ class ExtDirectSociete extends Societe
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
         $filterSize = 0;
         $limit=null;
         $start=0;
@@ -486,7 +483,7 @@ class ExtDirectSociete extends Societe
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
         
-                $row = null;
+                $row = new stdClass;
                 $row->id            = $obj->rowid.'_'.$obj->categorie_id;
                 $row->company_id    = (int) $obj->rowid;
                 $row->name          = $obj->name;
@@ -546,7 +543,6 @@ class ExtDirectSociete extends Societe
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
         
         $id=null;
         $ref=null;
@@ -581,7 +577,7 @@ class ExtDirectSociete extends Societe
             }
             
             if (!$this->error) {
-                $row = null;
+                $row = new stdClass;
                 $row->id            = (int) $this->id;
                 $row->entity        = (int) $this->entity;
             
@@ -773,7 +769,6 @@ class ExtDirectSociete extends Societe
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $error=0;
         $results = array();
-        $row = new stdClass;
         if (ExtDirect::checkDolVersion() >= 3.4) {
             $sql = 'SELECT distinct s.town, s.zip';
         } else {
@@ -837,7 +832,7 @@ class ExtDirectSociete extends Societe
 
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
 
                 $row->town      = $obj->town;
                 $row->zip       = $obj->zip;
@@ -935,8 +930,7 @@ class ExtDirectSociete extends Societe
 
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
-                    
+                $row = new stdClass;
                 $row->categorie         = $obj->categorie;
                 $row->id                = $obj->rowid;
 

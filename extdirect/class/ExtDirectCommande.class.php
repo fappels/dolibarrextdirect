@@ -424,7 +424,6 @@ class ExtDirectCommande extends Commande
         
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         $myUser = new User($this->db);
         $statusFilterCount = 0;
         $ref = null;
@@ -487,7 +486,7 @@ class ExtDirectCommande extends Commande
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
                 $row->id            = (int) $obj->rowid;
                 $row->customer      = $obj->nom;
                 $row->customer_id   = (int) $obj->socid;
@@ -525,10 +524,9 @@ class ExtDirectCommande extends Commande
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         $statut = -1;
         while (($result = $this->LibStatut($statut, false, 1)) != '') {
-            $row = null;
+            $row = new stdClass;
             $row->id = $statut++;
             $row->status = $result;
             array_push($results, $row);
@@ -545,14 +543,13 @@ class ExtDirectCommande extends Commande
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
         // add empty type
         $row->id = 0;
         $row->label = '';
         array_push($results, $row);
         foreach ($result as $id => $label) {
-            $row = null;
+            $row = new stdClass;
             $row->id = $id;
             $row->label = html_entity_decode($label);
             array_push($results, $row);
@@ -572,7 +569,6 @@ class ExtDirectCommande extends Commande
 
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
 
         $sql = 'SELECT ca.rowid, ca.code , ca.label';
         $sql .= ' FROM '.MAIN_DB_PREFIX.'c_availability as ca';
@@ -586,7 +582,7 @@ class ExtDirectCommande extends Commande
 
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
 
                 $row->id = $obj->rowid;
                 $transcode=$langs->transnoentities($obj->code);
@@ -617,7 +613,7 @@ class ExtDirectCommande extends Commande
 
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
+        
         if (ExtDirect::checkDolVersion(0,'3.7','')) {
             $sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
             $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
@@ -631,7 +627,7 @@ class ExtDirectCommande extends Commande
 
                 for ($i = 0;$i < $num; $i++) {
                     $obj = $this->db->fetch_object($resql);
-                    $row = null;
+                    $row = new stdClass;
 
                     $row->id = $obj->rowid;
                     $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
@@ -663,7 +659,7 @@ class ExtDirectCommande extends Commande
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
+
         if (ExtDirect::checkDolVersion(0,'3.8','')) {
             $sql = 'SELECT ci.rowid, ci.code';
             $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
@@ -677,7 +673,7 @@ class ExtDirectCommande extends Commande
 
                 for ($i = 0;$i < $num; $i++) {
                     $obj = $this->db->fetch_object($resql);
-                    $row = null;
+                    $row = new stdClass;
 
                     $row->id = $obj->rowid;
                     $row->code = $obj->code;
@@ -719,7 +715,6 @@ class ExtDirectCommande extends Commande
         
 
         $results = array();
-        $row = new stdClass;
         $order_id = 0;
         $photoSize = '';
         $onlyProduct = 1;
@@ -754,7 +749,7 @@ class ExtDirectCommande extends Commande
                     if ($isService || $isFreeLine || isset($warehouse_id) || ($myprod->stock_reel == 0)) {
                         if ($isService || $isFreeLine || $warehouse_id == -1) {
                             // get orderline with complete stock
-                            $row = null;
+                            $row = new stdClass;
                             $row->id = $line->rowid;
                             $row->origin_id = $line->fk_commande;
                             $row->origin_line_id = $line->rowid;
@@ -817,7 +812,7 @@ class ExtDirectCommande extends Commande
                             array_push($results, $row);
                         } else {
                             // get orderline with stock of warehouse
-                            $row = null;
+                            $row = new stdClass;
                             $row->id = $line->rowid.'_'.$warehouse_id;
                             $row->origin_id = $line->fk_commande;
                             $row->origin_line_id = $line->rowid;
@@ -878,7 +873,7 @@ class ExtDirectCommande extends Commande
                     } else {
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                             if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stock_warehouse->real > 0)) {
-                                $row = null;
+                                $row = new stdClass;
                                 $row->id = $line->rowid.'_'.$warehouse;
                                 $row->origin_id = $line->fk_commande;
                                 $row->origin_line_id = $line->rowid;

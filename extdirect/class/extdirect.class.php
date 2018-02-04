@@ -598,7 +598,7 @@ class ExtDirect
         }
     }
     
-	/**
+    /**
      *	Load Dolibarr constants
      * 
      *	@param			DoliDb		$db					Database handle
@@ -611,34 +611,34 @@ class ExtDirect
      */
     public static function readConstants(DoliDb $db, stdClass $params, user $user, $moduleConstants = array())
     {
-    	$constants =  array();
-    	$results = array();
-        $row = new stdClass;
+        $constants =  array();
+        $results = array();
         $entity = ($user->entity > 0) ? $user->entity : 1;
         $constants += $moduleConstants;
-    	
-    	if (isset($params->filter)) {
-    		if ($filter->property == 'constant') {
-    			$row->constant = $filter->value;
-    			$row->value = dolibarr_get_const($db, $constant, $entity);
-    			array_push($results, $row);
-    		}
-    	} else {
-    		foreach ($constants as $constant) {
-    			$row = null;
-    			$row->constant = $constant;
-    			$row->value = dolibarr_get_const($db, $constant, $entity);
-    			array_push($results, $row);
-    		}
-    	}
-    	return $results;
+        
+        if (isset($params->filter)) {
+            if ($filter->property == 'constant') {
+                $row = new stdClass;
+                $row->constant = $filter->value;
+                $row->value = dolibarr_get_const($db, $constant, $entity);
+                array_push($results, $row);
+            }
+        } else {
+            foreach ($constants as $constant) {
+                $row = new stdClass;
+                $row->constant = $constant;
+                $row->value = dolibarr_get_const($db, $constant, $entity);
+                array_push($results, $row);
+            }
+        }
+        return $results;
     }
 
     /**
-    * Load available object Optionals (extra fields)
-    *
-    * @return stdClass array result data
-    */
+     * Load available object Optionals (extra fields)
+     *
+     * @return stdClass array result data
+     */
     public static function readOptionalModel($object) 
     {
         $results = array();

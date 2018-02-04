@@ -393,7 +393,6 @@ class ExtDirectExpedition extends Expedition
         
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
@@ -452,7 +451,7 @@ class ExtDirectExpedition extends Expedition
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
                 $row->id            = (int) $obj->rowid;
                 $row->customer      = $obj->nom;
                 $row->customer_id   = (int) $obj->socid;
@@ -482,10 +481,9 @@ class ExtDirectExpedition extends Expedition
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         $statut = 0;
         while (($result = $this->LibStatut($statut, 1)) !== null) {
-            $row = null;
+            $row = new stdClass;
             $row->id = $statut;
             $row->status = $result;
             $statut++;
@@ -510,7 +508,7 @@ class ExtDirectExpedition extends Expedition
         $row->label = '';
         array_push($results, $row);
         foreach ($result as $id => $label) {
-            $row = null;
+            $row = new stdClass;
             $row->id = $id;
             $row->label = html_entity_decode($label);
             array_push($results, $row);
@@ -737,6 +735,7 @@ class ExtDirectExpedition extends Expedition
                 $line->entrepot_id = $params->warehouse_id;
                 $line->fk_product = $params->product_id;
                 $line->qty = $params->qty_toship;
+                $line->detail_batch = new stdClass;
                 $line->detail_batch->id = $idArray[1];
                 $line->detail_batch->batch = $params->batch;
                 $line->detail_batch->entrepot_id = $params->warehouse_id;
@@ -908,7 +907,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
      *  @param      int		$lineid		Id of line to delete
      * 	@return	int		>0 if OK, <0 if KO
      */
-    function delete()
+    function delete($user = null, $notrigger = 0)
     {
         global $conf;
 
@@ -968,7 +967,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
      *
      *  @return		int					< 0 if KO, > 0 if OK
      */
-    function update()
+    function update($user = null, $notrigger = 0)
     {
         global $conf;
 

@@ -70,7 +70,6 @@ class ExtDirectContact extends Contact
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
         
         $results = array();
-        $row = new stdClass;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') {
@@ -104,7 +103,7 @@ class ExtDirectContact extends Contact
                     return array(); // no results
                 }
                 if (!$this->error) {
-                    $row = null;
+                    $row = new stdClass;
                     $row->id                = (int) $this->id;
                     $row->civility_id       = $this->civilite_id;
                     $row->lastname          = $this->lastname;
@@ -219,7 +218,6 @@ class ExtDirectContact extends Contact
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
         $filterSize = 0;
     
         if (isset($params->limit)) {
@@ -300,7 +298,7 @@ class ExtDirectContact extends Contact
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
     
-                $row = null;
+                $row = new stdClass;
                 $row->id            = (int) $obj->id;
                 $row->name          = ($obj->firstname != "") ? ($obj->firstname.' '.$obj->lastname) : ($obj->lastname);
                 $row->company_id    = (int) $obj->company_id;

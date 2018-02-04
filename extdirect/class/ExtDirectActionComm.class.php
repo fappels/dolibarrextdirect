@@ -74,7 +74,7 @@ class ExtDirectActionComm extends ActionComm
         if (!isset($this->_user->rights->agenda->myactions->read) 
             || !isset($this->_user->rights->agenda->allactions->read)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass();
+        
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') {
@@ -83,7 +83,7 @@ class ExtDirectActionComm extends ActionComm
                         return array(); // no results
                     }
                     if (!$this->error) {
-                        $row = null;
+                        $row = new stdClass;
                         $row->id                = (int) $this->id;
                         $row->code              = $this->code;
                         $row->label             = $this->label;
@@ -212,7 +212,7 @@ class ExtDirectActionComm extends ActionComm
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
         $results = array();
-        $row = new stdClass;
+        
         $filterSize = 0;
     
         if (isset($params->limit)) {
@@ -288,7 +288,7 @@ class ExtDirectActionComm extends ActionComm
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
     
-                $row = null;
+                $row = new stdClass;
                 $row->id            = (int) $obj->id;
                 $row->percentage    = (int) $obj->percentage;
                 $row->companyname   = $obj->companyname;
@@ -459,7 +459,7 @@ class ExtDirectActionComm extends ActionComm
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-                $row = null;
+                $row = new stdClass;
                 $row->id       = (int) $obj->rowid;
                 $row->name      = $obj->firstname.' '.$obj->lastname;
                 array_push($results, $row);
