@@ -33,8 +33,8 @@ class ExtDirectFormProduct extends FormProduct
     private $_user;
     
     const ALLWAREHOUSE_ID = 0;
-    const ALLWAREHOUSE_LABEL = 'All';
-    const ALLWAREHOUSE_DESCRIPTION = 'AllLocations';
+    const ALLWAREHOUSE_LABEL = 'AllLocationsLabel';
+    const ALLWAREHOUSE_DESCRIPTION = 'AllLocationsDesc';
     
     /** Constructor
      *
