@@ -812,6 +812,7 @@ class ExtDirectCommande extends Commande
                             array_push($results, $row);
                         } else {
                             // get orderline with stock of warehouse
+                            if (!isset($warehouse_id)) $warehouse_id = 0; // no warehouse, stock is warehouse 0 (all warehouses)
                             $row = new stdClass;
                             $row->id = $line->rowid.'_'.$warehouse_id;
                             $row->origin_id = $line->fk_commande;
@@ -869,7 +870,7 @@ class ExtDirectCommande extends Commande
                             } else {
                                 if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id)) < 0) return $res;
                             }
-                        }                        
+                        }
                     } else {
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                             if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stock_warehouse->real > 0)) {
