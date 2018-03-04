@@ -502,7 +502,7 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
-        if (! is_array($result = $this->liste_type_contact())) return $result;
+        if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
         // add empty type
         $row->id = 0;
         $row->label = '';
@@ -532,25 +532,25 @@ class ExtDirectExpedition extends Expedition
         $results = array();
         $row = new stdClass;
         $origin_id = 0;
-    
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'origin_id') $origin_id=$filter->value;
             }
         }
-    
+
         if ($origin_id > 0) {
             $this->id=$origin_id;
-            if (($result = $this->fetch_lines()) < 0)   return $result;
+            if (($result = $this->fetch_lines()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 foreach ($this->lines as $key => $line) {
-                	if (ExtDirect::checkDolVersion() < 3.6) {
-			    		$row->id = $key; // no line id available
+                    if (ExtDirect::checkDolVersion() < 3.6) {
+                        $row->id = $key; // no line id available
                         $row->line_id = $key; 
-			    	} else {
-			    		$row->id = $line->line_id;
+                    } else {
+                        $row->id = $line->line_id;
                         $row->line_id = $line->line_id;
-			    	}
+                    }
                     $row->origin_line_id = $line->fk_origin_line;
                     $row->description = $line->description;
                     $row->product_id = $line->fk_product;
@@ -684,7 +684,7 @@ class ExtDirectExpedition extends Expedition
                     }                    
                 } else {
                     // no batch
-                    if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return $result;
+                    if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);;
                     $params->line_id=$result;
                 }                
             } else {
@@ -782,7 +782,7 @@ class ExtDirectExpedition extends Expedition
         foreach ($stockLocationQty as $stockLocation => $qty) {
             
             if (($result = $this->create_line($stockLocation, $stockLocationOriginLineId[$stockLocation], $qty)) < 0)  {
-                return $result;
+                return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 // create shipment batch lines for stockLocation
                 if (ExtDirect::checkDolVersion(0, '4.0', '')) {
