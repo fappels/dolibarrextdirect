@@ -746,7 +746,7 @@ class ExtDirectCommande extends Commande
                     if ($line->product_type == 1) {
                         $isService = true;
                     }
-                    if ($isService || $isFreeLine || isset($warehouse_id) || ($myprod->stock_reel == 0)) {
+                    if ($isService || $isFreeLine || isset($warehouse_id) || $myprod->stock_reel == 0) {
                         if ($isService || $isFreeLine || $warehouse_id == -1) {
                             // get orderline with complete stock
                             $row = new stdClass;
@@ -812,9 +812,13 @@ class ExtDirectCommande extends Commande
                             array_push($results, $row);
                         } else {
                             // get orderline with stock of warehouse
-                            if (!isset($warehouse_id)) $warehouse_id = 0; // no warehouse, stock is warehouse 0 (all warehouses)
+                            if (!isset($warehouse_id)) {
+                                $line_warehouse_id = 0; // no warehouse, stock is warehouse 0 (all warehouses)
+                            } else {
+                                $line_warehouse_id = $warehouse_id;
+                            }
                             $row = new stdClass;
-                            $row->id = $line->rowid.'_'.$warehouse_id;
+                            $row->id = $line->rowid.'_'.$line_warehouse_id;
                             $row->origin_id = $line->fk_commande;
                             $row->origin_line_id = $line->rowid;
                             if (empty($line->label)) {
@@ -855,9 +859,9 @@ class ExtDirectCommande extends Commande
                             $row->subprice = $line->subprice;
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                            $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real;
+                            !empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_reel;
                             $row->total_stock = $myprod->stock_reel;
-                            $row->warehouse_id = $warehouse_id;
+                            $row->warehouse_id = $line_warehouse_id;
                             $row->has_photo = 0;
                             if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
@@ -865,10 +869,10 @@ class ExtDirectCommande extends Commande
                             $row->unit_id = $line->fk_unit;
                             // split orderlines by batch
                             $row->has_batch = $myprod->status_batch;
-                            if (empty($conf->productbatch->enabled)) {
+                            if (empty($conf->productbatch->enabled) || empty($line_warehouse_id)) {
                                 array_push($results, $row);
                             } else {
-                                if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id)) < 0) return $res;
+                                if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id)) < 0) return $res;
                             }
                         }
                     } else {
