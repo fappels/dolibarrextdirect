@@ -496,7 +496,7 @@ describe("companies", function ()
             companyData = {
                 name: 'Company1', 							// company name
                 ref_ext: 'connectortest',
-                adress: '21 jump street',
+                address: '21 jump street',
                 zip: '99999',
                 town: 'MyTown',
                 state_id: 1,
@@ -670,7 +670,7 @@ describe("companies", function ()
             contactData = {
                 lastname: 'Contact', 							// company name
                 firstname: 'connectortest',
-                adress: '22 jump street',
+                address: '22 jump street',
                 zip: '99999',
                 town: 'MyTown',
                 state: 'MyState',
@@ -2225,54 +2225,56 @@ describe("shipment", function ()
 		});
 	});
 
-    it("create shipmentlines", function ()
-    {
-        runs(function ()
-        {
-            // create shipment lines from orderlines
-            var shipmentData, shipmentLine, shipmentLines = [],
-                shipmentLineStore = Ext.getStore('shipmentline'),
-                orderLineStore = Ext.getStore('orderline');
+	it("create shipmentlines", function ()
+	{
+		runs(function ()
+		{
+			// create shipment lines from orderlines
+			var shipmentData, shipmentLine, shipmentLines = [],
+				shipmentLineStore = Ext.getStore('shipmentline'),
+				orderLineStore = Ext.getStore('orderline');
 
-            flag = false;
-            orderLineStore.each(function (orderLine)
-            {
-                shipmentData = {
-                    origin_id: shipmentId,
-                    warehouse_id: orderLine.get('warehouse_id'),
-                    origin_line_id: orderLine.get('origin_line_id'),
-                    sellby: orderLine.get('sellby'),
-                    eatby: orderLine.get('eatby'),
-                    batch: orderLine.get('batch'),
-                    batch_id: orderLine.get('batch_id'),
-                    qty_toship: 2
-                };
-                if (orderLine.get('batch_id') > 0)
-                {
-                    // ship 1 of each batch
-                    shipmentData.qty_toship = 1;
-                }
-                shipmentLine = Ext.create('ConnectorTest.model.OrderLine', shipmentData);
-                shipmentLines.push(shipmentLine);
-            });
-            shipmentLineStore.add(shipmentLines);
-            shipmentLineStore.sync();
-            shipmentLineStore.clearFilter();
-            shipmentLineStore.filter([Ext.create('Ext.util.Filter', { property: "origin_id", value: shipmentId })]);
-            shipmentLineStore.load({
-                callback: function (records)
-                {
-                    Ext.Array.each(records, function (record, index)
-                    {
-                        testresults[index] = record.get('description');
-                        shipmentLineIds[index] = record.get('line_id');
-                        sellbys[index] = record.get('sellby');
-                        batches[index] = record.get('batch');
-                    });
-                    flag = true;
-                }
-            });
-        });
+			flag = false;
+			orderLineStore.each(function (orderLine)
+			{
+				shipmentData = {
+					origin_id: shipmentId,
+					warehouse_id: orderLine.get('warehouse_id'),
+					origin_line_id: orderLine.get('origin_line_id'),
+					sellby: orderLine.get('sellby'),
+					eatby: orderLine.get('eatby'),
+					batch: orderLine.get('batch'),
+					batch_id: orderLine.get('batch_id'),
+					qty_toship: 2
+				};
+				if (orderLine.get('batch_id') > 0)
+				{
+					// ship 1 of each batch
+					shipmentData.qty_toship = 1;
+				}
+				shipmentLine = Ext.create('ConnectorTest.model.OrderLine', shipmentData);
+				shipmentLines.push(shipmentLine);
+				shipmentLine = Ext.create('ConnectorTest.model.OrderLine', shipmentData);// simulate bug creating double shipment lines
+				shipmentLines.push(shipmentLine);
+			});
+			shipmentLineStore.add(shipmentLines);
+			shipmentLineStore.sync();
+			shipmentLineStore.clearFilter();
+			shipmentLineStore.filter([Ext.create('Ext.util.Filter', { property: "origin_id", value: shipmentId })]);
+			shipmentLineStore.load({
+				callback: function (records)
+				{
+					Ext.Array.each(records, function (record, index)
+					{
+						testresults[index] = record.get('description');
+						shipmentLineIds[index] = record.get('line_id');
+						sellbys[index] = record.get('sellby');
+						batches[index] = record.get('batch');
+					});
+					flag = true;
+				}
+			});
+		});
 
         waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
 

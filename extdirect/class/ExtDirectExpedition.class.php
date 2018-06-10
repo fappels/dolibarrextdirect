@@ -653,43 +653,48 @@ class ExtDirectExpedition extends Expedition
         $paramArray = ExtDirect::toArray($param);
         $batches = array();
         $qtyShipped = 0;
+        $lineConstraint = array(); // avoid double shipments
         foreach ($paramArray as &$params) {
             // TODO make prepare fields function for shipment lines, will create a 'detail_batch object array'
             // TODO rewrite with to develop ExpeditionLigne::create function, this function will create a line included batch lines when detail_batch array available
             $this->id=$params->origin_id;
             dol_syslog(get_class($this).'::'.__FUNCTION__." line id=".$params->origin_line_id, LOG_DEBUG);
             if ($params->origin_id > 0) {
-                if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {
-                    if (count($batches) > 0) {
-                        $finishBatch = false;
-                        foreach ($batches as $batch) {
-                            if ($batch->origin_line_id != $params->origin_line_id) {
-                                $finishBatch = true;
+                if ($lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id] != 1) {
+                    if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {
+                        if (count($batches) > 0) {
+                            $finishBatch = false;
+                            foreach ($batches as $batch) {
+                                if ($batch->origin_line_id != $params->origin_line_id) {
+                                    $finishBatch = true;
+                                }
                             }
-                        }
-                        if ($finishBatch) {
-                            if (($res = $this->finishBatches($batches)) < 0) return $res;
-                            $params->line_id=$res;
-                            unset($batches);
-                            $batches = array();
+                            if ($finishBatch) {
+                                if (($res = $this->finishBatches($batches)) < 0) return $res;
+                                $lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id] = 1;
+                                $params->line_id=$res;
+                                unset($batches);
+                                $batches = array();
+                                $qtyShipped = $params->qty_toship;
+                                array_push($batches, $params);
+                            } else {
+                                $qtyShipped += $params->qty_toship;
+                                array_push($batches, $params);
+                            }
+                        } else {
                             $qtyShipped = $params->qty_toship;
                             array_push($batches, $params);
-                        } else {
-                            $qtyShipped += $params->qty_toship;
-                            array_push($batches, $params);
-                        }
+                        }                    
                     } else {
-                        $qtyShipped = $params->qty_toship;
-                        array_push($batches, $params);
-                    }                    
-                } else {
-                    // no batch
-                    if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);;
-                    $params->line_id=$result;
-                }                
+                        // no batch
+                        if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);;
+                        $params->line_id=$result;
+                        $lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id] = 1;
+                    }
+                }
             } else {
                 return PARAMETERERROR;
-            }            
+            }
         }
 
         if (!empty($conf->productbatch->enabled) && !empty($batches)) {
@@ -770,17 +775,20 @@ class ExtDirectExpedition extends Expedition
         
         $stockLocationQty = array(); // associated array with batch qty in stock location
         $stockLocationOriginLineId = array(); // associated array with OriginLineId's
+        $batchConstraint = array(); // avoid double shipments
         $shipmentLineId = 0;
         foreach ($batches as $batch)
         {
             if ($batch->warehouse_id)
             {
-                $stockLocationQty[$batch->warehouse_id] += $batch->qty_toship;
-                $stockLocationOriginLineId[$batch->warehouse_id] = $batch->origin_line_id;				
+                if ($batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] != 1) {
+                    $stockLocationQty[$batch->warehouse_id] += $batch->qty_toship;
+                    $stockLocationOriginLineId[$batch->warehouse_id] = $batch->origin_line_id;
+                    $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] = 1;
+                }
             }
         }
         foreach ($stockLocationQty as $stockLocation => $qty) {
-            
             if (($result = $this->create_line($stockLocation, $stockLocationOriginLineId[$stockLocation], $qty)) < 0)  {
                 return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
@@ -792,8 +800,9 @@ class ExtDirectExpedition extends Expedition
                 }
                 dol_syslog(get_class($this).'::'.__FUNCTION__." stock location = ".$stockLocation." qty = ".$qty." shipmentLineId = ".$shipmentLineId, LOG_DEBUG);
                 // store colleted batches
+                $batchConstraint = array(); // reset contraint
                 foreach ($batches as $batch) {
-                    if ($batch->warehouse_id == $stockLocation) {
+                    if ($batch->warehouse_id == $stockLocation && $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] != 1) {
                         if (ExtDirect::checkDolVersion(0, '3.8', '')) {
                             $expeditionLineBatch = new ExpeditionLineBatch($this->db);
                         } else {
@@ -805,7 +814,8 @@ class ExtDirectExpedition extends Expedition
                         $expeditionLineBatch->dluo_qty = $batch->qty_toship;
                         $expeditionLineBatch->fk_origin_stock = $batch->batch_id;
                         $expeditionLineBatch->create($shipmentLineId);
-                    }		            
+                        $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] = 1;
+                    }
                 }
             }
         }
