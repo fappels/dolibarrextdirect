@@ -568,33 +568,49 @@ class ExtDirect
      * static method to copy field into dolibarr object element and check if changed
      *
      * @param boolean $diff diff status of param elements
-     * @param stdclass $param object with fields
-     * @param stdclass $object dolibarr object
-     * @param string $paramName param object field name
-     * @param string $propertyName object property name
+     * @param unknown_type $param object with fields
+     * @param unknown_type $object dolibarr object
+     * @param string $paramName param object field name, if null $param is value
+     * @param string $propertyName object property name, if null $object is value
+     * @param unknown_type $default default value
+     * @param unknown_type $paramIndex array index if paramName is array
+     * @param unknown_type $propertyIndex array index if propertyName is array
      * 
      * @return boolean true if param $diff true or true on param element change
      */
-    public static function prepareField($diff, $param, $object, $paramName, $propertyName)
+    public static function prepareField($diff, $param, $object, $paramName = null, $propertyName = null, $default = null, $paramIndex = null, $propertyIndex = null)
     {
-    	$epsilon = 0.00001;
-    	$propertySet = isset($object->$propertyName);
-    	if (is_numeric($object->$propertyName) || is_numeric($param->$paramName)) {
-    		$equal = (abs($object->$propertyName - $param->$paramName) < $epsilon);
-    		$paramSet = isset($param->$paramName);
-    	} else {
-    		$equal = ($param->$paramName == $object->$propertyName);
-    		$paramSet = !empty($param->$paramName);
-    	}
-    	if ($paramSet && (!$equal || !$propertySet)) {
-    		$object->$propertyName = $param->$paramName;
-           	return true;
-    	} else {
-        	if ($diff) {
-        		return true;
-        	} else {
-        		return false;
-        	}
+        $epsilon = 0.00001;
+        if (!empty($propertyName)) {
+            $propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
+        } else {
+            $propertyValue = $object;
+        }
+       
+        if (!empty($paramName)) {
+            $paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
+        } else {
+            $paramValue = $param;
+        }
+        
+        $propertySet = isset($propertyValue);
+        if (is_numeric($paramValue) && (is_numeric($propertyValue) || (!isset($propertyValue)))) {
+            $equal = (abs($propertyValue - $paramValue) < $epsilon);
+            $paramSet = isset($paramValue);
+        } else {
+            $equal = ($paramValue == $propertyValue);
+            $paramSet = !empty($paramValue);
+        }
+        if (!$paramSet && !$propertySet && isset($default)) {
+            $propertyIndex ? $object->{$propertyName}[$propertyIndex] = $default : $object->$propertyName = $default;
+        } else if ($paramSet && (!$equal || !$propertySet)) {
+            $propertyIndex ? $object->{$propertyName}[$propertyIndex] = $paramValue : $object->$propertyName = $paramValue;
+            return true;
+        }
+        if ($diff) {
+            return true;
+        } else {
+            return false;
         }
     }
     
