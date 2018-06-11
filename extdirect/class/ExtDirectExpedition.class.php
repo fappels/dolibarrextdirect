@@ -660,7 +660,7 @@ class ExtDirectExpedition extends Expedition
             $this->id=$params->origin_id;
             dol_syslog(get_class($this).'::'.__FUNCTION__." line id=".$params->origin_line_id, LOG_DEBUG);
             if ($params->origin_id > 0) {
-                if ($lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id] != 1) {
+                if ($lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id.'-'.$params->qty_toship] != 1) {
                     if (!empty($conf->productbatch->enabled) && !empty($params->batch_id)) {
                         if (count($batches) > 0) {
                             $finishBatch = false;
@@ -671,7 +671,7 @@ class ExtDirectExpedition extends Expedition
                             }
                             if ($finishBatch) {
                                 if (($res = $this->finishBatches($batches)) < 0) return $res;
-                                $lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id] = 1;
+                                $lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id.'-'.$params->qty_toship] = 1;
                                 $params->line_id=$res;
                                 unset($batches);
                                 $batches = array();
@@ -689,7 +689,7 @@ class ExtDirectExpedition extends Expedition
                         // no batch
                         if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);;
                         $params->line_id=$result;
-                        $lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id] = 1;
+                        $lineConstraint[$params->origin_line_id.'-'.$params->warehouse_id.'-'.$params->qty_toship] = 1;
                     }
                 }
             } else {
@@ -781,10 +781,10 @@ class ExtDirectExpedition extends Expedition
         {
             if ($batch->warehouse_id)
             {
-                if ($batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] != 1) {
+                if ($batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id.'-'.$batch->qty_toship] != 1) {
                     $stockLocationQty[$batch->warehouse_id] += $batch->qty_toship;
                     $stockLocationOriginLineId[$batch->warehouse_id] = $batch->origin_line_id;
-                    $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] = 1;
+                    $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id.'-'.$batch->qty_toship] = 1;
                 }
             }
         }
@@ -802,7 +802,7 @@ class ExtDirectExpedition extends Expedition
                 // store colleted batches
                 $batchConstraint = array(); // reset contraint
                 foreach ($batches as $batch) {
-                    if ($batch->warehouse_id == $stockLocation && $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] != 1) {
+                    if ($batch->warehouse_id == $stockLocation && $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id.'-'.$batch->qty_toship] != 1) {
                         if (ExtDirect::checkDolVersion(0, '3.8', '')) {
                             $expeditionLineBatch = new ExpeditionLineBatch($this->db);
                         } else {
@@ -814,7 +814,7 @@ class ExtDirectExpedition extends Expedition
                         $expeditionLineBatch->dluo_qty = $batch->qty_toship;
                         $expeditionLineBatch->fk_origin_stock = $batch->batch_id;
                         $expeditionLineBatch->create($shipmentLineId);
-                        $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id] = 1;
+                        $batchConstraint[$batch->origin_line_id.'-'.$batch->warehouse_id.'-'.$batch->batch_id.'-'.$batch->qty_toship] = 1;
                     }
                 }
             }
