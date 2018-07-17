@@ -146,7 +146,8 @@ class ExtDirectCommande extends Commande
                 $row->shipping_method_id = $this->shipping_method_id;
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
-				$row->customer_type = $mySociete->typent_code;
+                $row->customer_type = $mySociete->typent_code;
+                $row->has_signature = 0;
 	            if ($this->remise == 0) {
 	            	$row->reduction = 0;
 	            	foreach ($this->lines as $line) {
@@ -439,7 +440,7 @@ class ExtDirectCommande extends Commande
             }
         }
         
-        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison";
+        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande";
         $sql.= " FROM ".MAIN_DB_PREFIX."commande as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode) {
@@ -896,7 +897,6 @@ class ExtDirectCommande extends Commande
                                 $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
                                 $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
                                 $row->product_type = $line->product_type;
-                                // limit qty asked to stock qty
                                 $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
