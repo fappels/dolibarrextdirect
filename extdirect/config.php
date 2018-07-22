@@ -154,6 +154,9 @@ $API = array(
             ),
             'readOptionals'=>array(
                     'len'=>1
+            ),
+            'readAttributes'=>array(
+                    'len'=>1
             )
         )
     ),

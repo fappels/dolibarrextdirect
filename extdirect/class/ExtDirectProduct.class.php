@@ -346,7 +346,7 @@ class ExtDirectProduct extends Product
                     }
                 } else {
                     array_push($results, $row);
-                }                                
+                }
             }
         }
         
@@ -416,6 +416,67 @@ class ExtDirectProduct extends Product
                         $name = substr($key,8); // strip options_
                         $row->name = $name;
                         $row->value = $extraFields->showOutputField($name,$value);
+                        $results[] = $row;
+                    }
+                }
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * public method to read product attributes from database
+     *
+     *    @param    stdClass    $param  filter with elements:
+     *      id                  Id of product to load
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readAttributes(stdClass $param)
+    {
+        global $conf, $langs;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+        $results = array();
+        $id = 0;
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'id') $id=$filter->value;
+            }
+        }
+        
+        if ($conf->variants->enabled && $id > 0) {
+            require_once DOL_DOCUMENT_ROOT.'/variants/class/ProductCombination.class.php';
+            require_once DOL_DOCUMENT_ROOT.'/variants/class/ProductCombination2ValuePair.class.php';
+            require_once DOL_DOCUMENT_ROOT.'/variants/class/ProductAttributeValue.class.php';
+            require_once DOL_DOCUMENT_ROOT.'/variants/class/ProductAttribute.class.php';
+            $productCombination = new ProductCombination($this->db);
+            if ($productCombination->fetchByFkProductChild($id) > 0) {
+                $row = new stdClass;
+                $row->name = $langs->trans('PriceImpact');
+                $row->value = $productCombination->variation_price;
+                $results[] = $row;
+                $row = new stdClass;
+                $row->name = $langs->trans('WeightImpact');
+                $row->value = $productCombination->variation_weight;
+                $results[] = $row;
+                $productCombination2ValuePair = new ProductCombination2ValuePair($this->db);
+                $attributes = $productCombination2ValuePair->fetchByFkCombination($productCombination->id);
+                if (is_array($attributes)) {
+                    foreach ($attributes as $key => $value) {
+                        require_once DOL_DOCUMENT_ROOT.'/variants/class/ProductAttributeValue.class.php';
+                        require_once DOL_DOCUMENT_ROOT.'/variants/class/ProductAttribute.class.php';
+                        $prodattr = new ProductAttribute($this->db);
+                        $prodattrval = new ProductAttributeValue($this->db);
+
+                        $row = new stdClass;
+                        $prodattr->fetch($value->fk_prod_attr);
+                        $prodattrval->fetch($value->fk_prod_attr_val);
+                        
+                        $row->name = $prodattr->label;
+                        $row->value = $prodattrval->value;
                         $results[] = $row;
                     }
                 }
