@@ -54,6 +54,9 @@ $API = array(
             ),
             'readOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -395,5 +398,57 @@ $API = array(
                     'len'=>1
             )
         )
-    )
+    ),
+    'ExtDirectFichinter'=>array(
+        'methods'=>array(
+            'readIntervention'=>array(
+                    'len'=>1
+            ),
+            'createIntervention'=>array(
+                    'len'=>1
+            ),
+            'updateIntervention'=>array(
+                    'len'=>1
+            ),
+            'destroyIntervention'=>array(
+                    'len'=>1
+            ),
+            'readList'=>array(
+                    'len'=>1
+            ),
+            'readStatus'=>array(
+                    'len'=>1
+            ),
+            'readContactTypes'=>array(
+                    'len'=>1
+            ),
+            'readInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'createInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'updateInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'destroyInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'readConstants'=>array(
+                    'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
+                    'len'=>1
+            )
+        )
+    ),
 );

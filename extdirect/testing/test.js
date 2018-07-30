@@ -8,6 +8,8 @@ var appUuid = null,
 	orderId = null,
 	shipmentId = null,
 	purchaseOrderId = 0,
+	interventionId = null,
+	interventionLineId = null,
 	productIds = [],
 	companyIds = [],
 	contactId = 0,
@@ -3141,6 +3143,294 @@ describe("Purchase Order", function () {
 	});
 });
 
+describe("intervention", function () {
+	var flag = false,
+		testresults = [],
+		testresult = null,
+		ref = null,
+		statusIds = [],
+		lineIds = [];
+		
+	beforeEach(function() {
+		testresults = [];
+		testresult = null;
+	});
+	
+	it("read interventionconstants", function() {
+		
+		runs(function() {
+			flag = false;
+			Ext.getStore('InterventionConstants').load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.get('constant');
+					});
+					flag = true;
+				}
+			}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain('FICHINTER_USE_SERVICE_DURATION');
+		});
+	});
+	
+	it("read interventionstatuslist", function() {
+		
+		runs(function() {
+			var i=0;
+			
+			flag = false;
+			Ext.getStore('InterventionStatus').load({
+				callback: function(records) {
+					Ext.Array.each(records, function (record,index) {
+						testresults[index] = record.getId();
+						statusIds[i++] = record.getId();
+					});
+					flag = true;
+				}
+			}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain(-0);	
+			expect(testresults).toContain(1);	
+			expect(testresults).toContain(2);	
+			expect(testresults).toContain(3);	
+		});
+	});
+		
+	it("create intervention", function() {
+		runs(function() {
+			// add 2 products
+			var interventionData,intervention,interventionStore;
+
+			flag = false;
+			interventionData = {
+				note_private: 'connectortest private',
+				note_public: 'connectortest public',
+				description: 'connectortest',
+				duration: 2,
+				customer_id: customerId
+			};
+			intervention = Ext.create('ConnectorTest.model.Intervention',interventionData);
+			
+			interventionStore = Ext.getStore('Intervention');
+			interventionStore.add(intervention);					
+			interventionStore.sync();
+			flag = true;
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(true).toBe(true); // dummy test
+		});
+	});
+	
+	it("read interventionlist", function() {
+	
+		runs(function() {
+			flag = false;
+			Ext.getStore('InterventionList').clearFilter();
+			Ext.getStore('InterventionList').filter([Ext.create('Ext.util.Filter',{property:"status_id",value:statusIds[0]})]);
+			Ext.getStore('InterventionList').load({
+				callback: function(records, operation, success) {
+					if (success) {
+						Ext.Array.each(records, function (record,index) {
+							testresults[index] = record.get('description');
+							if (record.get('description') == 'connectortest') {
+								ref = record.get('ref');
+								interventionId = record.getId();
+							}
+						});
+					} else {
+						testresults[0] = 'Failed';
+					}
+					
+					flag = true;
+				}
+			}); 
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain('connectortest');
+		});
+	});
+	
+	it("create interventionlines", function() {
+		runs(function() {
+			// add 3 products
+			var interventionData,interventionLine,interventionLines = [];
+
+			flag = false;
+			interventionData = {
+				origin_id: interventionId,
+				description: 'connectortest',
+				date: Ext.Date.format(new Date(),'U'),
+				duration: 2
+			};
+			
+			interventionLine = Ext.create('ConnectorTest.model.InterventionLine',interventionData);
+			interventionLines.push(interventionLine);
+
+			Ext.getStore('InterventionLines').add(interventionLines);					
+			Ext.getStore('InterventionLines').sync();
+			Ext.getStore('InterventionLines').clearFilter();
+			Ext.getStore('InterventionLines').filter([Ext.create('Ext.util.Filter',{property:"intervention_id",value:interventionId})]);
+			Ext.getStore('InterventionLines').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record,index) {
+						testresults[index] = record.get('description');
+						lineIds[index] = record.get('line_id');
+					});
+					flag = true;
+				}
+			});			
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			Ext.Array.each(testresults, function(testresult) {
+				expect(testresult).toBe('connectortest');
+			});
+		});
+	});
+
+	it("read intervention by ref", function() {
+		
+		runs(function() {
+			flag = false;
+			Ext.getStore('Intervention').clearFilter();
+			Ext.getStore('Intervention').filter([Ext.create('Ext.util.Filter',{property:"ref",value:ref})]);
+			Ext.getStore('Intervention').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult = record.get('ref');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe(ref);
+		});
+	});	
+	
+	it("update intervention", function() {
+		var recordIndex = Ext.getStore('Intervention').find('ref',ref),
+			record = Ext.getStore('Intervention').getAt(recordIndex);
+		
+		runs(function() {
+			flag = false;
+			record.set('description','connectortested');
+			record.set('status_id','1');
+			Ext.getStore('Intervention').sync();
+			Ext.getStore('Intervention').clearFilter();
+			Ext.getStore('Intervention').filter([Ext.create('Ext.util.Filter',{property:"id",value:record.get('id')})]);
+			Ext.getStore('Intervention').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults.push(record.get('description'));
+						testresults.push(record.get('status'));
+						ref = record.get('ref');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain('connectortested');
+			expect(testresults).toContain('Validated');
+		});
+	});
+
+	it("read intervention by Id", function() {
+	
+		runs(function() {
+			flag = false;
+			Ext.getStore('Intervention').clearFilter();
+			Ext.getStore('Intervention').filter([Ext.create('Ext.util.Filter',{property:"id",value:interventionId})]);
+			Ext.getStore('Intervention').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults.push(record.get('ref'));
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain(ref);
+		});
+	});	
+	
+	it("read interventionline by Id", function() {
+		
+		runs(function() {
+			flag = false;
+			Ext.getStore('InterventionLines').clearFilter();
+			Ext.getStore('InterventionLines').filter([Ext.create('Ext.util.Filter',{property:"intervention_id",value:interventionId})]);
+			Ext.getStore('InterventionLines').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresults.push(record.get('duration'));
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresults).toContain(2);
+		});
+	});
+	
+	it("update interventionline", function() {
+		var updateRecord = null;
+		
+		runs(function() {
+			flag = false;
+			interventionLineId = lineIds[0];
+			updateRecord = Ext.getStore('InterventionLines').findRecord('line_id', interventionLineId);
+			updateRecord.set('description','connectortest update');
+			Ext.getStore('InterventionLines').sync();
+			Ext.getStore('InterventionLines').load({
+				callback: function (records) {
+					Ext.Array.each(records,function (record) {
+						testresult=record.get('description');
+					});
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe('connectortest update');
+		});
+	});
+});
+
 describe("warehouse stock", function () {
 	var flag = false,
 		testresults = [],
@@ -3170,6 +3460,68 @@ describe("warehouse stock", function () {
 				expect(stock[1]).toBeGreaterThan(0);
 				expect(stock[2]).toBeGreaterThan(0);
 			});			
+		});
+	});
+});
+
+describe("delete intervention", function () {
+	var flag = false,			
+		testresult = null;
+		
+	beforeEach(function() {
+		testresult = null;
+	});
+	
+	it("destroy interventionLines", function() {
+		Ext.getStore('InterventionLines').setDestroyRemovedRecords(true);
+		Ext.getStore('InterventionLines').setSyncRemovedRecords(true);
+		runs(function() {
+			flag = false;
+			Ext.getStore('InterventionLines').clearFilter();
+			Ext.getStore('InterventionLines').filter([Ext.create('Ext.util.Filter',{property:"line_id",value:interventionLineId})]);
+			Ext.getStore('InterventionLines').load({
+				callback: function (records) {
+					Ext.getStore('InterventionLines').remove(records);
+					Ext.getStore('InterventionLines').sync();
+					Ext.getStore('InterventionLines').load({
+						callback: function (records) {
+							testresult = records.length;
+							flag = true;
+						}
+					});
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe(0);
+		});
+	});
+	
+	it("destroy intervention", function() {
+		var record = Ext.getStore('Intervention').find('id',interventionId);
+		
+		Ext.getStore('Intervention').setDestroyRemovedRecords(true);
+		Ext.getStore('Intervention').setSyncRemovedRecords(true);
+		runs(function() {
+			flag = false;
+			Ext.getStore('Intervention').removeAt(record);
+			Ext.getStore('Intervention').sync();
+			Ext.getStore('Intervention').load({
+				callback: function () {
+					testresult = Ext.getStore('Intervention').find('id',interventionId);
+					flag = true;
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(record).toBe(0);
+			expect(testresult).toBe(-1);
 		});
 	});
 });
