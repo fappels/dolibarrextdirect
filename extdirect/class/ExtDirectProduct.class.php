@@ -1586,7 +1586,13 @@ class ExtDirectProduct extends Product
      */
     public function addBase64Jpeg($base64JpegUrl) {
         // get photo
-        global $conf;
+        global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
+
+        $maxwidthsmall = 270;
+        $maxheightsmall = 150;
+        $maxwidthmini = 128;
+        $maxheightmini = 72;
+        $quality = 80;
         
         require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
         // TODO add file upload permission to Dolibarr
@@ -1630,6 +1636,7 @@ class ExtDirectProduct extends Product
                         	$this->addThumbs($dir.'/'.$filename);
                         }                        
                         return 1;
+                        @rmdir($tdir);
                     } else {
                         $this->error="ErrorFailToCreateFile";
                         return -5;
