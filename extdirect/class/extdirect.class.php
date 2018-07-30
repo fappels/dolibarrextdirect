@@ -630,7 +630,9 @@ class ExtDirect
         $constants =  array();
         $results = array();
         $entity = ($user->entity > 0) ? $user->entity : 1;
-        $constants += $moduleConstants;
+        if (!empty($moduleConstants)) {
+            $constants += $moduleConstants;
+        }
         
         if (isset($params->filter)) {
             if ($filter->property == 'constant') {
