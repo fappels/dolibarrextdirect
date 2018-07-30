@@ -23,7 +23,7 @@ $debugData = '[]';
 /** Action class
  * class to execute extdirect functions
  */
-class Action
+class BogusAction
 {
     public $action;
     public $method;
@@ -38,6 +38,9 @@ $rawData = file_get_contents("php://input");
 if (!empty($rawData)) {
     header('Content-Type: text/javascript');
     $data = json_decode($rawData);
+    if (empty($data)) { // binary data
+        die('Binary data.');
+    }
 } else if (isset($_POST['extAction'])) {
     $isForm = true;
     $isUpload = $_POST['extUpload'] == 'true';
@@ -128,14 +131,14 @@ function doRpc($cdata)
                         $error->message = "Error $result from dolibarr: $method on action $action";
                         break;
                 }
-            }            
+            }
             $r['result'] = $result;
             throw new Exception($error->message);
         } else if (is_string($result)) {
             $error->message = "Dolibarr: $result";
             $r['result'] = $result;
             throw new Exception($error->message);
-        } else {            
+        } else {
             $r['result'] = $result;
         }
 
@@ -209,9 +212,7 @@ if (is_array($data)) {
     $response = doRpc($data);
 }
 if ($isForm && $isUpload) {
-    echo '<html><body><textarea>';
-    echo json_encode($response);
-    echo '</textarea></body></html>';
+    echo json_encode($response['result'], true);
 } else {
     echo json_encode($response);
 }
