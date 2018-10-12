@@ -50,16 +50,16 @@ class ExtDirectCommande extends Commande
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login, '', 1)>0) {
+            if (empty($user->id) && $user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
-                $this->_user = $user;  //commande.class uses global user
-                if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
-                    $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
-                }
-                $langs->load("orders");
-                $langs->load("sendings"); // for shipment methods
-                parent::__construct($db);
             }
+            $this->_user = $user;  //commande.class uses global user
+            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+                $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+            }
+            $langs->load("orders");
+            $langs->load("sendings"); // for shipment methods
+            parent::__construct($db);
         }
     }
     
@@ -147,7 +147,7 @@ class ExtDirectCommande extends Commande
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
                 $row->customer_type = $mySociete->typent_code;
-                $row->has_signature = 0;
+                //$row->has_signature = 0; not yet implemented
 	            if ($this->remise == 0) {
 	            	$row->reduction = 0;
 	            	foreach ($this->lines as $line) {
@@ -477,7 +477,7 @@ class ExtDirectCommande extends Commande
             $sql.= " AND ec.fk_socpeople = ".$contactId;
         }
     	if ($barcode) {
-            $sql.= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."')";
+            $sql.= " AND (p.barcode LIKE '".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."')";
         }
         $sql .= " ORDER BY c.date_commande DESC";
         
@@ -485,6 +485,7 @@ class ExtDirectCommande extends Commande
         
         if ($resql) {
             $num=$this->db->num_rows($resql);
+            $authorName = array();
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
                 $row = new stdClass;
@@ -500,9 +501,10 @@ class ExtDirectCommande extends Commande
                 $row->customer_price_level = (int) $obj->price_level;
                 $row->ref_customer  = $obj->ref_client;
             	$row->user_id 		= $obj->fk_user_author;
-                if ($myUser->fetch($row->user_id)>0) {
-                    $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
+                if (empty($authorName[$row->user_id]) && $myUser->fetch($row->user_id) > 0) {
+                    $authorName[$row->user_id] = $myUser->firstname . ' ' . $myUser->lastname;
                 }
+                $row->user_name = $authorName[$row->user_id];
                 $row->total_inc		= $obj->total_ttc;
                 $row->deliver_date  = $this->db->jdate($obj->date_livraison);
                 array_push($results, $row);
