@@ -54,18 +54,18 @@ class ExtDirectProduct extends Product
         global $langs,$db,$user,$conf;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login, '', 1)>0) {
+            if (empty($user->id) && $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
-                $this->_user = $user;  //product.class uses global user
-                if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
-                    $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
-                }
-                $langs->load("products");
-                $langs->load("stocks");
-                $langs->load("productbatch");
-                if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
-                parent::__construct($db);
             }
+            $this->_user = $user;  //product.class uses global user
+            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+                $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+            }
+            $langs->load("products");
+            $langs->load("stocks");
+            $langs->load("productbatch");
+            if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
+            parent::__construct($db);
         }
     }
 
@@ -1026,13 +1026,13 @@ class ExtDirectProduct extends Product
         }
         
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
+        if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
+            $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
+        }
         if ($multiprices) {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
         }
         $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
-        if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
-            $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
-        }
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
             $sql .= ' AND (';
