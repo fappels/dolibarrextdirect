@@ -2256,8 +2256,6 @@ describe("shipment", function ()
 				}
 				shipmentLine = Ext.create('ConnectorTest.model.OrderLine', shipmentData);
 				shipmentLines.push(shipmentLine);
-				shipmentLine = Ext.create('ConnectorTest.model.OrderLine', shipmentData);// simulate bug creating double shipment lines
-				shipmentLines.push(shipmentLine);
 			});
 			shipmentLineStore.add(shipmentLines);
 			shipmentLineStore.sync();

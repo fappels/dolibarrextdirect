@@ -725,7 +725,7 @@ class ExtDirectExpedition extends Expedition
             }
             // Add a protection to refuse deleting if shipment is not in draft status
             if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
-                if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+                if (ExtDirect::checkDolVersion(0, '9.0', '')) {
                     $line = new ExpeditionLigne($this->db);
                 } else {
                     $line = new ExtDirectExpeditionLine($this->db);
@@ -739,7 +739,8 @@ class ExtDirectExpedition extends Expedition
                 $line->detail_batch->id = $idArray[1];
                 $line->detail_batch->batch = $params->batch;
                 $line->detail_batch->entrepot_id = $params->warehouse_id;
-                $line->detail_batch->dluo_qty = $params->qty_toship;
+                $line->detail_batch->dluo_qty = $params->qty_toship; // deprecated for 9.0
+                $line->detail_batch->qty = $params->qty_toship;
                 $line->detail_batch->fk_origin_stock = $params->batch_id;
                 if (($result = $line->update()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
@@ -802,6 +803,7 @@ class ExtDirectExpedition extends Expedition
                         $expeditionLineBatch->eatby = $batch->eatby;
                         $expeditionLineBatch->batch = $batch->batch;
                         $expeditionLineBatch->dluo_qty = $batch->qty_toship;
+                        $expeditionLineBatch->qty = $batch->qty_toship; // deprecated for 9.0
                         $expeditionLineBatch->fk_origin_stock = $batch->batch_id;
                         $expeditionLineBatch->create($shipmentLineId);
                     }
@@ -878,7 +880,11 @@ class ExtDirectExpedition extends Expedition
                 $row->sellby = $batch->sellby;
                 $row->eatby = $batch->eatby;
                 $row->batch = $batch->batch;
-                $row->qty_shipped = (float) $batch->dluo_qty;
+                if (! isset($batch->qty)) {
+                    $row->qty_shipped = (float) $batch->dluo_qty; // deprecated for 9.0
+                } else {
+                    $row->qty_shipped = (float) $batch->qty;
+                }
                 array_push($results, clone $row);
             }
         } else {
@@ -891,6 +897,8 @@ class ExtDirectExpedition extends Expedition
 }
 /** ExtDirectExpeditionLine class
  * Class to access shipments lines with CRUD methods 
+ * 
+ * deprecated for 9.0
  */
 class ExtDirectExpeditionLine extends ExpeditionLigne
 {
