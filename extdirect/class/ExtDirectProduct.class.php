@@ -1000,11 +1000,13 @@ class ExtDirectProduct extends Product
         }
         foreach ($param->filter as $key => $filter) {
             if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiprices=true;
-            if (($filter->property == 'categorie_id')) $categorieFilter=true;
-            if (($filter->property == 'supplier_id')) $supplierFilter=true;
+            elseif (($filter->property == 'categorie_id')) $categorieFilter=true;
+            elseif (($filter->property == 'supplier_id')) $supplierFilter=true;
+            elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
         }
         
-        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, ps.fk_entrepot, ps.reel as stock, p.entity, p.seuil_stock_alerte, p.stock as total_stock';
+        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock';
+        if ($warehouseFilter) $sql .= ', ps.fk_entrepot, ps.reel as stock';
         if ($supplierFilter) {
             $sql .= ', sp.unitprice as price, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
@@ -1016,7 +1018,7 @@ class ExtDirectProduct extends Product
             $sql .= ', p.price, p.price_ttc';
         }
         $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+        if ($warehouseFilter) $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
         if ($categorieFilter) {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
@@ -1025,9 +1027,11 @@ class ExtDirectProduct extends Product
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_fournisseur_price as sp ON p.rowid = sp.fk_product';
         }
         
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
-        if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
-            $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
+        if ($warehouseFilter) {
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
+            if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
+                $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
+            }
         }
         if ($multiprices) {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product';
