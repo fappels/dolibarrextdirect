@@ -498,7 +498,7 @@ class ExtDirectCommande extends Commande
                 $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
                 $row->availability_id = $obj->fk_availability;
                 $row->status        = $obj->status;
-                $row->customer_price_level = (int) $obj->price_level;
+                $row->customer_price_level = ($obj->price_level) ? (int) $obj->price_level : 1;
                 $row->ref_customer  = $obj->ref_client;
             	$row->user_id 		= $obj->fk_user_author;
                 if (empty($authorName[$row->user_id]) && $myUser->fetch($row->user_id) > 0) {
