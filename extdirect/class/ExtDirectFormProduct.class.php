@@ -108,6 +108,8 @@ class ExtDirectFormProduct extends FormProduct
         }
         if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $limit, $start)) < 0) return $result;
         
+        $this->_makeNumericLabelSortable();
+
         if ($start == 0) {
             // create allwarehouse record with total warehouse stock, only for first page
             $row = new stdClass;
@@ -415,6 +417,25 @@ class ExtDirectFormProduct extends FormProduct
         {
             dol_print_error($this->db);
             return -1;
+        }
+    }
+
+    private function _makeNumericLabelSortable()
+    {
+        $numericLabel = array();
+        $maxLabel = 0;
+
+        foreach ($this->cache_warehouses as $warehouse) {
+            if (preg_match('/(^[0-9]*)([a-z_A-Z-0-9]*)/', $warehouse['label'], $matches)) {
+                $numericLabel[$warehouse['id']] = (int) $matches[1];
+                $alphaLabel[$warehouse['id']] = $matches[2];
+                if ($numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
+            }
+        }
+        $digits = '%0'.strlen((string) $maxLabel).'d';
+        foreach ($this->cache_warehouses as &$warehouse) {
+            $numericPart = ($numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
+            $warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
         }
     }
 
