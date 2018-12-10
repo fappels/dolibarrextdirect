@@ -1009,7 +1009,7 @@ class ExtDirectProduct extends Product
             elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
         }
         
-        $sql = 'SELECT DISTINCT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
+        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
         if ($warehouseFilter) $sql .= ', ps.fk_entrepot, ps.reel as stock';
         if ($supplierFilter) {
             $sql .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
@@ -1041,7 +1041,14 @@ class ExtDirectProduct extends Product
             }
         }
         if (! empty($conf->global->PRODUIT_MULTIPRICES)) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON p.rowid = pp.fk_product AND pp.price_level = '.$multiPriceLevel;
+            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON pp.rowid = ';
+            $sql .= "(SELECT rowid";
+			$sql .= " FROM " . MAIN_DB_PREFIX . "product_price ";
+			$sql .= " WHERE fk_product = p.rowid";
+			$sql .= " AND entity IN (" . getEntity('productprice') . ")";
+			$sql .= " AND price_level=" . $multiPriceLevel;
+			$sql .= " ORDER BY date_price";
+			$sql .= " DESC LIMIT 1)";
         }
         if (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_customer_price as pcp ON p.rowid = pcp.fk_product AND pcp.fk_soc = '.$socid;
