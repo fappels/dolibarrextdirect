@@ -426,7 +426,7 @@ class ExtDirectFormProduct extends FormProduct
         $maxLabel = 0;
 
         foreach ($this->cache_warehouses as $warehouse) {
-            if (preg_match('/(^[0-9]*)([a-z_A-Z-0-9]*)/', $warehouse['label'], $matches)) {
+            if (preg_match('/(^[0-9]*)([a-z_A-Z-0-9\s]*)/', $warehouse['label'], $matches)) {
                 $numericLabel[$warehouse['id']] = (int) $matches[1];
                 $alphaLabel[$warehouse['id']] = $matches[2];
                 if ($numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
