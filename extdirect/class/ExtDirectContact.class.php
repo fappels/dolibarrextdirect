@@ -72,8 +72,8 @@ class ExtDirectContact extends Contact
         $results = array();
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'id') {
-                    if (($result = $this->fetch($filter->value)) < 0)   return $result;
+                if ($filter->property == 'id' && $filter->value > 0) {
+                    if (($result = $this->fetch($filter->value)) < 0)   return ExtDirect::getDolError($result, $this->errors, $this->error);;
                 } else if ($filter->property == 'company_id') {
                     // fetch first contact
                     $sql = 'SELECT rowid as id';
@@ -87,7 +87,7 @@ class ExtDirectContact extends Contact
                         $num=$this->db->num_rows($resql);
                         if ($num) {
                             $obj = $this->db->fetch_object($resql);
-                            if (($result = $this->fetch($obj->id)) < 0)   return $result;
+                            if (($result = $this->fetch($obj->id)) < 0)   return ExtDirect::getDolError($result, $this->errors, $this->error);;
                         } else {
                             return array(); // no results
                         }
@@ -96,13 +96,8 @@ class ExtDirectContact extends Contact
                         dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);
                         return SQLERROR;
                     }
-                } else {
-                    return PARAMETERERROR;
                 }
-                if ($result == 0) {
-                    return array(); // no results
-                }
-                if (!$this->error) {
+                if ($result > 0) {
                     $row = new stdClass;
                     $row->id                = (int) $this->id;
                     $row->civility_id       = $this->civilite_id;
@@ -135,14 +130,10 @@ class ExtDirectContact extends Contact
                     $row->canvas            = $this->canvas;
                     
                     array_push($results, $row);
-                    
-                    return $results;
-                } else {
-                    return $result;
                 }
             }
         }
-        return PARAMETERERROR;
+        return $results;
     }
 
     /**
@@ -217,8 +208,10 @@ class ExtDirectContact extends Contact
     
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
-        $results = array();
+        $result = new stdClass;
+        $data = array();
         $filterSize = 0;
+        $includeTotal = false;
     
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -227,68 +220,88 @@ class ExtDirectContact extends Contact
         if (isset($params->filter)) {
             $filterSize = count($params->filter);
         }
+        if (isset($params->include_total)) {
+            $includeTotal = $params->include_total;
+        }
         if (ExtDirect::checkDolVersion() >= 3.4) {
             if (ExtDirect::checkDolVersion() >= 3.5) {
-                $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
+                $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
             } else {
-                $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
+                $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
             }            
         } else {
-            $sql = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.name as lastname, c.firstname,c.cp as zip, c.ville as town';
+            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.name as lastname, c.firstname,c.cp as zip, c.ville as town';
         }
-        $sql .= ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
+        $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
-            $sql .= ' WHERE (';
+            $sqlWhere = ' WHERE (';
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id')
-                    $sql .= 'c.rowid = '.$filter->value;
+                    $sqlWhere .= 'c.rowid = '.$filter->value;
                 else if ($filter->property == 'company_id')
-                    $sql .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
+                    $sqlWhere .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
                 else if ($filter->property == 'town') {
                     if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql .= "c.town = '".$this->db->escape($filter->value)."'";
+                        $sqlWhere .= "c.town = '".$this->db->escape($filter->value)."'";
                     } else {
-                        $sql .= "c.ville = '".$this->db->escape($filter->value)."'";
+                        $sqlWhere .= "c.ville = '".$this->db->escape($filter->value)."'";
                     }      
                 }              
                 else if ($filter->property == 'content') {
                     $contentValue = $this->db->escape(strtolower($filter->value));
                     if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
+                        $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                        $sqlWhere.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
                     } else {
-                        $sql.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(c.ville) like '%".$contentValue."%' OR LOWER(c.cp) like '%".$contentValue."%')" ;
+                        $sqlWhere.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                        $sqlWhere.= " OR LOWER(c.ville) like '%".$contentValue."%' OR LOWER(c.cp) like '%".$contentValue."%')" ;
                     }
                     
                 } else break;
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
-                    else $sql .= ') AND (';
+                    if($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
+                    else $sqlWhere .= ') AND (';
                 }
             }
-            $sql .= ')';
+            $sqlWhere .= ')';
         }
-        $sql .= " ORDER BY ";
+        $sqlOrder = " ORDER BY ";
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
             foreach($params->sort as $key => $sort) {
                 if (!empty($sort->property)) {
-                    $sql .= $sort->property. ' '.$sort->direction;
+                    $sqlOrder .= $sort->property. ' '.$sort->direction;
                     if ($key < ($sorterSize-1)) {
-                        $sql .= ",";
+                        $sqlOrder .= ",";
                     }
                 }
             }
         } else {
-            $sql .= "lastname ASC";
+            $sqlOrder .= "lastname ASC";
         }
          
         if ($limit) {
-            $sql .= $this->db->plimit($limit, $start);
+            $sqlLimit = $this->db->plimit($limit, $start);
         }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+        
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
     
         $resql=$this->db->query($sql);
     
@@ -308,10 +321,16 @@ class ExtDirectContact extends Contact
                 if (isset($obj->statut)) {
                     $row->enabled    = $obj->statut;
                 }
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readContactList ".$error, LOG_ERR);

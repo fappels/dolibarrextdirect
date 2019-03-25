@@ -370,10 +370,12 @@ class ExtDirectSociete extends Societe
     
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
-        $results = array();
+        $result = new stdClass;
+        $data = array();
         $filterSize = 0;
         $limit=null;
         $start=0;
+        $includeTotal = false;
         
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -382,99 +384,119 @@ class ExtDirectSociete extends Societe
         if (isset($params->filter)) {
             $filterSize = count($params->filter);
         }
+        if (isset($params->include_total)) {
+            $includeTotal = $params->include_total;
+        }
         if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
+            $sqlFields = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
         } else {
-            $sql = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
+            $sqlFields = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
         }
         
-        $sql .= ', st.libelle as commercial_status';
-        $sql .= ', c.rowid as categorie_id, c.label as categorie, s.fk_stcomm';
-        $sql .= ' FROM '.MAIN_DB_PREFIX.'societe as s';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
+        $sqlFields .= ', st.libelle as commercial_status';
+        $sqlFields .= ', c.rowid as categorie_id, c.label as categorie, s.fk_stcomm';
+        $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'societe as s';
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
         if (ExtDirect::checkDolVersion() >= 3.8) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
         } else {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
         }        
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
         if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
-        	$sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe_commerciaux as sc ON s.rowid = sc.fk_soc';
+        	$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe_commerciaux as sc ON s.rowid = sc.fk_soc';
         }
-        $sql .= ' WHERE s.entity IN ('.getEntity('societe', 1).')';
+        $sqlWhere = ' WHERE s.entity IN ('.getEntity('societe', 1).')';
     	if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
-        	$sql .= ' AND sc.fk_user = '.$this->_user->id;
+        	$sqlWhere .= ' AND sc.fk_user = '.$this->_user->id;
         }
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
-            $sql .= ' AND (';
+            $sqlWhere .= ' AND (';
             foreach ($params->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value)) {
-                    $sql .= '1';                    
+                    $sqlWhere .= '1';                    
                 } else {
                     if ($filter->property == 'id') 
-                        $sql .= 's.rowid = '.$value;
+                        $sqlWhere .= 's.rowid = '.$value;
                     else if ($filter->property == 'ref') 
-                        $sql .= "s.nom = '".$this->db->escape($value)."'";
+                        $sqlWhere .= "s.nom = '".$this->db->escape($value)."'";
                     else if ($filter->property == 'client') 
-                        $sql .= "s.client = ".$value;
+                        $sqlWhere .= "s.client = ".$value;
                     else if ($filter->property == 'supplier') 
-                        $sql .= "s.fournisseur = ".$value;
+                        $sqlWhere .= "s.fournisseur = ".$value;
                     else if ($filter->property == 'town') {
                         if (ExtDirect::checkDolVersion() >= 3.4) {
-                            $sql .= "s.town = '".$this->db->escape($value)."'";
+                            $sqlWhere .= "s.town = '".$this->db->escape($value)."'";
                         } else {
-                            $sql .= "s.ville = '".$this->db->escape($value)."'";
+                            $sqlWhere .= "s.ville = '".$this->db->escape($value)."'";
                         }
                     } 
                     else if ($filter->property == 'stcomm_id') 
-                        $sql .= "s.fk_stcomm = ".$value;
+                        $sqlWhere .= "s.fk_stcomm = ".$value;
                     else if ($filter->property == 'categorie_id') {
                         //allow filtering on non categorized societe
                         if ($value == 0) {
-                            $sql .= "c.rowid IS NULL";
+                            $sqlWhere .= "c.rowid IS NULL";
                         } else {
-                            $sql .= "c.rowid = ".$value;
+                            $sqlWhere .= "c.rowid = ".$value;
                         }
                     } else if ($filter->property == 'content') {
                         $contentValue = strtolower($value);
-                        $sql.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(s.code_client) like '%".$contentValue."%' OR LOWER(s.code_fournisseur) like '%".$contentValue."%'" ;
+                        $sqlWhere.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
+                        $sqlWhere.= " OR LOWER(s.code_client) like '%".$contentValue."%' OR LOWER(s.code_fournisseur) like '%".$contentValue."%'" ;
                         if (ExtDirect::checkDolVersion() >= 3.4) {
-                            $sql.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')" ;
+                            $sqlWhere.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')" ;
                         } else {
-                            $sql.= " OR LOWER(s.ville) like '%".$contentValue."%' OR LOWER(s.cp) like '%".$contentValue."%')" ;
+                            $sqlWhere.= " OR LOWER(s.ville) like '%".$contentValue."%' OR LOWER(s.cp) like '%".$contentValue."%')" ;
                         }
                     } else {
-                       $sql .= '1';
+                       $sqlWhere .= '1';
                     }
                 }
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
-                    else $sql .= ') AND (';
+                    if($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
+                    else $sqlWhere .= ') AND (';
                 }
             }
-            $sql .= ')';
+            $sqlWhere .= ')';
         }
-        $sql .= " ORDER BY ";
+        $sqlOrder = " ORDER BY ";
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
             foreach($params->sort as $key => $sort) {
                 if (!empty($sort->property)) {
-                    $sql .= $sort->property. ' '.$sort->direction;
+                    $sqlOrder .= $sort->property. ' '.$sort->direction;
                     if ($key < ($sorterSize-1)) {
-                        $sql .= ",";
+                        $sqlOrder .= ",";
                     }
                 }
             }
         } else {
-             $sql .= "name ASC";
+             $sqlOrder .= "name ASC";
         }
        
         if ($limit) {
-            $sql .= $this->db->plimit($limit, $start);
+            $sqlLimit = $this->db->plimit($limit, $start);
         }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readSocieteList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+        
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
     
         $resql=$this->db->query($sql);
     
@@ -507,13 +529,20 @@ class ExtDirectSociete extends Societe
                     // Read image path, convert to base64 encoding
                     $imgData = base64_encode(file_get_contents($filename));
                     // Format the image SRC:  data:{mime};base64,{data};
-                    $row->logo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                    if ($imgData) {
+                        $row->logo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                    }
                 }
-                
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readSocieteList ".$error, LOG_ERR);
@@ -679,7 +708,9 @@ class ExtDirectSociete extends Societe
                     // Read image path, convert to base64 encoding
                     $imgData = base64_encode(file_get_contents($filename));
                     // Format the image SRC:  data:{mime};base64,{data};
-                    $row->logo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                    if ($imgData) {
+                        $row->logo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+                    }
                 }
             
                 // multiprix
@@ -989,9 +1020,9 @@ class ExtDirectSociete extends Societe
         if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
         // dolibarr update settings
-        $allowmodcodeclient=0;
+        $allowmodcodeclient=1;
         $call_trigger=1;
-        $allowmodcodefournisseur=0;
+        $allowmodcodefournisseur=1;
         foreach ($paramArray as &$param) {
             // prepare fields
             if ($param->id) {
@@ -1095,7 +1126,7 @@ class ExtDirectSociete extends Societe
                             if (is_string($result))
                             {
                                 $errors[] = $result;
-                                $response = ExtDirect::getDolError($result, $errors[], $result);
+                                $response = ExtDirect::getDolError($result, $errors, $result);
                             }
                             else
                             {

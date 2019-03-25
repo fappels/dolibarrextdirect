@@ -460,7 +460,7 @@ class ExtDirectFichinter extends Fichinter
                 $row->ref           = $obj->ref;
                 $row->description   = $obj->description;
                 $row->status_id= (int) $obj->fk_statut;
-                $row->status   = $this->LibStatut($obj->fk_statut, false, 1);
+                $row->status   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
                 $row->user_id 		= $obj->fk_user_author;
                 if ($myUser->fetch($row->user_id)>0) {
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
@@ -490,7 +490,7 @@ class ExtDirectFichinter extends Fichinter
         while (($result = $this->LibStatut($statut, 1)) != '') {
             $row = new stdClass;
             $row->id = $statut++;
-            $row->status = $result;
+            $row->status = html_entity_decode($result);
             array_push($results, $row);
         }
         return $results;
@@ -730,12 +730,11 @@ class ExtDirectFichinter extends Fichinter
         $notrigger=0;
 
         foreach ($paramArray as &$params) {
-            // prepare fields
-            if ($params->line_id) {
+            if ($params->id) {
+                // prepare fields
+                $line->fetch($params->id);
+                $this->id = $line->fk_fichinter;
                 // delete 
-                $this->id = $params->origin_id;
-                $line->rowid = $params->line_id;
-                $line->id = $params->line_id;
                 if (($result = $line->deleteline($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;

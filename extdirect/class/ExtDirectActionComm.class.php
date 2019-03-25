@@ -78,11 +78,8 @@ class ExtDirectActionComm extends ActionComm
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') {
-                    if (($result = $this->fetch($filter->value)) < 0)   return $result;
-                    if ($result == 0) {
-                        return array(); // no results
-                    }
-                    if (!$this->error) {
+                    if (($result = $this->fetch($filter->value)) < 0)   return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if ($result > 0) {
                         $row = new stdClass;
                         $row->id                = (int) $this->id;
                         $row->code              = $this->code;
@@ -119,14 +116,11 @@ class ExtDirectActionComm extends ActionComm
                         $row->project_id        = (int) $this->fk_project;
                 
                         array_push($results, $row);
-                        return $results;
-                    } else {
-                        return $result;
                     }
                 }
             }
         }
-        return PARAMETERERROR;
+        return $results;
     }
 
     /**
@@ -211,9 +205,11 @@ class ExtDirectActionComm extends ActionComm
     
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
-        $results = array();
+        $result = new stdClass;
+        $data = array();
         
         $filterSize = 0;
+        $includeTotal = false;
     
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -222,63 +218,83 @@ class ExtDirectActionComm extends ActionComm
         if (isset($params->filter)) {
             $filterSize = count($params->filter);
         }
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
-        } else {
-            $sql = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.name as lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+        if (isset($params->include_total)) {
+            $includeTotal = $params->include_total;
         }
-        $sql .= ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
-        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_actioncomm as ac ON a.fk_action = ac.id';
+        if (ExtDirect::checkDolVersion() >= 3.4) {
+            $sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+        } else {
+            $sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.name as lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+        }
+        $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_actioncomm as ac ON a.fk_action = ac.id';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
-            $sql .= ' WHERE (';
+            $sqlWhere = ' WHERE (';
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id')
-                    $sql .= 'a.id = '.$filter->value;
+                    $sqlWhere .= 'a.id = '.$filter->value;
                 else if ($filter->property == 'company_id')
-                    $sql .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
+                    $sqlWhere .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
                 else if ($filter->property == 'contact_id')
-                    $sql .= "(c.rowid = ".$filter->value.")";
+                    $sqlWhere .= "(c.rowid = ".$filter->value.")";
                 else if ($filter->property == 'user_id') 
-                    $sql.= '(fk_user_action = '.$filter->value.' OR fk_user_done = '.$filter->value.')';
+                    $sqlWhere.= '(fk_user_action = '.$filter->value.' OR fk_user_done = '.$filter->value.')';
                 else if ($filter->property == 'type')
-                    $sql.= "(ac.type = '".$this->db->escape($filter->value)."')";
+                    $sqlWhere.= "(ac.type = '".$this->db->escape($filter->value)."')";
                 else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);
                     if (ExtDirect::checkDolVersion() >= 3.4) {
-                    	$sql.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    	$sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
                     } else {
-                    	$sql.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    	$sqlWhere.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
                     }                    
-                    $sql.= " OR LOWER(s.nom) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contentValue."%')" ;
+                    $sqlWhere.= " OR LOWER(s.nom) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contentValue."%')" ;
                 } else break;
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
-                    else $sql .= ') AND (';
+                    if($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
+                    else $sqlWhere .= ') AND (';
                 }
             }
-            $sql .= ')';
+            $sqlWhere .= ')';
         }
-        $sql .= " ORDER BY ";
+        $sqlOrder = " ORDER BY ";
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
             foreach($params->sort as $key => $sort) {
                 if (!empty($sort->property)) {
-                    $sql .= $sort->property. ' '.$sort->direction;
+                    $sqlOrder .= $sort->property. ' '.$sort->direction;
                     if ($key < ($sorterSize-1)) {
-                        $sql .= ",";
+                        $sqlOrder .= ",";
                     }
                 }
             }
         } else {
-            $sql .= "datep ASC";
+            $sqlOrder .= "datep ASC";
         }
          
         if ($limit) {
-            $sql .= $this->db->plimit($limit, $start);
+            $sqlLimit = $this->db->plimit($limit, $start);
         }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readProductList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+        
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
     
         $resql=$this->db->query($sql);
     
@@ -299,10 +315,16 @@ class ExtDirectActionComm extends ActionComm
                 $row->contact_id    = $obj->contact_id;
                 $row->label         = $obj->label;
                               
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readActionList ".$error, LOG_ERR);
@@ -331,7 +353,7 @@ class ExtDirectActionComm extends ActionComm
             // prepare fields
             $this->prepareFields($param);
             // create
-            if (($result = $this->add($this->_user, $notrigger)) < 0)    return $result;
+            if (($result = $this->add($this->_user, $notrigger)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
            
             $param->id=$this->id;
             $this->_societe->id=$this->socid;
@@ -370,7 +392,7 @@ class ExtDirectActionComm extends ActionComm
                 $this->prepareFields($param);
                 // update
                 if (($result = $this->update($this->_user, $notrigger)) < 0) {
-                     return $result;
+                     return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }  
                 $this->_societe->id=$this->societe->id;
                 $this->_societe->add_commercial($this->_user, $this->userdoneid);
@@ -404,15 +426,9 @@ class ExtDirectActionComm extends ActionComm
         foreach ($paramArray as &$param) {
             // prepare fields
             if ($param->id) {
-                $this->id = $param->id;   
-                if ($param->usertodo_id) $this->usertodo->id = $param->usertodo_id; // deprecated
-                if ($param->usertodo_id) $this->userdoneid = $param->usertodo_id;
-                if ($param->company_id) $this->societe->id=$param->company_id; // deprecated
-                if ($param->company_id) $this->socid=$param->company_id;
+                $this->id = $param->id;
                 // delete
-                if (($result = $this->delete($notrigger)) < 0) return $result;
-                $this->_societe->id=$this->socid;
-                $this->_societe->del_commercial($this->_user, $this->userdoneid);
+                if (($result = $this->delete($notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }            
@@ -467,9 +483,9 @@ class ExtDirectActionComm extends ActionComm
             $this->db->free($resql);
             return $results;
         } else {
-            $error="Error ".$this->db->lasterror();
-            dol_syslog(get_class($this)."::getAllUsers ".$error, LOG_ERR);
-            return -1;
+            $this->error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::getAllUsers ".$this->error, LOG_ERR);
+            return ExtDirect::getDolError(-1, $this->errors, $this->error);
         }   
     }
     

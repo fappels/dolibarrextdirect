@@ -278,7 +278,7 @@ class ExtDirectCommande extends Commande
         foreach ($paramArray as &$params) {
             // prepare fields
             if ($params->id) {
-                $this->id = $params->id;
+                if (($result = $this->fetch($params->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 $this->prepareOrderFields($params);
                 // update
                 switch ($params->orderstatus_id) {
@@ -432,7 +432,7 @@ class ExtDirectCommande extends Commande
         $barcode = null;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
+                if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value; // add id config in client filter for ExtJs
                 if ($filter->property == 'ref') $ref=$filter->value;
                 if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
@@ -495,7 +495,7 @@ class ExtDirectCommande extends Commande
                 $row->ref           = $obj->ref;
                 $row->ref_int           = $obj->ref_int;
                 $row->orderstatus_id= (int) $obj->fk_statut;
-                $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
+                $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
                 $row->availability_id = $obj->fk_availability;
                 $row->status        = $obj->status;
                 $row->customer_price_level = ($obj->price_level) ? (int) $obj->price_level : 1;
@@ -531,7 +531,7 @@ class ExtDirectCommande extends Commande
         while (($result = $this->LibStatut($statut, false, 1)) != '') {
             $row = new stdClass;
             $row->id = $statut++;
-            $row->status = $result;
+            $row->status = html_entity_decode($result);
             array_push($results, $row);
         }
         return $results;
@@ -1233,13 +1233,24 @@ class ExtDirectCommande extends Commande
     
         foreach ($paramArray as &$params) {
             // prepare fields
-            if ($params->origin_line_id) {
-                // delete 
+            if (empty($params->origin_line_id)) {
+                $lineId = $params->id;
+            } else {
+                $lineId = $params->origin_line_id;
+            }
+            if (empty($params->origin_id)) {
+                $orderLine = new OrderLine($this->db);
+                $orderLine->fetch($lineId);
+                $this->id = $orderLine->fk_commande;
+            } else {
                 $this->id = $params->origin_id;
+            }
+            if ($lineId && $this->id) {
+                // delete 
                 if (ExtDirect::checkDolVersion(0,'5.0','')) {
-                	if (($result = $this->deleteline($this->_user, $params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                	if (($result = $this->deleteline($this->_user, $lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 } else {
-                	if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                	if (($result = $this->deleteline($lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             } else {
                 return PARAMETERERROR;

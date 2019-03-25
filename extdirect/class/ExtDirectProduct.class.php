@@ -982,17 +982,17 @@ class ExtDirectProduct extends Product
         global $conf;
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
-        $results = array();
+        $result = new stdClass;
+        $data = array();
 
         $filterSize = 0;
         $limit=null;
         $start=0;
-        $dataComplete=false;
-        $dataNotComplete=false;
         $photoSize = '';
         $multiPriceLevel=1;
         $categorieFilter = false;
         $socid;
+        $includeTotal = false;
         
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -1000,6 +1000,9 @@ class ExtDirectProduct extends Product
         }
         if (isset($param->filter)) {
             $filterSize = count($param->filter);
+        }
+        if (isset($param->include_total)) {
+            $includeTotal = $param->include_total;
         }
         foreach ($param->filter as $key => $filter) {
             if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
@@ -1009,117 +1012,134 @@ class ExtDirectProduct extends Product
             elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
         }
         
-        $sql = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
-        if ($warehouseFilter) $sql .= ', ps.fk_entrepot, ps.reel as stock';
+        $sqlFields = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
+        if ($warehouseFilter) $sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
         if ($supplierFilter) {
-            $sql .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
-            if (ExtDirect::checkDolVersion(0, '5.0', '')) $sql .= ', sp.supplier_reputation';
-            $sql .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
-            $sql .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
+            $sqlFields .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
+            if (ExtDirect::checkDolVersion(0, '5.0', '')) $sqlFields .= ', sp.supplier_reputation';
+            $sqlFields .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
+            $sqlFields .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
         } else {
             if (! empty($conf->global->PRODUIT_MULTIPRICES)) {
-                $sql .= ', pp.price as multi_price, pp.price_ttc as multi_price_ttc';
+                $sqlFields .= ', pp.price as multi_price, pp.price_ttc as multi_price_ttc';
             }
             if (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) {
-                $sql .= ', pcp.price as customer_price, pcp.price_ttc as customer_price_ttc';
+                $sqlFields .= ', pcp.price as customer_price, pcp.price_ttc as customer_price_ttc';
             }
         }
-        $sql .= ' FROM '.MAIN_DB_PREFIX.'product as p';
-        if ($warehouseFilter) $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+        $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
+        if ($warehouseFilter) $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
         if ($categorieFilter) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
         }
         if ($supplierFilter) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_fournisseur_price as sp ON p.rowid = sp.fk_product';
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_fournisseur_price as sp ON p.rowid = sp.fk_product';
         }
         
         if ($warehouseFilter) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
             if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
-                $sql.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
+                $sqlFrom.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
             }
         }
         if (! empty($conf->global->PRODUIT_MULTIPRICES)) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON pp.rowid = ';
-            $sql .= "(SELECT rowid";
-			$sql .= " FROM " . MAIN_DB_PREFIX . "product_price ";
-			$sql .= " WHERE fk_product = p.rowid";
-			$sql .= " AND entity IN (" . getEntity('productprice') . ")";
-			$sql .= " AND price_level=" . $multiPriceLevel;
-			$sql .= " ORDER BY date_price";
-			$sql .= " DESC LIMIT 1)";
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_price as pp ON pp.rowid = ';
+            $sqlFrom .= "(SELECT rowid";
+			$sqlFrom .= " FROM " . MAIN_DB_PREFIX . "product_price ";
+			$sqlFrom .= " WHERE fk_product = p.rowid";
+			$sqlFrom .= " AND entity IN (" . getEntity('productprice') . ")";
+			$sqlFrom .= " AND price_level=" . $multiPriceLevel;
+			$sqlFrom .= " ORDER BY date_price";
+			$sqlFrom .= " DESC LIMIT 1)";
         }
         if (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_customer_price as pcp ON p.rowid = pcp.fk_product AND pcp.fk_soc = '.$socid;
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_customer_price as pcp ON p.rowid = pcp.fk_product AND pcp.fk_soc = '.$socid;
         }
-        $sql .= ' WHERE p.entity IN ('.getEntity('product', 1).')';
+        $sqlWhere = ' WHERE p.entity IN ('.getEntity('product', 1).')';
         if ($filterSize > 0) {
             // TODO improve sql command to allow random property type
-            $sql .= ' AND (';
+            $sqlWhere .= ' AND (';
             foreach ($param->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value) && ($filter->property != 'type') && ($filter->property != 'supplier_id')) {
-                    $sql .= '1';                    
+                    $sqlWhere .= '1';                    
                 } else {
                     if ($filter->property == 'warehouse_id') {
-                        $sql .= 'ps.fk_entrepot = '.$value;
+                        $sqlWhere .= 'ps.fk_entrepot = '.$value;
                     } else if ($filter->property == 'tosell') {
-                        $sql .= "p.tosell = ".$value;
+                        $sqlWhere .= "p.tosell = ".$value;
                     } else if ($filter->property == 'tobuy') {
-                        $sql .= "p.tobuy = ".$value;
+                        $sqlWhere .= "p.tobuy = ".$value;
                     } else if ($filter->property == 'status') { // backward comp
-                        $sql .= "p.tosell = ".$value;
+                        $sqlWhere .= "p.tosell = ".$value;
                     } else if ($filter->property == 'status_buy') {  // backward comp
-                        $sql .= "p.tobuy = ".$value;
+                        $sqlWhere .= "p.tobuy = ".$value;
                     } else if ($filter->property == 'finished') {
-                        $sql .= "p.finished = ".$value;
+                        $sqlWhere .= "p.finished = ".$value;
                     } else if ($filter->property == 'type') {
-                        $sql .= "p.fk_product_type = ".$value;
+                        $sqlWhere .= "p.fk_product_type = ".$value;
                     } else if ($filter->property == 'categorie_id') {
-                        $sql .= "c.rowid = ".$value;
+                        $sqlWhere .= "c.rowid = ".$value;
                     } else if ($filter->property == 'supplier_id') {
                         if ($value > 0) {
-                            $sql .= "sp.fk_soc = ".$value;
+                            $sqlWhere .= "sp.fk_soc = ".$value;
                         } else {
-                            $sql .= "sp.rowid IS NOT NULL";
+                            $sqlWhere .= "sp.rowid IS NOT NULL";
                         }
                     } else if ($filter->property == 'content') {
                         $contentValue = strtolower($value);
-                        $sql.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
+                        $sqlWhere.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
+                        $sqlWhere.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
                     } else if ($filter->property == 'photo_size' && !empty($value)) {
-                        $sql .= '1';
+                        $sqlWhere .= '1';
                         $photoSize = $value;
                     } else {
-                        $sql .= '1';
+                        $sqlWhere .= '1';
                     }
                 }    
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $param->filter[$key+1]->property) $sql .= ' OR ';
-                    else $sql .= ') AND (';
+                    if($filter->property == $param->filter[$key+1]->property) $sqlWhere .= ' OR ';
+                    else $sqlWhere .= ') AND (';
                 }            
             }
-            $sql .= ')';
+            $sqlWhere .= ')';
         }
-        $sql .= " ORDER BY ";
+        $sqlOrder = " ORDER BY ";
         if (isset($param->sort)) {
             $sorterSize = count($param->sort);
             foreach ($param->sort as $key => $sort) {
                 if (!empty($sort->property)) {
-                    $sql .= $sort->property. ' '.$sort->direction;
+                    $sqlOrder .= $sort->property. ' '.$sort->direction;
                     if ($key < ($sorterSize-1)) {
-                        $sql .= ",";
+                        $sqlOrder .= ",";
                     }
                 }
             }
         } else {
-            $sql .= "p.ref ASC";
+            $sqlOrder .= "p.ref ASC";
         }
         
         if ($limit) {
-            $sql .= $this->db->plimit($limit, $start);
+            $sqlLimit = $this->db->plimit($limit, $start);
         }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readProductList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+        
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
     
         $resql=$this->db->query($sql);
         
@@ -1171,10 +1191,16 @@ class ExtDirectProduct extends Product
                     }
                 }
                 $row->qty_ordered = $obj->ordered - $obj->dispatched;
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readProductList ".$error, LOG_ERR);

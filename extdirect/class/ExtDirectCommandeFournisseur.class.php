@@ -422,7 +422,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
+                if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value; // add id config in client filter for ExtJs
                 if ($filter->property == 'ref') $ref=$filter->value;
                 if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
@@ -495,7 +495,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->ref           = $obj->ref;
                 $row->ref_supplier  = $obj->ref_supplier;
                 $row->orderstatus_id= (int) $obj->fk_statut;
-                $row->orderstatus   = $this->LibStatut($obj->fk_statut, false, 1);
+                $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
                 $row->status        = $obj->status;
                 if ($obj->mode_code && $langs->transnoentitiesnoconv($obj->mode_code)) {
                     $row->mode      = $langs->transnoentitiesnoconv($obj->mode_code);
@@ -532,7 +532,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $result = $this->LibStatut($statut, 1);
             $row = new stdClass;
             $row->id = $statut;
-            $row->status = $result;
+            $row->status = html_entity_decode($result);
             array_push($results, $row);
         }
         return $results;
@@ -1121,10 +1121,18 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     
         foreach ($paramArray as &$params) {
             // prepare fields
-            if ($params->origin_line_id) {
+            if (empty($params->origin_line_id)) {
+                $lineId = $params->id;
+            } else {
+                $lineId = $params->origin_line_id;
+            }
+            
+            $orderLine = new CommandeFournisseurLigne($this->db);
+            $orderLine->fetch($lineId);
+            $this->id = $orderLine->fk_commande;
+            if ($lineId) {
                 // delete 
-                $this->id = $params->origin_id;
-                if (($result = $this->deleteline($params->origin_line_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (($result = $this->deleteline($lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }

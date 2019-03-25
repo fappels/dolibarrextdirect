@@ -458,7 +458,7 @@ class ExtDirectExpedition extends Expedition
                 $row->ref           = $obj->ref;
                 $row->ref_int           = $obj->ref_int;
                 $row->orderstatus_id= (int) $obj->fk_statut;
-                $row->orderstatus   = $this->LibStatut($obj->fk_statut, 1);
+                $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, 1));
                 $row->status        = $obj->status;
                 $row->mode			= $obj->mode;
                 array_push($results, $row);
@@ -485,7 +485,7 @@ class ExtDirectExpedition extends Expedition
         while (($result = $this->LibStatut($statut, 1)) !== null) {
             $row = new stdClass;
             $row->id = $statut;
-            $row->status = $result;
+            $row->status = html_entity_decode($result);
             $statut++;
             array_push($results, $row);
         }
@@ -830,17 +830,29 @@ class ExtDirectExpedition extends Expedition
 
         foreach ($paramArray as &$params) {
             // prepare fields
-            if (($result = $this->fetch($params->origin_id)) < 0) {
+            if (empty($params->line_id)) {
+                $lineId = $params->id;
+            } else {
+                $lineId = $params->line_id;
+            }
+            if (empty($params->origin_id)) {
+                $orderLine = new OrderLine($this->db);
+                $orderLine->fetch($lineId);
+                $this->id = $orderLine->fk_commande;
+            } else {
+                $this->id = $params->origin_id;
+            }
+            if (($result = $this->fetch($this->id)) < 0) {
                     return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
             // Add a protection to refuse deleting if shipment is not in draft status
-            if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
+            if ($this->statut == self::STATUS_DRAFT && $lineId) {
                 if (ExtDirect::checkDolVersion(0, '7.0', '')) {
                     $line = new ExpeditionLigne($this->db);
                 } else {
                     $line = new ExtDirectExpeditionLine($this->db);
                 }
-                $line->id = $params->line_id;
+                $line->id = $lineId;
                 if (($result = $line->delete()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
