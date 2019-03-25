@@ -60,6 +60,24 @@ Client CRUD calls:
 			destroy: ExtDirectProduct.destroyProduct
 		}
 	});
+
+	Ext.getStore('productlist').setProxy({
+		type: 'direct',
+		directFn: ExtDirectProduct.readProductList,
+		reader: {
+			rootProperty: 'data'
+		}
+	});
+
+	// enable total property in result output
+	Ext.getStore('productlist').on('beforeload', function(store, operation, eOpts) {
+		operation.setParams({
+			include_total: true
+		});
+	}, this);
+
+	Ext.getStore('productlist').load();
+	
 	...
 	var products = Ext.getStore('product');
     var productData = {
