@@ -161,6 +161,8 @@ class ExtDirectAuthenticate extends ExtDirect
                 $result->home_country_id = $mysoc->country_id;
                 $result->home_state_id = $mysoc->state_id;
                 $result->home_name = $mysoc->name;
+                $result->home_localtax1_assuj = $mysoc->localtax1_assuj;
+                $result->home_localtax2_assuj = $mysoc->localtax2_assuj;
             } 
             $result->timezone_offset = getServerTimeZoneInt('now');   
             $result->timezone = getServerTimeZoneString();        

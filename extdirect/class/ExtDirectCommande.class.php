@@ -1044,25 +1044,29 @@ class ExtDirectCommande extends Commande
                 $tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
                 $tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
             }
+
+            // Local Taxes
+            $localtax1_tx = get_localtax($tva_tx, 1, $this->thirdparty);
+            $localtax2_tx = get_localtax($tva_tx, 2, $this->thirdparty);
             
             $info_bits = 0;
             if ($tva_npr) $info_bits |= 0x01;
             if (!empty($params->product_price) || !empty($params->product_price_ttc)) {
                 // when product_price is available, use product price for calculating unit price
                 if ($orderLine->price_base_type == 'TTC') {
-                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
                     $pu_ht = $tabprice[3];
                     $pu_ttc = $tabprice[5];
                 } else {
-                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
                     $pu_ht = $tabprice[3];
                     $pu_ttc = $tabprice[5];
                 }
             } else {
-                $tabprice = calcul_price_total($orderLine->qty, $orderLine->subprice, $orderLine->remise_percent, $tva_tx, $orderLine->total_localtax1, $orderLine->total_localtax2, 0, 'HT', $info_bits, $orderLine->product_type);	
+                $tabprice = calcul_price_total($orderLine->qty, $orderLine->subprice, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, 'HT', $info_bits, $orderLine->product_type);	
                 $pu_ht = $tabprice[3];
                 $pu_ttc = $tabprice[5];
-            }			
+            }
             
             if (ExtDirect::checkDolVersion() >= 3.5) {
                 $this->id = $orderLine->fk_commande;
@@ -1071,8 +1075,8 @@ class ExtDirectCommande extends Commande
                     $pu_ht,
                     $orderLine->qty,
                     $tva_tx,
-                    $orderLine->localtax1_tx,
-                    $orderLine->localtax2_tx,
+                    $localtax1_tx,
+                    $localtax2_tx,
                     $orderLine->fk_product,
                     $orderLine->remise_percent,
                     $info_bits,
@@ -1099,8 +1103,8 @@ class ExtDirectCommande extends Commande
                     $pu_ht,
                     $orderLine->qty,
                     $tva_tx,
-                    $orderLine->localtax1_tx,
-                    $orderLine->localtax2_tx,
+                    $localtax1_tx,
+                    $localtax2_tx,
                     $orderLine->fk_product,
                     $orderLine->remise_percent,
                     $info_bits,
@@ -1171,6 +1175,10 @@ class ExtDirectCommande extends Commande
                                 $tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
                                 $tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
                             }
+
+                            // Local Taxes
+                            $localtax1_tx = get_localtax($tva_tx, 1, $this->thirdparty);
+                            $localtax2_tx = get_localtax($tva_tx, 2, $this->thirdparty);
                             
                             $info_bits = 0;
                             if ($tva_npr) {
@@ -1186,8 +1194,8 @@ class ExtDirectCommande extends Commande
                                 $orderLine->qty, 
                                 $orderLine->remise_percent, 
                                 $tva_tx, 
-                                $orderLine->total_localtax1,
-                                $orderLine->total_localtax2, 
+                                $localtax1_tx,
+                                $localtax2_tx, 
                                 'HT', 
                                 $info_bits, 
                                 $orderLine->date_start, 
