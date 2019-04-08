@@ -141,7 +141,18 @@ class ExtDirectProduct extends Product
                     //! Arrays for multiprices
                     $row->price=$this->multiprices[$multiprices_index]?$this->multiprices[$multiprices_index]:'';
                     $row->price_ttc=$this->multiprices_ttc[$multiprices_index]?$this->multiprices_ttc[$multiprices_index]:'';
-                    $row->tva_tx=$this->multiprices_tva_tx[$multiprices_index]?$this->multiprices_tva_tx[$multiprices_index]:'';
+                    if (! empty($conf->global->PRODUIT_MULTIPRICES_USE_VAT_PER_LEVEL) || empty($socid))  // using this option is a bug. kept for backward compatibility
+                    {
+                        $row->tva_tx=$this->multiprices_tva_tx[$multiprices_index]?$this->multiprices_tva_tx[$multiprices_index]:'';
+                    } else {
+                        $customer = new Societe($this->db);
+                        if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
+                        $mysoc = new Societe($this->db);
+                        $mysoc->setMysoc($conf);
+                        if ($result > 0 && $mysoc->id > 0) {
+                            $row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
+                        }
+                    }
                     $row->price_base_type=$this->multiprices_base_type[$multiprices_index];
                     $row->multiprices_index=$multiprices_index;
                 } else if (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) { // Price by customer
@@ -166,9 +177,9 @@ class ExtDirectProduct extends Product
                 $row->price_min_ttc= $this->price_min_ttc;     // Minimum price with tax
                 //! French VAT NPR (0 or 1)
                 $row->tva_npr= $this->tva_npr;
-                //! Spanish local taxes
-                $row->localtax1_tx= $this->localtax1_tx;
-                $row->localtax2_tx= $this->localtax2_tx;
+                //! local taxes
+                $row->localtax1_tx = $this->localtax1_tx;
+                $row->localtax2_tx = $this->localtax2_tx;
                 
                 // batch managed product
                 $row->has_batch = $this->status_batch;
@@ -247,7 +258,9 @@ class ExtDirectProduct extends Product
                 //! Stock alert
                 $row->seuil_stock_alerte= $this->seuil_stock_alerte;
                 $row->desiredstock= $this->desiredstock;
+                // warehouse
                 if (empty($row->warehouse_id)) $row->warehouse_id = $warehouse;
+                $row->default_warehouse_id = $this->fk_default_warehouse;
                 //! Duree de validite du service
                 $row->duration_value= $this->duration_value;
                 //! Unite de duree
@@ -1329,7 +1342,7 @@ class ExtDirectProduct extends Product
         
         //! French VAT NPR (0 or 1)
         $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_npr', 'tva_npr');
-        //! Spanish local taxes
+        //! local taxes
         $diff = ExtDirect::prepareField($diff, $param, $this, 'localtax1_tx', 'localtax1_tx');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'localtax2_tx', 'localtax2_tx');
         //! Stock alert
@@ -1391,6 +1404,7 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_id', 'fourn_id');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'desiredstock', 'desiredstock');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_reputation', 'supplier_reputation');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'default_warehouse_id', 'fk_default_warehouse');
         return $diff;
     }
     
