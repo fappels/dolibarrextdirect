@@ -515,7 +515,7 @@ class ExtDirectCommande extends Commande
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readOrdelList ".$error, LOG_ERR);
             return SQLERROR;
-        }   
+        }
     }
     
     /**
@@ -1285,11 +1285,10 @@ class ExtDirectCommande extends Commande
         isset($params->origin_id) ? ( $orderLine->fk_commande= $params->origin_id) : null;
         isset($params->product_id) ? ( $orderLine->fk_product = $params->product_id) : null;
         isset($params->subprice) ? ( $orderLine->subprice = $params->subprice) : null;
-        isset($params->product_tax) ? ( $orderLine->tva_tx = $params->product_tax) : null;
+        isset($params->product_tax) ? ( $orderLine->tva_tx = $params->product_tax) : (isset($params->tax_tx) ? ( $orderLine->tva_tx = $params->tax_tx) : null);
         isset($params->description) ? ( $orderLine->desc = $params->description) : null;
         isset($params->qty_asked) ? ( $orderLine->qty = $params->qty_asked) : null;
         isset($params->reduction_percent) ? ($orderLine->remise_percent = $params->reduction_percent) : null;
-        isset($params->tax_tx) ? ($orderLine->tva_tx = $params->tax_tx) : null;
         isset($params->localtax1_tx) ? ($orderLine->localtax1_tx = $params->localtax1_tx) : null;
         isset($params->localtax2_tx) ? ($orderLine->localtax2_tx = $params->localtax2_tx) : null;
         isset($params->product_type) ? ($orderLine->product_type = $params->product_type) : null;
