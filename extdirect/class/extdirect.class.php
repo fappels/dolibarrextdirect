@@ -477,13 +477,12 @@ class ExtDirect
      *
      * @return return validation 0 (not valid) or 1 (valid) or string with major.minor version
      */
-    
-    public static function checkDolVersion($validate = 0, $minVersion = '', $maxVersion = '') 
+    public static function checkDolVersion($validate = 0, $minVersion = '', $maxVersion = '')
     {
         $dolVersion = versiondolibarrarray();
         $dolMajorMinorVersion = $dolVersion[0].'.'.$dolVersion[1];
 
-        if($validate) 
+        if($validate)
         {
             $minVersion = '3.3';
             $maxVersion = '9.0'; // tested version
@@ -492,12 +491,12 @@ class ExtDirect
             return $dolMajorMinorVersion;
         } else {
             if (empty($minVersion)) $minVersion = '3.3';
-            if (empty($maxVersion)) $maxVersion = '9.0'; // debugging version
-            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) 
+            if (empty($maxVersion)) $maxVersion = '10.0'; // debugging version
+            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>='))
             {
             	return 1;
             }
-            else 
+            else
             {
                 return 0;
             }

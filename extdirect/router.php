@@ -177,7 +177,7 @@ function doAroundCalls(&$fns, &$cdata, &$returnData=null)
 /**
  * Security: Return true if OK, false otherwise.
  *
- * @param       unknown_type        &$var       Object/Array to check
+ * @param       unknown_type        $var       Object/Array to check
  * @param       int     $type       1=GET, 0=POST, 2=PHP_SELF
  * @return      boolean                 false if ther is an injection
  */
@@ -197,8 +197,11 @@ function object_analyse_sql_and_script(&$var, $type)
         }
         return true;
     } else {
-        //print_r($var);
-        return (test_sql_and_script_inject($var, $type) <= 0);
+        if (function_exists('test_sql_and_script_inject')) {
+            return (test_sql_and_script_inject($var, $type) <= 0);
+        } else {
+            return (testSqlAndScriptInject($var, $type) <= 0);
+        }
     }
 }
 

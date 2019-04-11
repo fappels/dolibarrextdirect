@@ -523,12 +523,13 @@ class ExtDirectCommande extends Commande
      *
      * @return     stdClass result data or error number
      */
-    public function readOrderStatus() 
+    public function readOrderStatus()
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = -1;
         while (($result = $this->LibStatut($statut, false, 1)) != '') {
+            if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
             $row->id = $statut++;
             $row->status = html_entity_decode($result);
@@ -1157,7 +1158,7 @@ class ExtDirectCommande extends Commande
                 // get old orderline
                 if (($result = $this->fetch($this->id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->fetch_lines()) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-                $this->fetch_thirdparty();         
+                $this->fetch_thirdparty();
                 
                 if (!$this->error) {
                     foreach ($this->lines as $orderLine) {

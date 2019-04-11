@@ -482,12 +482,13 @@ class ExtDirectFichinter extends Fichinter
      *
      * @return     stdClass result data or error number
      */
-    public function readStatus() 
+    public function readStatus()
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = 0;
         while (($result = $this->LibStatut($statut, 1)) != '') {
+            if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
             $row->id = $statut++;
             $row->status = html_entity_decode($result);

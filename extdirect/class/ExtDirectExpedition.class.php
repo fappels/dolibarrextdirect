@@ -477,12 +477,13 @@ class ExtDirectExpedition extends Expedition
      *
      * @return     stdClass result data or error number
      */
-    public function readShipmentStatus() 
+    public function readShipmentStatus()
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = 0;
         while (($result = $this->LibStatut($statut, 1)) !== null) {
+            if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
             $row->id = $statut;
             $row->status = html_entity_decode($result);
