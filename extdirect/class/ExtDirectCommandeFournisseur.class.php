@@ -432,7 +432,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
         
-        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc";
+        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
         $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
