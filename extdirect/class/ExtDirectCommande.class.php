@@ -286,7 +286,11 @@ class ExtDirectCommande extends Commande
                         $result = $this->cancel();
                         break;
                     case 0:
-                        $result = $this->set_draft($this->_user);
+                        if (ExtDirect::checkDolVersion(0, '10.0', '')) {
+                            $result = $this->setDraft($this->_user);
+                        } else {
+                            $result = $this->set_draft($this->_user);
+                        }
                         break;
                     case 1:
                         // set global $mysoc required to set pdf sender
