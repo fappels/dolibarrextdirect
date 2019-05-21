@@ -139,7 +139,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 }
                 //! -1 for cancelled, 0 for draft, 1 for validated, 2 for send, 3 for closed
                 $row->orderstatus_id = $this->statut;
-                $row->orderstatus = $this->getLibStatut(1);
+                $row->orderstatus = html_entity_decode($this->getLibStatut(1));
                 $row->note_private = $this->note_private;
                 $row->note_public = $this->note_public;
                 $row->user_id = $this->user_author_id;
@@ -1260,6 +1260,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'product_price', 'fourn_unitprice');
         $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'ref_supplier', 'ref_supplier');
         $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'ref_supplier_id', 'product_fourn_price_id');
+        $diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'product_id', 'product_fourn_id');
         return $diff;
     }
     
