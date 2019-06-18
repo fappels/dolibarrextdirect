@@ -82,6 +82,9 @@ $API = array(
             ),
             'readOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -110,6 +113,9 @@ $API = array(
             ),
             'readOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -192,8 +198,7 @@ $API = array(
             ),
             'readSupplierReputations'=>array(
                     'len'=>1
-            )
-            ,
+            ),
             'readProductUnits'=>array(
                     'len'=>1
             )
@@ -292,6 +297,9 @@ $API = array(
             ),
             'readLineOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -344,6 +352,9 @@ $API = array(
             ),
             'readLineOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -396,6 +407,9 @@ $API = array(
             ),
             'readLineOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -448,6 +462,9 @@ $API = array(
             ),
             'readLineOptionals'=>array(
                     'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     )

@@ -571,7 +571,7 @@ class ExtDirectCommande extends Commande
      * @return     stdClass result data or error number
      */
 
-    function readAvailabilityCodes()
+    public function readAvailabilityCodes()
     {
         global $langs;
 
@@ -615,7 +615,7 @@ class ExtDirectCommande extends Commande
      * @return     stdClass result data or error number
      */
 
-    function readShipmentModes()
+    public function readShipmentModes()
     {
         global $langs;
 
@@ -663,7 +663,7 @@ class ExtDirectCommande extends Commande
      * @return     stdClass result data or error number
      */
 
-    function readIncotermCodes()
+    public function readIncotermCodes()
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
@@ -698,6 +698,44 @@ class ExtDirectCommande extends Commande
         }  else {
             return $results;
         }
+    }
+
+    /**
+     * Ext.direct method to upload file for order object
+     * 
+     * @param unknown_type $params object or object array with uploaded file(s)
+     * @return Array    ExtDirect response message
+     */
+    public function fileUpload($params) 
+    {
+        global $conf;
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+        $dir = null;
+        
+        foreach ($paramArray as &$param) {
+            if (isset($param['extTID'])) 
+            {
+                $id = $param['extTID'];
+                if ($this->fetch($id)) 
+                {
+                    $this->fetch_thirdparty();
+                    $dir = $conf->commande->dir_output . "/" . dol_sanitizeFileName($this->ref);
+                }
+                else
+                {
+                    $response = PARAMETERERROR;
+                    $break;
+                }
+            } elseif (isset($param['file']) && isset($dir)) {
+                $response = ExtDirect::fileUpload($param, $dir);
+            } else {
+                $response = PARAMETERERROR;
+                $break;
+            }
+        }
+        return $response;
     }
     
     /**

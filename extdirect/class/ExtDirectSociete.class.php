@@ -23,8 +23,6 @@
  *  \brief      Sencha Ext.Direct third party remoting class
  */
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
-require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
-require_once DOL_DOCUMENT_ROOT.'/core/lib/images.lib.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 
@@ -1094,52 +1092,35 @@ class ExtDirectSociete extends Societe
     /**
      * Ext.direct method to upload image file for societe object
      * 
-     * @param unknown_type $params object or object array with societe model(s)
-     * @return Ambigous <multitype:, unknown_type>|unknown
+     * @param unknown_type $params object or object array with uploaded file(s)
+     * @return Array    ExtDirect response message
      */
-    function fileUpload($params) 
+    public function fileUpload($params) 
     {
         global $conf;
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
+        $dir = null;
         
-
         foreach ($paramArray as &$param) {
-            // prepare fields
-            $value = $param;
-            if (isset($param['extTID'])) $id = $param['extTID'];
-            if (is_array($param['photo'])){
-                $dir     = $conf->societe->multidir_output[$conf->entity]."/".$id."/";
-                $file_OK = is_uploaded_file($param['photo']['tmp_name']);
-                if ($file_OK)
+            if (isset($param['extTID'])) 
+            {
+                $id = $param['extTID'];
+                if ($id)
                 {
-                    if (image_format_supported($param['photo']['name']))
-                    {
-                        dol_mkdir($dir);
-
-                        if (@is_dir($dir))
-                        {
-                            $newfile=$dir.'/'.dol_sanitizeFileName($param['photo']['name']);
-                            $result = dol_move_uploaded_file($param['photo']['tmp_name'], $newfile,0,0,$param['photo']['error']);
-
-                            if (is_string($result))
-                            {
-                                $errors[] = $result;
-                                $response = ExtDirect::getDolError($result, $errors, $result);
-                            }
-                            else
-                            {
-                                // Create thumbs
-                                $this->addThumbs($newfile);
-                                $response = array(
-                                    'success' => true,
-                                    'message' => 'Successful upload: ' . $param['photo']['name']
-                                );
-                            }
-                        }
-                    }
+                    $dir = $conf->societe->multidir_output[$conf->entity]."/".$id."/";
                 }
+                else
+                {
+                    $response = PARAMETERERROR;
+                    $break;
+                }
+            } elseif (isset($param['file']) && isset($dir)) {
+                $response = ExtDirect::fileUpload($param, $dir);
+            } else {
+                $response = PARAMETERERROR;
+                $break;
             }
         }
         return $response;

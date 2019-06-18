@@ -26,6 +26,8 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/product.lib.php'; // required for showing product units in pdf's from version 4.0
+require_once DOL_DOCUMENT_ROOT.'/core/lib/images.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 
 /**
@@ -485,7 +487,7 @@ class ExtDirect
         if($validate)
         {
             $minVersion = '3.3';
-            $maxVersion = '9.0'; // tested version
+            $maxVersion = '10.0'; // tested version
         }
         if (empty($minVersion) && empty($maxVersion)) {
             return $dolMajorMinorVersion;
@@ -673,5 +675,58 @@ class ExtDirect
             }
         }
         return $results;
+    }
+
+    /**
+     * Upload file to ECM
+     * 
+     * @param Array     $param ExtDirect uploaded item
+     * @param String    Object dir
+     * 
+     * @return Array    ExtDirect response message
+     */
+    public static function fileUpload($param, $dir)
+    {
+        global $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
+        
+        $response = PARAMETERERROR;
+        
+        if (is_array($param['file']) && is_uploaded_file($param['file']['tmp_name']))
+        {
+            dol_mkdir($dir);
+            if (@is_dir($dir))
+            {
+                $newfile=$dir.'/'.dol_sanitizeFileName($param['file']['name']);
+                $result = dol_move_uploaded_file($param['file']['tmp_name'], $newfile,0,0,$param['file']['error']);
+
+                if (is_string($result))
+                {
+                    $errors[] = $result;
+                    $response = ExtDirect::getDolError($result, $errors, $result);
+                }
+                else
+                {
+                    if (image_format_supported($newfile) > 0) {
+                        // Create thumbs
+                        $file_osencoded=dol_osencode($newfile);
+                        if (file_exists($file_osencoded))
+                        {
+                            // Create small thumbs (Ratio is near 16/9)
+                            // Used on logon for example
+                            vignette($file_osencoded, $maxwidthsmall, $maxheightsmall, '_small', $quality);
+
+                            // Create mini thumbs (Ratio is near 16/9)
+                            // Used on menu or for setup page for example
+                            vignette($file_osencoded, $maxwidthmini, $maxheightmini, '_mini', $quality);
+                        }
+                    }
+                    $response = array(
+                        'success' => true,
+                        'message' => 'Successful upload: ' . $param['file']['name']
+                    );
+                }
+            }
+        }
+        return $response;
     }
 }

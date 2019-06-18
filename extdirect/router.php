@@ -215,7 +215,11 @@ if (is_array($data)) {
     $response = doRpc($data);
 }
 if ($isForm && $isUpload) {
-    echo json_encode($response['result'], true);
+    if ($response['type'] == 'exception') {
+        echo json_encode($response['message'], JSON_FORCE_OBJECT);
+    } else {
+        echo json_encode($response['result'], JSON_FORCE_OBJECT);
+    }
 } else {
     echo json_encode($response);
 }
