@@ -187,7 +187,7 @@ class ExtDirectProduct extends Product
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
                     if (ExtDirect::checkDolVersion() >= 3.5) {
-                        $this->load_stock('warehouseopen, warehouseinternal');
+                        $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                     } 
                     if (ExtDirect::checkDolVersion() >= 3.8) {
                         $row->pmp = $this->pmp;
@@ -229,7 +229,7 @@ class ExtDirectProduct extends Product
                         // fetch qty and warehouse of first batch found
                         $formProduct = new FormProduct($this->db);                        
                         if (ExtDirect::checkDolVersion() >= 3.5) {
-                            $this->load_stock('warehouseopen, warehouseinternal');
+                            $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                         }
                         $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
@@ -685,7 +685,7 @@ class ExtDirectProduct extends Product
                 // check batch or non batch
                 if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
                     //! Stock
-                    $this->load_stock('warehouseopen, warehouseinternal');
+                    $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                     $originalQty = $param->stock_reel;
                     $stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
                     $createNewBatchFromZeroStock = false;
@@ -861,7 +861,7 @@ class ExtDirectProduct extends Product
                             $productBatch->fetch($param->batch_id);
                         } else {         
                             if ($createNewBatchFromZeroStock) {
-                                $this->load_stock();
+                                $this->load_stock('novirtual');
                             }    
                             if (isset($this->stock_warehouse[$param->warehouse_id]->id)) {
                                 $productBatch->find($this->stock_warehouse[$param->warehouse_id]->id,ExtDirect::dateTimeToDate($param->eatby),ExtDirect::dateTimeToDate($param->sellby),$param->batch);
@@ -1266,7 +1266,7 @@ class ExtDirectProduct extends Product
         if (empty($conf->productbatch->enabled) || empty($id) || !isset($warehouseId)) return PARAMETERERROR;
         
         $this->id = $id;
-        if (($res = $this->load_stock('warehouseopen, warehouseinternal')) < 0) return $res; 
+        if (($res = $this->load_stock('novirtual, warehouseopen, warehouseinternal')) < 0) return $res; 
                
         if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
             require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';

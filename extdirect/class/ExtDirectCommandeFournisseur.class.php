@@ -659,7 +659,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $myprod = new ExtDirectProduct($this->_user->login);
                             if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                             if (ExtDirect::checkDolVersion() >= 3.5) {
-                                if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                                if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                             } 
                         } else {
                             $isFreeLine = true;
