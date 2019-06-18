@@ -38,22 +38,23 @@ $rawData = file_get_contents("php://input");
 if (!empty($rawData)) {
     header('Content-Type: text/javascript');
     $data = json_decode($rawData);
-    if (empty($data)) { // binary data
-        die('Binary data.');
-    }
-} else if (isset($_POST['extAction'])) {
-    $isForm = true;
-    $isUpload = $_POST['extUpload'] == 'true';
-    $data = new BogusAction();
-    $data->action = $_POST['extAction'];
-    $data->method = $_POST['extMethod'];
-    $data->tid = isset($_POST['extTID']) ? $_POST['extTID'] : null; // not set for upload
-    $data->data = array($_POST, $_FILES);
-} else if (isset($debugData)) {
-    $data = json_decode($debugData);
-} else { 
-    die('Invalid request.');
 }
+if (empty($rawData) || empty($data)) {
+    if (isset($_POST['extAction'])) {
+        $isForm = true;
+        $isUpload = $_POST['extUpload'] == 'true';
+        $data = new BogusAction();
+        $data->action = $_POST['extAction'];
+        $data->method = $_POST['extMethod'];
+        $data->tid = isset($_POST['extTID']) ? $_POST['extTID'] : null; // not set for upload
+        $data->data = array($_POST, $_FILES);
+    } else if (isset($debugData)) {
+        $data = json_decode($debugData);
+    } else { 
+        echo json_encode('Invalid request.');
+    }
+}
+
 
 function doRpc($cdata)
 {

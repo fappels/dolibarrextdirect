@@ -690,7 +690,7 @@ class ExtDirect
         global $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
         
         $response = array(
-            'success' => true,
+            'success' => false,
             'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
         );
         

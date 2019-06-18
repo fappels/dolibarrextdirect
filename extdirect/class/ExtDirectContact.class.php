@@ -454,7 +454,7 @@ class ExtDirectContact extends Contact
                 $id = $param['extTID'];
                 if ($this->fetch($id))
                 {
-                    $conf->societe->multidir_output[$this->entity].'/contact/'.dol_sanitizeFileName($this->ref);
+                    $dir = $conf->societe->multidir_output[$this->entity].'/contact/'.dol_sanitizeFileName($this->ref);
                 }
                 else
                 {
