@@ -693,6 +693,11 @@ class ExtDirect
             'success' => false,
             'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
         );
+
+        if (empty($conf->global->MAIN_UPLOAD_DOC)) {
+            // block upload
+            return $response;
+        }
         
         if (is_array($param['file']) && is_uploaded_file($param['file']['tmp_name']))
         {
