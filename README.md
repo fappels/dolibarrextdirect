@@ -107,6 +107,48 @@ Client CRUD calls:
     products.removeAt(products.find('ref','CT0001'));
     products.sync();
 
+For client File uploads create an upload fieldset like below, set extTID field value with related object id. Submit your form to router.php.
+
+	{
+		xtype: 'fieldset',
+		itemId: 'filefieldset',
+		title: 'File',
+		items:[
+			{
+				xtype: 'hiddenfield',
+				name: 'extType',
+				value: "rpc"
+			},
+			{
+				xtype: 'hiddenfield',
+				itemId: 'exttid',
+				name: 'extTID'
+			},
+			{
+				xtype: 'hiddenfield',
+				name: 'extAction',
+				itemId: 'extaction',
+				value: "ExtDirectCommande"
+			},
+			{
+				xtype: 'hiddenfield',
+				name: 'extMethod',
+				value: "fileUpload"
+			},
+			{
+				xtype: 'hiddenfield',
+				name: 'extUpload',
+				value: "true"
+			},
+			{
+				xtype: "filefield",
+				label: "Select file",
+				capture: "environment",
+				name: 'file'
+			}
+		]
+	}
+
 **Currently provided Classes:**
 
 - Authentication
@@ -145,4 +187,4 @@ Demo data from dev/initdemo should work. Add two multiprice levels and a string 
 **Supported Dolibarr Versions:**
 
 - Min version:	3.3
-- Max version:	9.0
+- Max version:	10.0
