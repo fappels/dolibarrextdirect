@@ -333,7 +333,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->mode_reglement_id) &&
                     ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                
+                if (isset($this->remise_percent) && 
+                    ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -598,6 +599,74 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             array_push($results, $row);
         }
         return $results;
+    }
+
+    // phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
+    // TODO push to dolibar core, into common_object with ifelse on trigger name
+    /**
+     * 	Applique une remise relative
+     *
+     * 	@param     	User		$user		User qui positionne la remise
+     * 	@param     	float		$remise		Discount (percent)
+     * 	@param     	int			$notrigger	1=Does not execute triggers, 0= execute triggers
+     *	@return		int 					<0 if KO, >0 if OK
+        */
+    private function set_remise($user, $remise, $notrigger = 0)
+    {
+        // phpcs:enable
+        $remise=trim($remise)?trim($remise):0;
+
+        if ($user->rights->commande->creer)
+        {
+            $error=0;
+
+            $this->db->begin();
+
+            $remise=price2num($remise);
+
+            $sql = 'UPDATE '.MAIN_DB_PREFIX.$this->table_element;
+            $sql.= ' SET remise_percent = '.$remise;
+            $sql.= ' WHERE rowid = '.$this->id.' AND fk_statut = '.self::STATUS_DRAFT.' ;';
+
+            dol_syslog(__METHOD__, LOG_DEBUG);
+            $resql=$this->db->query($sql);
+            if (!$resql)
+            {
+                $this->errors[]=$this->db->error();
+                $error++;
+            }
+
+            if (! $error)
+            {
+                $this->oldcopy= clone $this;
+                $this->remise_percent = $remise;
+                $this->update_price(1);
+            }
+
+            if (! $notrigger && empty($error))
+            {
+                // Call trigger
+                $result=$this->call_trigger('ORDER_SUPPLIER_MODIFY', $user);
+                if ($result < 0) $error++;
+                // End call triggers
+            }
+
+            if (! $error)
+            {
+                $this->db->commit();
+                return 1;
+            }
+            else
+            {
+                foreach($this->errors as $errmsg)
+                {
+                    dol_syslog(__METHOD__.' Error: '.$errmsg, LOG_ERR);
+                    $this->error.=($this->error?', '.$errmsg:$errmsg);
+                }
+                $this->db->rollback();
+                return -1*$error;
+            }
+        }
     }
     
     /**
