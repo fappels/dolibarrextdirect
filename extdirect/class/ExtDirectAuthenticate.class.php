@@ -65,11 +65,11 @@ class ExtDirectAuthenticate extends ExtDirect
     {
         $paramArray = ExtDirect::toArray($params);
         foreach ($paramArray as &$param) {
+            if (!empty($param->ack_id)) return PARAMETERERROR;
             $this->prepareAuthenticationFields($param);
             dol_syslog(get_class($this)."::create webview name= ". $param->webview_name ." webview version= ". $param->webview_version, LOG_DEBUG);
             // check if already acknowledged, return PARAMETERERROR if so
             if (($resql = $this->fetch(0, $this->app_id)) < 0) return $resql;
-            if (!empty($this->ack_id)) return PARAMETERERROR;
             if (empty($this->id)) {
                 // create user app record
                 $this->fk_user=null;
@@ -171,7 +171,7 @@ class ExtDirectAuthenticate extends ExtDirect
     }
     
     /**
-     * Ext.direct method to update authorisation details, update not possible.
+     * Ext.direct method to update authorisation details.
      *
      * @param unknown_type $param parameter
      * 
@@ -179,7 +179,30 @@ class ExtDirectAuthenticate extends ExtDirect
      */
     public function updateAuthentication($param) 
     {
-        return PARAMETERERROR;// no update possible
+        if (!isset($this->db)) return CONNECTERROR;
+        // dolibarr update settings
+
+        $paramArray = ExtDirect::toArray($param);
+        foreach ($paramArray as &$param) {
+            // prepare fields
+            if ($param->id && !empty($param->ack_id)) {
+                $id = $param->id;
+                $this->id = $id;
+                if (($result = $this->fetch($id)) < 0)    return $result;
+                if ($this->prepareAuthenticationFields($param)) {
+                    // update
+                    $this->date_last_connect=dol_now();
+                    if (($result = $this->update($this->_user)) < 0)   return $result;
+                };
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
     
     /**
@@ -214,18 +237,17 @@ class ExtDirectAuthenticate extends ExtDirect
      * private method to copy order fields into dolibarr object
      *
      * @param stdclass $params object with fields
-     * @return null
+     * @return boolean true if there is an update
      */
-    private function prepareAuthenticationFields($params) 
+    private function prepareAuthenticationFields($param) 
     {
-        isset($params->requestid) ? ( $this->requestid = $params->requestid ) : ( $this->requestid = null);
-        isset($params->app_id) ? ( $this->app_id = $params->app_id ) : ( $this->app_id = null);
-        isset($params->app_name) ? ( $this->app_name = $params->app_name) : ( $this->app_name = null);
-        isset($params->dev_platform) ? ( $this->dev_platform = $params->dev_platform) : ( $this->dev_platform = null);
-        isset($params->dev_type) ? ( $this->dev_type = $params->dev_type) : ($this->dev_type  = 0);
-        isset($params->fk_user) ? ( $this->fk_user =$params->fk_user) : ( $this->fk_user= null);
-        isset($params->ack_id) ? ( $this->ack_id = $params->ack_id ) : ($this->ack_id = null);
-        isset($params->datec) ? ( $this->datec = $params->datec) : ($this->datec = null);
-        isset($params->date_last_connect) ? ( $this->date_last_connect =$params->date_last_connect) : ($this->date_last_connect = null);
+        $diff = false; // difference flag, set to true if a param element diff detected
+        $diff = self::prepareField($diff, $param, $this, 'requestid', 'requestid');
+        $diff = self::prepareField($diff, $param, $this, 'app_id', 'app_id');
+        $diff = self::prepareField($diff, $param, $this, 'app_name', 'app_name');
+        $diff = self::prepareField($diff, $param, $this, 'dev_platform', 'dev_platform');
+        $diff = self::prepareField($diff, $param, $this, 'dev_type', 'dev_type');
+        
+        return $diff;
     }
 }

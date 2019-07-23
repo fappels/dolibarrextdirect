@@ -310,11 +310,14 @@ class ExtDirect
                 $this->dev_platform = $obj->dev_platform;
                 $this->dev_type = $obj->dev_type;
 
-                
+                return 1;
+            } else {
+                return 0;
             }
+
             $this->db->free($resql);
 
-            return 1;
+           
         } else {
             $this->error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::fetch ".$this->error, LOG_ERR);
