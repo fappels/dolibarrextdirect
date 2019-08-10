@@ -1508,23 +1508,25 @@ class ExtDirectProduct extends Product
                     if (empty($batchValue)) {
                         $row->id = $id.'_'.$batch->id;
                         $num++;
-                	    array_push($results, clone $row);
+                        array_push($results, clone $row);
                     } else if (($batchValue == $batch->batch)) {
                         $row->id = $id;
                         $num++;
-                	    array_push($results, clone $row);
+                        array_push($results, clone $row);
                     }
                 } else if ($batchId == $batch->id) {
                 	$row->id = $id;
                     $num++;
-                	array_push($results, clone $row);
+                    array_push($results, clone $row);
                 }
                 $batchesQty += $batch->qty;
             }
         } else if(isset($row->id)) {
             // no batch
             $num++;
-            array_push($results, $row);
+            $row->is_sub_product = false;
+            array_push($results, clone $row);
+            $this->fetchSubProducts($results, $row);
         }
         
         if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
@@ -1723,6 +1725,40 @@ class ExtDirectProduct extends Product
             return $barcode['code'];
         } else {
             return $this->barcode;
+        }
+    }
+
+    /**
+     * Add subproducts to results
+     *
+     * @param array &$results array to store batches
+     * @param object $row object with product data to add to results
+     *
+     * @return void
+     */
+    public function fetchSubProducts(&$results, $row) {
+        global $conf;
+
+        if (! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
+            $this->get_sousproduits_arbo();
+            if (isset($this->sousprods)) {
+                $prods_arbo = $this->get_arbo_each_prod($row->qty_asked);
+                if (count($prods_arbo) > 0) {
+                    $rowId = $row->id;
+                    $rowLabel = $row->label;
+                    foreach($prods_arbo as $key => $value) {
+                        $row->id = $rowId.'_'.$value['id'];
+                        $row->is_sub_product = true;
+                        $row->product_id = $value['id'];
+                        $row->ref = $value['ref'];
+                        $row->product_label = $value['label'];
+                        $row->label = $rowLabel.' -> '.$value['fullpath'];
+                        $row->qty_asked = $value['nb_total'];
+                        $row->stock = $value['stock'];
+                        array_push($results, clone $row);
+                    }
+                }
+            }
         }
     }
 }

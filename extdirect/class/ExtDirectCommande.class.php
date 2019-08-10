@@ -764,6 +764,7 @@ class ExtDirectCommande extends Commande
         $order_id = 0;
         $photoSize = '';
         $onlyProduct = 1;
+        $hasSubProductFilter = false;
 
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -773,7 +774,19 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
                 if ($filter->property == 'multiprices_index'  && !empty($filter->value)) $multiprices_index = $filter->value;
                 if ($filter->property == 'only_product') $onlyProduct=$filter->value;
+                if ($filter->property == 'is_sub_product') {
+                    $hasSubProductFilter = true;
+                    if ($filter->value == false) {
+                        // do not show sub products
+                        $conf->global->PRODUIT_SOUSPRODUITS = false;
+                    }
+                }
             }
+        }
+
+        if (! $hasSubProductFilter) {
+            // do not show sub products
+            $conf->global->PRODUIT_SOUSPRODUITS = false;
         }
 
         if ($order_id > 0) {
@@ -788,7 +801,10 @@ class ExtDirectCommande extends Commande
                     if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                     if (ExtDirect::checkDolVersion() >= 3.5) {
                         if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
-                    } 
+                    }
+                    if (! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
+                        $myprod->get_sousproduits_arbo();
+                    }
                     if ($line->product_type == 1) {
                         $isService = true;
                     }
@@ -843,19 +859,23 @@ class ExtDirectCommande extends Commande
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                             $row->stock = $myprod->stock_reel;
                             $row->total_stock = $row->stock;
-                            if ($isService) {
-                                $row->warehouse_id = -1; // service is not stocked
-                            } else if ($isFreeLine) {
-                                $row->warehouse_id = 0; // freeline is not in a specific stock location
-                            } else {
-                                $row->warehouse_id = $warehouse_id;
-                            }
                             $row->has_photo = 0;
                             if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
                             $row->unit_id = $line->fk_unit;
-                            array_push($results, $row);
+                            $row->is_sub_product = false;
+                            if ($isService) {
+                                $row->warehouse_id = -1; // service is not stocked
+                                array_push($results, $row);
+                            } else if ($isFreeLine) {
+                                $row->warehouse_id = 0; // freeline is not in a specific stock location
+                                array_push($results, $row);
+                            } else {
+                                $row->warehouse_id = $warehouse_id;
+                                array_push($results, $row);
+                                $myprod->fetchSubProducts($results, $row);
+                            }
                         } else {
                             // get orderline with stock of warehouse
                             if (!isset($warehouse_id)) {
@@ -915,8 +935,10 @@ class ExtDirectCommande extends Commande
                             $row->unit_id = $line->fk_unit;
                             // split orderlines by batch
                             $row->has_batch = $myprod->status_batch;
+                            $row->is_sub_product = false;
                             if (empty($conf->productbatch->enabled) || empty($line_warehouse_id)) {
                                 array_push($results, $row);
+                                $myprod->fetchSubProducts($results, $row);
                             } else {
                                 if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id)) < 0) return $res;
                             }
@@ -976,8 +998,10 @@ class ExtDirectCommande extends Commande
                                 $row->unit_id = $line->fk_unit;
                                 // split orderlines by batch
                                 $row->has_batch = $myprod->status_batch;
+                                $row->is_sub_product = false;
                                 if (empty($conf->productbatch->enabled)) {
                                     array_push($results, $row);
+                                    $myprod->fetchSubProducts($results, $row);
                                 } else {
                                     if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
                                 }
