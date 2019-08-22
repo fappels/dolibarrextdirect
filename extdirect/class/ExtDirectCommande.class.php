@@ -874,7 +874,7 @@ class ExtDirectCommande extends Commande
                             } else {
                                 $row->warehouse_id = $warehouse_id;
                                 array_push($results, $row);
-                                $myprod->fetchSubProducts($results, $row);
+                                $myprod->fetchSubProducts($results, clone $row);
                             }
                         } else {
                             // get orderline with stock of warehouse
@@ -938,7 +938,7 @@ class ExtDirectCommande extends Commande
                             $row->is_sub_product = false;
                             if (empty($conf->productbatch->enabled) || empty($line_warehouse_id)) {
                                 array_push($results, $row);
-                                $myprod->fetchSubProducts($results, $row);
+                                $myprod->fetchSubProducts($results, clone $row);
                             } else {
                                 if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id)) < 0) return $res;
                             }
@@ -1001,7 +1001,7 @@ class ExtDirectCommande extends Commande
                                 $row->is_sub_product = false;
                                 if (empty($conf->productbatch->enabled)) {
                                     array_push($results, $row);
-                                    $myprod->fetchSubProducts($results, $row);
+                                    $myprod->fetchSubProducts($results, clone $row);
                                 } else {
                                     if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id)) < 0) return $res;
                                 }
