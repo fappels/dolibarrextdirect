@@ -140,7 +140,7 @@ class InterfaceExtDirectUserSynchro
         else*/
         if ($action == 'USER_DELETE') {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
-            require(DOL_DOCUMENT_ROOT."/extdirect/class/extdirect.class.php");
+            dol_include_once("/extdirect/class/extdirect.class.php");
             
             $extDirect = new ExtDirect($this->db);
             $extDirect->fetchList("fk_user = '" . $object->id . "'");
