@@ -690,7 +690,7 @@ class ExtDirect
      */
     public static function fileUpload($param, $dir)
     {
-        global $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
+        global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
         
         $response = array(
             'success' => false,
