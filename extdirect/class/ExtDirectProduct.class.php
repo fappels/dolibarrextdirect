@@ -1741,6 +1741,7 @@ class ExtDirectProduct extends Product
         global $conf;
 
         if (! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
+            $product_id = $this->id;
             $this->get_sousproduits_arbo();
             if (isset($this->sousprods)) {
                 $prods_arbo = $this->get_arbo_each_prod($row->qty_asked);
@@ -1750,6 +1751,7 @@ class ExtDirectProduct extends Product
                     foreach($prods_arbo as $key => $value) {
                         $row->id = $rowId.'_'.$value['id'];
                         $row->is_sub_product = true;
+                        $row->sub_product_parent_id = $product_id;
                         $row->product_id = $value['id'];
                         $row->ref = $value['ref'];
                         $row->product_label = $value['label'];
