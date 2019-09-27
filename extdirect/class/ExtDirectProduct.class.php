@@ -1480,7 +1480,7 @@ class ExtDirectProduct extends Product
      * 
      * @return int < 0 if error > 0 if OK
      */
-    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false, $batchId = null, $batchValue = '') {
+    public function fetchBatches(&$results,$row,$id,$warehouseId,$productStockId,$includeNoBatch = false, $batchId = null, $batchValue = '', $photoFormat = '') {
         require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
         $batches = array();
         $batchesQty = 0;
@@ -1526,7 +1526,8 @@ class ExtDirectProduct extends Product
             $num++;
             $row->is_sub_product = false;
             array_push($results, clone $row);
-            $this->fetchSubProducts($results, $row);
+            $this->fetchSubProducts($results, $row, $photoFormat);
+            $this->fetch($product_id);
         }
         
         if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
@@ -1736,7 +1737,7 @@ class ExtDirectProduct extends Product
      *
      * @return void
      */
-    public function fetchSubProducts(&$results, $row) {
+    public function fetchSubProducts(&$results, $row, $photoFormat = '') {
         global $conf;
 
         if (! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
@@ -1755,6 +1756,10 @@ class ExtDirectProduct extends Product
                         $row->label = $rowLabel.' -> '.$value['fullpath'];
                         $row->qty_asked = $value['nb_total'];
                         $row->stock = $value['stock'];
+                        $row->has_photo = 0;
+                        $subProduct = new Product($this->db);
+                        $subProduct->fetch($value['id']);
+                        $this->fetchPhoto($row, $photoFormat, 0, $subProduct);
                         array_push($results, clone $row);
                     }
                 }
