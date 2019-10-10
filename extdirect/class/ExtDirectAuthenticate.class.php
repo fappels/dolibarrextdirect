@@ -65,6 +65,7 @@ class ExtDirectAuthenticate extends ExtDirect
     {
         $paramArray = ExtDirect::toArray($params);
         foreach ($paramArray as &$param) {
+            if (!empty($param->ack_id)) return PARAMETERERROR;
             $this->prepareAuthenticationFields($param);
             dol_syslog(get_class($this)."::create webview name= ". $param->webview_name ." webview version= ". $param->webview_version, LOG_DEBUG);
             // check if already acknowledged, return PARAMETERERROR if so
