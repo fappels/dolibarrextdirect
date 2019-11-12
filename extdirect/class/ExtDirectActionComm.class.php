@@ -47,7 +47,7 @@ class ExtDirectActionComm extends ActionComm
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login, '', 1) > 0) {
+            if (get_class($db) == get_class($login) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
                 $this->_user = $user;
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -353,7 +353,11 @@ class ExtDirectActionComm extends ActionComm
             // prepare fields
             $this->prepareFields($param);
             // create
-            if (($result = $this->add($this->_user, $notrigger)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if (ExtDirect::checkDolVersion(0, '','10.0')) {
+                if (($result = $this->add($this->_user, $notrigger)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
+            } else {
+                if (($result = $this->create($this->_user, $notrigger)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
+            }
            
             $param->id=$this->id;
             $this->_societe->id=$this->socid;

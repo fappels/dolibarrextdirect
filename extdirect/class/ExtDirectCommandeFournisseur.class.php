@@ -64,7 +64,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login, '', 1)>0) {
+            if (get_class($db) == get_class($login) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {

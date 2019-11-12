@@ -46,17 +46,17 @@ class ExtDirectSociete extends Societe
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if (empty($user->id) && $user->fetch('', $login, '', 1) > 0) {
+            if (get_class($db) == get_class($login) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
+                $this->_user = $user;
+                if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+                    $langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
+                }
+                $langs->load("companies");
+                $langs->load("bills");
+                $langs->load("dict");
+                parent::__construct($db);
             }
-            $this->_user = $user;
-            if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
-                $langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
-            }
-            $langs->load("companies");
-            $langs->load("bills");
-            $langs->load("dict");
-            parent::__construct($db);
         }
     }
 

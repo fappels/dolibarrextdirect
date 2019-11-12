@@ -23,10 +23,18 @@
  */
 
 // Load Dolibarr environment
-if (false === (@include '../../main.inc.php')) {  // From htdocs directory
-	require '../../../main.inc.php'; // From "custom" directory
-    $custom = true;
-}
+$res=0;
+// Try main.inc.php into web root known defined into CONTEXT_DOCUMENT_ROOT (not always defined)
+if (! $res && ! empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) $res=@include($_SERVER["CONTEXT_DOCUMENT_ROOT"]."/main.inc.php");
+// Try main.inc.php into web root detected using web root calculated from SCRIPT_FILENAME
+$tmp=empty($_SERVER['SCRIPT_FILENAME'])?'':$_SERVER['SCRIPT_FILENAME'];$tmp2=realpath(__FILE__); $i=strlen($tmp)-1; $j=strlen($tmp2)-1;
+while($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i]==$tmp2[$j]) { $i--; $j--; }
+if (! $res && $i > 0 && file_exists(substr($tmp, 0, ($i+1))."/main.inc.php")) $res=@include(substr($tmp, 0, ($i+1))."/main.inc.php");
+if (! $res && $i > 0 && file_exists(dirname(substr($tmp, 0, ($i+1)))."/main.inc.php")) $res=@include(dirname(substr($tmp, 0, ($i+1)))."/main.inc.php");
+// Try main.inc.php using relative path
+if (! $res && file_exists("../../main.inc.php")) $res=@include("../../main.inc.php");
+if (! $res && file_exists("../../../main.inc.php")) $res=@include("../../../main.inc.php");
+if (! $res) die("Include of main fails");
 
 require_once(DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php");
 dol_include_once("/extdirect/class/extdirect.class.php");
@@ -152,7 +160,7 @@ if ($action && !$refresh && !(($action == 'selectall') || ($action == 'selectnon
 $title = $langs->trans('DirectConnectSetup');
 $tabsTitle = $langs->trans('DirectConnect');
 $tabs = array('tab1' => $authentication,'tab2' => $activities);
-$head = extdirect_admin_prepare_head($tabs, $custom);
+$head = extdirect_admin_prepare_head($tabs, $langs);
 
 llxHeader('', $title);
 $linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
@@ -337,22 +345,20 @@ $db->close();
  *  @param  Array   $tabs       tab names
  *  @return array               head array with tabs
  */
-function extdirect_admin_prepare_head($tabs, $custom)
+function extdirect_admin_prepare_head($tabs, $langs)
 {
+    global $conf;
+
     $h = 0;
     $head = array();
     
     foreach ($tabs as $key => $value) {
-        if ($custom) {
-            $head[$h][0] = DOL_URL_ROOT."/custom/extdirect/admin/extdirect.php?mode=".$value->mode;
-        } else {
-            $head[$h][0] = DOL_URL_ROOT."/extdirect/admin/extdirect.php?mode=".$value->mode;
-        }
+        $head[$h][0] = dol_buildpath("/extdirect/admin/extdirect.php?mode=".$value->mode, 1);
         
         $head[$h][1] = $value->title;
         $head[$h][2] = $key;
         $h++;
     }
-
+    complete_head_from_modules($conf, $langs, $object, $head, $h, 'extdirect');
     return $head;
 }
