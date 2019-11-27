@@ -221,11 +221,8 @@ class ExtDirectActionComm extends ActionComm
         if (isset($params->include_total)) {
             $includeTotal = $params->include_total;
         }
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
-        } else {
-            $sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.name as lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
-        }
+
+        $sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
@@ -246,11 +243,7 @@ class ExtDirectActionComm extends ActionComm
                     $sqlWhere.= "(ac.type = '".$this->db->escape($filter->value)."')";
                 else if ($filter->property == 'content') {
                     $contentValue = strtolower($filter->value);
-                    if (ExtDirect::checkDolVersion() >= 3.4) {
-                    	$sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    } else {
-                    	$sqlWhere.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    }                    
+                    $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
                     $sqlWhere.= " OR LOWER(s.nom) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contentValue."%')" ;
                 } else break;
                 if ($key < ($filterSize-1)) {
@@ -497,18 +490,10 @@ class ExtDirectActionComm extends ActionComm
         array_push($results, $row);
         
         $sql = "SELECT u.rowid, u.firstname,";
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql.= " u.lastname";
-        } else {
-            $sql.= " u.name as lastname";
-        }
+        $sql.= " u.lastname";
         $sql .= " FROM ".MAIN_DB_PREFIX."user as u";
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql .= " ORDER BY u.lastname ASC ";
-        } else {
-            $sql .= " ORDER BY u.name ASC ";
-        }
-                
+        $sql .= " ORDER BY u.lastname ASC ";
+
         $resql=$this->db->query($sql);
         
         if ($resql) {

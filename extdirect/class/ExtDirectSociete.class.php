@@ -133,7 +133,7 @@ class ExtDirectSociete extends Societe
         $results = array();        
     
         $sql = "SELECT rowid, code, libelle as label";
-        if (ExtDirect::checkDolVersion() >= 3.7) {
+        if (ExtDirect::checkDolVersion(0, '3.7')) {
             $sql = "SELECT rowid, code, label";
             $sql.= " FROM ".MAIN_DB_PREFIX."c_country";
         } else {
@@ -190,7 +190,7 @@ class ExtDirectSociete extends Societe
         array_push($results, $row);
 
         $sql = "SELECT d.rowid, d.code_departement as code , d.nom as label, p.rowid as country_id FROM";
-        if (ExtDirect::checkDolVersion() >= 3.7) {
+        if (ExtDirect::checkDolVersion(0, '3.7')) {
             $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_country as p";
         } else {
             $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_pays as p";
@@ -385,17 +385,13 @@ class ExtDirectSociete extends Societe
         if (isset($params->include_total)) {
             $includeTotal = $params->include_total;
         }
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sqlFields = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
-        } else {
-            $sqlFields = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.cp as zip, s.ville as town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
-        }
-        
+
+        $sqlFields = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
         $sqlFields .= ', st.libelle as commercial_status';
         $sqlFields .= ', c.rowid as categorie_id, c.label as categorie, s.fk_stcomm';
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
-        if (ExtDirect::checkDolVersion() >= 3.8) {
+        if (ExtDirect::checkDolVersion(0, '3.8')) {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
         } else {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
@@ -425,10 +421,8 @@ class ExtDirectSociete extends Societe
                     else if ($filter->property == 'supplier') 
                         $sqlWhere .= "s.fournisseur = ".$value;
                     else if ($filter->property == 'town') {
-                        if (ExtDirect::checkDolVersion() >= 3.4) {
-                            $sqlWhere .= "s.town = '".$this->db->escape($value)."'";
-                        } else {
-                            $sqlWhere .= "s.ville = '".$this->db->escape($value)."'";
+                        $sqlWhere .= "s.town = '".$this->db->escape($value)."'";
+                    } 
                         }
                     } 
                     else if ($filter->property == 'stcomm_id') 
@@ -444,11 +438,7 @@ class ExtDirectSociete extends Societe
                         $contentValue = strtolower($value);
                         $sqlWhere.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
                         $sqlWhere.= " OR LOWER(s.code_client) like '%".$contentValue."%' OR LOWER(s.code_fournisseur) like '%".$contentValue."%'" ;
-                        if (ExtDirect::checkDolVersion() >= 3.4) {
-                            $sqlWhere.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')" ;
-                        } else {
-                            $sqlWhere.= " OR LOWER(s.ville) like '%".$contentValue."%' OR LOWER(s.cp) like '%".$contentValue."%')" ;
-                        }
+                        $sqlWhere.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')";
                     } else {
                        $sqlWhere .= '1';
                     }
@@ -691,12 +681,8 @@ class ExtDirectSociete extends Societe
             
                 $row->client         = (int) $this->client;
                 $row->supplier    = (int) $this->fournisseur;
-                if (ExtDirect::checkDolVersion() >= 3.4) {
-                    $row->note_private   = $this->note_private;
-                    $row->note_public    = $this->note_public;
-                } else {
-                    $row->note_public    = $this->note;
-                }
+                $row->note_private   = $this->note_private;
+                $row->note_public    = $this->note_public;
             
                 $row->default_lang   = $this->default_lang;
                 if (!empty($this->logo)) {
@@ -799,15 +785,11 @@ class ExtDirectSociete extends Societe
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $error=0;
         $results = array();
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql = 'SELECT distinct s.town, s.zip';
-        } else {
-            $sql = 'SELECT distinct s.ville as town, s.cp as zip';
-        }
+        $sql = 'SELECT distinct s.town, s.zip';
         
         $sql .= ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_effectif as e ON s.fk_effectif = e.id';
-        if (ExtDirect::checkDolVersion() >= 3.7) {
+        if (ExtDirect::checkDolVersion(0, '3.7')) {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_country as p ON s.fk_pays = p.rowid';
         } else {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_pays as p ON s.fk_pays = p.rowid';
@@ -836,14 +818,8 @@ class ExtDirectSociete extends Societe
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 else if ($filter->property == 'content') {
                     $contentValue = strtolower($this->db->escape($filter->value));
-                    
-                    if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sql.= " (LOWER(s.zip) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
-                    } else {
-                        $sql.= " (LOWER(s.cp) like '%".$contentValue."%'";
-                        $sql.= " OR LOWER(s.ville) like '%".$contentValue."%')" ;
-                    }
+                    $sql.= " (LOWER(s.zip) like '%".$contentValue."%'";
+                    $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
                 }
                 else break;
                 if ($key < ($filterSize-1)) {
@@ -934,13 +910,9 @@ class ExtDirectSociete extends Societe
                 else if ($filter->property == 'idprof4') 
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 else if ($filter->property == 'town') {
-                     if (ExtDirect::checkDolVersion() >= 3.4) {
-                         $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                     } else {
-                         $sql .= "(s.ville = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                     }
+                    $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 }
-                    
+
                 else break;
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
@@ -1224,12 +1196,8 @@ class ExtDirectSociete extends Societe
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
         isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-           isset($params->note_public) ? ($this->note_public = $params->note_public) : null;
-           isset($params->note_private) ? ($this->note_private = $params->note_private) : null;
-        } else {
-           isset($params->note_public) ? ($this->note = $params->note_public) : null;
-        }
+        isset($params->note_public) ? ($this->note_public = $params->note_public) : null;
+        isset($params->note_private) ? ($this->note_private = $params->note_private) : null;
         isset($params->typent_id) ? ($this->typent_id = $params->typent_id) : null;
         /*	$img = str_replace('data:image/png;base64,', '', $params->logo);
             $img = str_replace(' ', '+', $img);
