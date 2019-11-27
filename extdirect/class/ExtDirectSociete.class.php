@@ -625,7 +625,11 @@ class ExtDirectSociete extends Societe
                 $row->state         = $this->state;
             
                 $row->stcomm_id     = (int) $this->stcomm_id;     // id statut commercial
-                $row->commercial_status = $this->statut_commercial;    // libelle statut commercial
+                if (ExtDirect::checkDolVersion(0,'11.0')) {
+                    $row->commercial_status = $this->status_prospect_label;
+                } else {
+                    $row->commercial_status = $this->statut_commercial;
+                }
             
                 $row->email         = $this->email;
                 $row->url           = $this->url;
