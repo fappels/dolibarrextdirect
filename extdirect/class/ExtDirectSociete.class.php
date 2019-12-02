@@ -420,11 +420,8 @@ class ExtDirectSociete extends Societe
                         $sqlWhere .= "s.client = ".$value;
                     else if ($filter->property == 'supplier') 
                         $sqlWhere .= "s.fournisseur = ".$value;
-                    else if ($filter->property == 'town') {
+                    else if ($filter->property == 'town') 
                         $sqlWhere .= "s.town = '".$this->db->escape($value)."'";
-                    } 
-                        }
-                    } 
                     else if ($filter->property == 'stcomm_id') 
                         $sqlWhere .= "s.fk_stcomm = ".$value;
                     else if ($filter->property == 'categorie_id') {
