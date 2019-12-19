@@ -433,12 +433,25 @@ class ExtDirectFichinter extends Fichinter
         
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
-        $results = array();
+        $result = new stdClass;
+        $data = array();
+
         $myUser = new User($this->db);
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
         $barcode = null;
+
+        $includeTotal = false;
+
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+        if (isset($params->include_total)) {
+            $includeTotal = $params->include_total;
+        }
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'status_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
@@ -449,41 +462,62 @@ class ExtDirectFichinter extends Fichinter
             }
         }
         
-        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
-        $sql.= " FROM ".MAIN_DB_PREFIX."fichinter as i";
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON i.rowid = ec.element_id";
-        $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
-        $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
-        $sql.= "   FROM (";
-        $sql.= "    SELECT MAX( rowid ) AS maxrow, activity_id";
-        $sql.= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
-        $sql.= "    GROUP BY activity_id";
-        $sql.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
-        $sql.= "   WHERE ma.maxrow = ea.rowid";
-        $sql.= " ) AS ea ON i.rowid = ea.activity_id";
-        $sql.= " WHERE i.entity IN (".getEntity('fichinter', 1).')';
+        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
+        $sqlFrom = " FROM ".MAIN_DB_PREFIX."fichinter as i";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON i.rowid = ec.element_id";
+        $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+        $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
+        $sqlFrom .= "   FROM (";
+        $sqlFrom .= "    SELECT MAX( rowid ) AS maxrow, activity_id";
+        $sqlFrom .= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
+        $sqlFrom .= "    GROUP BY activity_id";
+        $sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
+        $sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
+        $sqlFrom .= " ) AS ea ON i.rowid = ea.activity_id";
+        $sqlWhere = " WHERE i.entity IN (".getEntity('fichinter', 1).')';
         
         if ($statusFilterCount>0) {
-            $sql.= " AND ( ";
+            $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
-                $sql .= "i.fk_statut = ".$fk_statut;
-                if ($key < ($statusFilterCount-1)) $sql .= " OR ";
+                $sqlWhere  .= "i.fk_statut = ".$fk_statut;
+                if ($key < ($statusFilterCount-1)) $sqlWhere  .= " OR ";
             }
-            $sql.= ")";
+            $sqlWhere .= ")";
         }
         if ($ref) {
-            $sql.= " AND i.ref = '".$ref."'";
+            $sqlWhere .= " AND i.ref = '".$ref."'";
         }
         if ($contactTypeId > 0) {
-            $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
-            $sql.= " AND ec.fk_socpeople = ".$contactId;
+            $sqlWhere .= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
     	if ($barcode) {
-            $sql.= " AND (i.ref = '".$this->db->escape($barcode)."' OR i.ref_ext = '".$this->db->escape($barcode)."')";
+            $sqlWhere .= " AND (i.ref = '".$this->db->escape($barcode)."' OR i.ref_ext = '".$this->db->escape($barcode)."')";
         }
-        $sql .= " ORDER BY i.datec DESC";
-        
+        $sqlOrder = " ORDER BY i.datec DESC";
+
+        if ($limit) {
+            $sqlLimit = $this->db->plimit($limit, $start);
+        }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readInterventionList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
+
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -503,15 +537,21 @@ class ExtDirectFichinter extends Fichinter
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
                 $row->create_date  = $this->db->jdate($obj->datec);
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readInterventionList ".$error, LOG_ERR);
             return SQLERROR;
-        }   
+        }
     }
     
     /**
