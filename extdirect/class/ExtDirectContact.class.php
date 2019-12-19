@@ -45,7 +45,7 @@ class ExtDirectContact extends Contact
         global $user,$db,$langs;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login, '', 1)>0) {
+            if (get_class($db) == get_class($login) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -223,14 +223,10 @@ class ExtDirectContact extends Contact
         if (isset($params->include_total)) {
             $includeTotal = $params->include_total;
         }
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            if (ExtDirect::checkDolVersion() >= 3.5) {
-                $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
-            } else {
-                $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
-            }            
+        if (ExtDirect::checkDolVersion() >= 3.5) {
+            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
         } else {
-            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.name as lastname, c.firstname,c.cp as zip, c.ville as town';
+            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
         }
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
@@ -243,22 +239,12 @@ class ExtDirectContact extends Contact
                 else if ($filter->property == 'company_id')
                     $sqlWhere .= '(s.rowid = '.$filter->value.' AND s.entity IN ('.getEntity('societe', 1).'))';
                 else if ($filter->property == 'town') {
-                    if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sqlWhere .= "c.town = '".$this->db->escape($filter->value)."'";
-                    } else {
-                        $sqlWhere .= "c.ville = '".$this->db->escape($filter->value)."'";
-                    }      
-                }              
+                    $sqlWhere .= "c.town = '".$this->db->escape($filter->value)."'";
+                }
                 else if ($filter->property == 'content') {
                     $contentValue = $this->db->escape(strtolower($filter->value));
-                    if (ExtDirect::checkDolVersion() >= 3.4) {
-                        $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sqlWhere.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
-                    } else {
-                        $sqlWhere.= " (LOWER(c.name) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                        $sqlWhere.= " OR LOWER(c.ville) like '%".$contentValue."%' OR LOWER(c.cp) like '%".$contentValue."%')" ;
-                    }
-                    
+                    $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
+                    $sqlWhere.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
                 } else break;
                 if ($key < ($filterSize-1)) {
                     if($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
@@ -480,23 +466,11 @@ class ExtDirectContact extends Contact
     private function prepareFields($params) 
     {
         ($params->civility_id) ? ($this->civilite_id = $params->civility_id) : null;
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            ($params->lastname) ? ($this->lastname = $params->lastname) : null;
-        } else {
-            ($params->lastname) ? ($this->name = $params->lastname) : null;
-        }
+        ($params->lastname) ? ($this->lastname = $params->lastname) : null;
         ($params->firstname) ? ($this->firstname = $params->firstname) : null;
         ($params->address) ? ($this->address = $params->address) : null;
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            ($params->zip) ? ($this->zip = $params->zip) : null;
-        } else {
-            ($params->zip) ? ($this->cp = $params->zip) : null;
-        }
-        if (ExtDirect::checkDolVersion() >= 3.4) {
-            ($params->town) ? ($this->town = $params->town) : null;
-        } else {
-            ($params->town) ? ($this->ville = $params->town) : null;
-        }
+        ($params->zip) ? ($this->zip = $params->zip) : null;
+        ($params->town) ? ($this->town = $params->town) : null;
         ($params->fax) ? ($this->fax = $params->fax) : null;
         ($params->phone_perso) ? ($this->phone_perso = $params->phone_perso) : null;
         ($params->skype) ? ($this->skype = $params->skype) : null;

@@ -64,7 +64,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login, '', 1)>0) {
+            if (get_class($db) == get_class($login) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -450,7 +450,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         global $conf, $langs;
         
         if (!isset($this->db)) return CONNECTERROR;
-        $results = array();
+        if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
+        $result = new stdClass;
+        $data = array();
+
         $myUser = new User($this->db);
         $statusFilterCount = 0;
         $ref = null;
@@ -458,6 +461,20 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $barcode = null;
         $productId = null;
         $supplierId = null;
+
+        $includeTotal = false;
+
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+        if (isset($params->allow_paging)) { // for backwards compatibility (actual app already sends include_total but is not ready for order paging)
+            if (isset($params->include_total)) {
+                $includeTotal = $params->include_total;
+            }
+        } else {
+            $limit = 0;
+        }
 
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -471,58 +488,80 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
         
-        $sql = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
-        $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
+        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
+        $sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
-            $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
+            $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
         }
         if ($barcode) {
-            $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
+            $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
         }
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."c_input_method as cim ON c.fk_input_method = cim.rowid";
-        $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
-        $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
-        $sql.= "   FROM (";
-        $sql.= "    SELECT MAX( rowid ) AS maxrow, activity_id";
-        $sql.= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
-        $sql.= "    GROUP BY activity_id";
-        $sql.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
-        $sql.= "   WHERE ma.maxrow = ea.rowid";
-        $sql.= " ) AS ea ON c.rowid = ea.activity_id";
-        $sql.= " WHERE c.entity IN (".getEntity('order_supplier', 1).')';
-        $sql.= " AND c.fk_soc = s.rowid";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."c_input_method as cim ON c.fk_input_method = cim.rowid";
+        $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+        $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
+        $sqlFrom .= "   FROM (";
+        $sqlFrom .= "    SELECT MAX( rowid ) AS maxrow, activity_id";
+        $sqlFrom .= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
+        $sqlFrom .= "    GROUP BY activity_id";
+        $sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
+        $sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
+        $sqlFrom .= " ) AS ea ON c.rowid = ea.activity_id";
+        $sqlWhere = " WHERE c.entity IN (".getEntity('order_supplier', 1).')';
+        $sqlWhere .= " AND c.fk_soc = s.rowid";
         
         
         if ($statusFilterCount>0) {
-            $sql.= " AND ( ";
+            $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
-                $sql .= "c.fk_statut = ".$fk_statut;
-                if ($key < ($statusFilterCount-1)) $sql .= " OR ";
+                $sqlWhere  .= "c.fk_statut = ".$fk_statut;
+                if ($key < ($statusFilterCount-1)) $sqlWhere  .= " OR ";
             }
-            $sql.= ")";
+            $sqlWhere .= ")";
         }
         if ($ref) {
-            $sql.= " AND c.ref = '".$this->db->escape($ref)."'";
+            $sqlWhere .= " AND c.ref = '".$this->db->escape($ref)."'";
         }
         if ($contactTypeId > 0) {
-            $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
-            $sql.= " AND ec.fk_socpeople = ".$contactId;
+            $sqlWhere .= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
         if ($barcode) {
-            $sql.= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_supplier = '".$this->db->escape($barcode)."')";
+            $sqlWhere .= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_supplier = '".$this->db->escape($barcode)."')";
         }
         if ($productId) {
-            $sql.= " AND cd.fk_product = ".$productId;
+            $sqlWhere .= " AND cd.fk_product = ".$productId;
         }
         if ($supplierId) {
-            $sql.= " AND c.fk_soc = ".$supplierId;
+            $sqlWhere .= " AND c.fk_soc = ".$supplierId;
         }
-        $sql .= " ORDER BY c.date_commande DESC";
-        
+
+        $sqlOrder = " ORDER BY c.date_commande DESC";
+
+        if ($limit) {
+            $sqlLimit = $this->db->plimit($limit, $start);
+        }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readOrderList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
+
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
@@ -546,15 +585,21 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
                 $row->total_inc		= $obj->total_ttc;
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readOrderList ".$error, LOG_ERR);
             return SQLERROR;
-        }   
+        }
     }
     
     /**

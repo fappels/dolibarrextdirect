@@ -51,18 +51,18 @@ class ExtDirectExpedition extends Expedition
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if (empty($user->id) && $user->fetch('', $login, '', 1)>0) {
+            if (get_class($db) == get_class($login) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
+                $this->_user = $user;  //commande.class uses global user
+                if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+                    $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+                }
+                $langs->load("sendings");
+                $langs->load("products");
+                $langs->load("stocks");
+                $langs->load("productbatch");
+                parent::__construct($db);
             }
-            $this->_user = $user;  //commande.class uses global user
-            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
-                $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
-            }
-            $langs->load("sendings");
-            $langs->load("products");
-            $langs->load("stocks");
-            $langs->load("productbatch");
-            parent::__construct($db);
         }
     }
     
@@ -419,7 +419,7 @@ class ExtDirectExpedition extends Expedition
 		isset($params->delivery_address_id) ? $this->fk_delivery_address = $params->delivery_address_id : null;
     } 
     
-/**
+    /**
      * public method to read a list of shipments
      *
      * @param stdClass $params to filter on order status and ref
@@ -430,11 +430,25 @@ class ExtDirectExpedition extends Expedition
         global $conf;
         
         if (!isset($this->db)) return CONNECTERROR;
-        $results = array();
+        if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
+        $result = new stdClass;
+        $data = array();
+
         $statusFilterCount = 0;
         $ref = null;
         $contactTypeId = 0;
         $originId = 0;
+
+        $includeTotal = false;
+
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+        if (isset($params->include_total)) {
+            $includeTotal = $params->include_total;
+        }
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
@@ -445,44 +459,65 @@ class ExtDirectExpedition extends Expedition
             }
         }
         
-        $sql = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_int, ea.status, csm.libelle as mode";
-        $sql.= " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_int, ea.status, csm.libelle as mode";
+        $sqlFrom = " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
         if ($originId) {
-            $sql.= " INNER JOIN ".MAIN_DB_PREFIX."element_element as el ON el.fk_target = e.rowid AND fk_source = " . $originId;
-            $sql.= " AND el.sourcetype = 'commande' AND el.targettype = '".$this->db->escape($this->element)."'";
+            $sqlFrom .= " INNER JOIN ".MAIN_DB_PREFIX."element_element as el ON el.fk_target = e.rowid AND fk_source = " . $originId;
+            $sqlFrom .= " AND el.sourcetype = 'commande' AND el.targettype = '".$this->db->escape($this->element)."'";
         }
-        $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."c_shipment_mode as csm ON e.fk_shipping_method = csm.rowid";
-        $sql.= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
-        $sql.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
-        $sql.= "   FROM (";
-        $sql.= "    SELECT MAX( rowid ) AS maxrow, activity_id";
-        $sql.= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
-        $sql.= "    GROUP BY activity_id";
-        $sql.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
-        $sql.= "   WHERE ma.maxrow = ea.rowid";
-        $sql.= " ) AS ea ON e.rowid = ea.activity_id";
-        $sql.= " WHERE e.entity IN (".getEntity('shipping', 1).')';
-        $sql.= " AND e.fk_soc = s.rowid";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."c_shipment_mode as csm ON e.fk_shipping_method = csm.rowid";
+        $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+        $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
+        $sqlFrom .= "   FROM (";
+        $sqlFrom .= "    SELECT MAX( rowid ) AS maxrow, activity_id";
+        $sqlFrom .= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
+        $sqlFrom .= "    GROUP BY activity_id";
+        $sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
+        $sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
+        $sqlFrom .= " ) AS ea ON e.rowid = ea.activity_id";
+        $sqlWhere = " WHERE e.entity IN (".getEntity('shipping', 1).')';
+        $sqlWhere .= " AND e.fk_soc = s.rowid";
         
         
         if ($statusFilterCount>0) {
-            $sql.= " AND ( ";
+            $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
-                $sql .= "e.fk_statut = ".$fk_statut;
-                if ($key < ($statusFilterCount-1)) $sql .= " OR ";
+                $sqlWhere  .= "e.fk_statut = ".$fk_statut;
+                if ($key < ($statusFilterCount-1)) $sqlWhere  .= " OR ";
             }
-            $sql.= ")";
+            $sqlWhere .= ")";
         }
         if ($ref) {
-            $sql.= " AND e.ref = '".$ref."'";
+            $sqlWhere .= " AND e.ref = '".$ref."'";
         }
         if ($contactTypeId > 0) {
-            $sql.= " AND ec.fk_c_type_contact = ".$contactTypeId;
-            $sql.= " AND ec.fk_socpeople = ".$contactId;
+            $sqlWhere .= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
-        $sql .= " ORDER BY e.date_creation DESC";
+        $sqlOrder = " ORDER BY e.date_creation DESC";
         
+        if ($limit) {
+            $sqlLimit = $this->db->plimit($limit, $start);
+        }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readShipmentList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
+
         $resql=$this->db->query($sql);
         
         if ($resql) {
@@ -499,13 +534,19 @@ class ExtDirectExpedition extends Expedition
                 $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, 1));
                 $row->status        = $obj->status;
                 $row->mode			= $obj->mode;
-                array_push($results, $row);
+                array_push($data, $row);
             }
             $this->db->free($resql);
-            return $results;
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
         } else {
             $error="Error ".$this->db->lasterror();
-            dol_syslog(get_class($this)."::readOrdelList ".$error, LOG_ERR);
+            dol_syslog(get_class($this)."::readShipmentList ".$error, LOG_ERR);
             return SQLERROR;
         }   
     }

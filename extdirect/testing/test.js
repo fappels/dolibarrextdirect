@@ -555,11 +555,7 @@ describe("companies", function ()
                 {
                     Ext.Array.each(records, function (record)
                     {
-                    	if (dolibarrVersion >= 3.4) {
-                    		testresults[0] = record.get('ref_ext');
-                    	} else {
-                    		testresults[0] = record.get('town');
-                    	}                   	
+                        testresults[0] = record.get('ref_ext');
                     });
                 }
             });
@@ -570,11 +566,7 @@ describe("companies", function ()
                 {
                     Ext.Array.each(records, function (record)
                     {
-                    	if (dolibarrVersion >= 3.4) {
-                    		testresults[0] = record.get('ref_ext');
-                    	} else {
-                    		testresults[0] = record.get('town');
-                    	} 
+                        testresults[0] = record.get('ref_ext');
                     });
                 }
             });
@@ -585,11 +577,7 @@ describe("companies", function ()
                 {
                     Ext.Array.each(records, function (record)
                     {
-                    	if (dolibarrVersion >= 3.4) {
-                    		testresults[0] = record.get('ref_ext');
-                    	} else {
-                    		testresults[0] = record.get('town');
-                    	} 
+                        testresults[0] = record.get('ref_ext');
                     });
                     flag = true;
                 }
@@ -602,11 +590,7 @@ describe("companies", function ()
         {
             Ext.Array.each(testresults, function (result)
             {
-            	if (dolibarrVersion >= 3.4) {
-            		expect(result).toBe('connectortest');
-            	} else {
-            		expect(result).toBe('MyTown');
-            	}           	
+                expect(result).toBe('connectortest');
             });
         });
     });
@@ -626,22 +610,12 @@ describe("companies", function ()
                 {
                     Ext.Array.each(records, function (record, index)
                     {
-                    	if (dolibarrVersion >= 3.4) {
-                    		testresults[index] = record.get('ref_ext');
-                        	
-							if (record.get('ref_ext') == 'connectortest')
-							{
-							    companyIds[index] = record.get('company_id');
-							}
-                    	} else {
-                    		testresults[index] = record.get('town');
-                        	
-							if (record.get('town') == 'MyTown')
-							{
-							    companyIds[index] = record.get('company_id');
-							}
-                    	}
-                    	
+                        testresults[index] = record.get('ref_ext');
+                        
+                        if (record.get('ref_ext') == 'connectortest')
+                        {
+                            companyIds[index] = record.get('company_id');
+                        }
                     });
                     flag = true;
                 }
@@ -652,11 +626,7 @@ describe("companies", function ()
 
         runs(function ()
         {
-        	if (dolibarrVersion >= 3.4) {
-        		expect(testresults).toContain('connectortest');
-        	} else {
-        		expect(testresults).toContain('MyTown');
-        	}     	
+            expect(testresults).toContain('connectortest');
         });
     });
 
@@ -917,10 +887,6 @@ describe("companies", function ()
     it("update company 1", function ()
     {
         var record, testField = 'ref_ext';
-        
-        if (dolibarrVersion < 3.4) {
-        	testField = 'town';		
-        }
 
         runs(function ()
         {
@@ -2311,11 +2277,9 @@ describe("shipment", function ()
                     Ext.Array.each(records, function (record)
                     {
                     	testresults.push(record.get('ref'));
-                    	if (dolibarrVersion >= 3.4)	{
-							testresults.push(record.get('note_public'));
-							testresults.push(record.get('note_private'));
-							testresults.push(record.get('tracking_number'));
-						}
+                        testresults.push(record.get('note_public'));
+                        testresults.push(record.get('note_private'));
+                        testresults.push(record.get('tracking_number'));
                     	if (dolibarrVersion >= 3.7)	{
 							testresults.push(record.get('shipping_method_id'));
 						}
@@ -2334,11 +2298,9 @@ describe("shipment", function ()
         runs(function ()
         {
             expect(testresults).toContain(shipmentRef);
-            if (dolibarrVersion >= 3.4)	{
-            	expect(testresults).toContain('connectortest public');
-            	expect(testresults).toContain('connectortest private');
-            	expect(testresults).toContain('connectortest tracking');
-            }            
+            expect(testresults).toContain('connectortest public');
+            expect(testresults).toContain('connectortest private');
+            expect(testresults).toContain('connectortest tracking');
 			if (dolibarrVersion >= 3.7)	{
 				expect(testresults).toContain(1);
 			}
@@ -2754,17 +2716,10 @@ describe("Purchase Order", function () {
 				callback: function(records) {
 					Ext.Array.each(records, function (record,index) {
 						testresults[index] = record.get('ref');
-						if (dolibarrVersion >= 3.4) {
-							if (record.get('ref_supplier') == 'connectortest') {
-								orderRef = record.get('ref');
-								purchaseOrderId = record.getId();
-							}
-						} else {
-							if (record.get('supplier_id') == customerId) {
-								orderRef = record.get('ref');
-								purchaseOrderId = record.getId();
-							}
-						}					
+                        if (record.get('ref_supplier') == 'connectortest') {
+                            orderRef = record.get('ref');
+                            purchaseOrderId = record.getId();
+                        }
 					});
 					flag = true;
 				}
