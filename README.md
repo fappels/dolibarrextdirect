@@ -60,6 +60,24 @@ Client CRUD calls:
 			destroy: ExtDirectProduct.destroyProduct
 		}
 	});
+
+	Ext.getStore('productlist').setProxy({
+		type: 'direct',
+		directFn: ExtDirectProduct.readProductList,
+		reader: {
+			rootProperty: 'data'
+		}
+	});
+
+	// enable total property in result output
+	Ext.getStore('productlist').on('beforeload', function(store, operation, eOpts) {
+		operation.setParams({
+			include_total: true
+		});
+	}, this);
+
+	Ext.getStore('productlist').load();
+	
 	...
 	var products = Ext.getStore('product');
     var productData = {
@@ -89,6 +107,48 @@ Client CRUD calls:
     products.removeAt(products.find('ref','CT0001'));
     products.sync();
 
+For client File uploads create an upload fieldset like below, set extTID field value with related object id. Submit your form to router.php.
+
+	{
+		xtype: 'fieldset',
+		itemId: 'filefieldset',
+		title: 'File',
+		items:[
+			{
+				xtype: 'hiddenfield',
+				name: 'extType',
+				value: "rpc"
+			},
+			{
+				xtype: 'hiddenfield',
+				itemId: 'exttid',
+				name: 'extTID'
+			},
+			{
+				xtype: 'hiddenfield',
+				name: 'extAction',
+				itemId: 'extaction',
+				value: "ExtDirectCommande"
+			},
+			{
+				xtype: 'hiddenfield',
+				name: 'extMethod',
+				value: "fileUpload"
+			},
+			{
+				xtype: 'hiddenfield',
+				name: 'extUpload',
+				value: "true"
+			},
+			{
+				xtype: "filefield",
+				label: "Select file",
+				capture: "environment",
+				name: 'file'
+			}
+		]
+	}
+
 **Currently provided Classes:**
 
 - Authentication
@@ -102,6 +162,7 @@ Client CRUD calls:
 - Categories
 - Agenda
 - Supplier orders
+- Interventions
 
 
 > New classes will be added.
@@ -121,9 +182,9 @@ At least three warehouses, 2 multiprice indexes and one customer-supplier with r
 Enable barcode module with at least EAN13 activated.
 Enable agenda module.
 Enable customer and supplier order modules with stock increase/decrease enabled.
-Demo data from dev/initdemo should work, only add two multiprice levels in product setup and rename admin username to SuperAdmin.
+Demo data from dev/initdemo should work. Add two multiprice levels and a string extrafield 'test' labeled 'Test' with default value 'test' in product setup. Rename admin username to SuperAdmin.
 
 **Supported Dolibarr Versions:**
 
-- Min version:	3.3
-- Max version:	6.0
+- Min version:	3.4
+- Max version:	11.0

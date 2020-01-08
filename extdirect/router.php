@@ -15,6 +15,7 @@ if (!defined("NOLOGIN"))            define("NOLOGIN", '1');
 $res=0;
 if (! $res && file_exists("../main.inc.php")) $res=@include("../main.inc.php");
 if (! $res && file_exists("../../main.inc.php")) $res=@include("../../main.inc.php");
+if (! $res && file_exists("../../../main.inc.php")) $res=@include("../../../main.inc.php");
 if (! $res) die("Include of main fails");
 require('class/extdirect.class.php');
 require('config.php');
@@ -23,7 +24,7 @@ $debugData = '[]';
 /** Action class
  * class to execute extdirect functions
  */
-class Action
+class BogusAction
 {
     public $action;
     public $method;
@@ -38,19 +39,23 @@ $rawData = file_get_contents("php://input");
 if (!empty($rawData)) {
     header('Content-Type: text/javascript');
     $data = json_decode($rawData);
-} else if (isset($_POST['extAction'])) {
-    $isForm = true;
-    $isUpload = $_POST['extUpload'] == 'true';
-    $data = new BogusAction();
-    $data->action = $_POST['extAction'];
-    $data->method = $_POST['extMethod'];
-    $data->tid = isset($_POST['extTID']) ? $_POST['extTID'] : null; // not set for upload
-    $data->data = array($_POST, $_FILES);
-} else if (isset($debugData)) {
-    $data = json_decode($debugData);
-} else { 
-    die('Invalid request.');
 }
+if (empty($rawData) || empty($data)) {
+    if (isset($_POST['extAction'])) {
+        $isForm = true;
+        $isUpload = $_POST['extUpload'] == 'true';
+        $data = new BogusAction();
+        $data->action = $_POST['extAction'];
+        $data->method = $_POST['extMethod'];
+        $data->tid = isset($_POST['extTID']) ? $_POST['extTID'] : null; // not set for upload
+        $data->data = array($_POST, $_FILES);
+    } else if (isset($debugData)) {
+        $data = json_decode($debugData);
+    } else { 
+        echo json_encode('Invalid request.');
+    }
+}
+
 
 function doRpc($cdata)
 {
@@ -128,14 +133,14 @@ function doRpc($cdata)
                         $error->message = "Error $result from dolibarr: $method on action $action";
                         break;
                 }
-            }            
+            }
             $r['result'] = $result;
             throw new Exception($error->message);
         } else if (is_string($result)) {
             $error->message = "Dolibarr: $result";
             $r['result'] = $result;
             throw new Exception($error->message);
-        } else {            
+        } else {
             $r['result'] = $result;
         }
 
@@ -174,7 +179,7 @@ function doAroundCalls(&$fns, &$cdata, &$returnData=null)
 /**
  * Security: Return true if OK, false otherwise.
  *
- * @param       unknown_type        &$var       Object/Array to check
+ * @param       unknown_type        $var       Object/Array to check
  * @param       int     $type       1=GET, 0=POST, 2=PHP_SELF
  * @return      boolean                 false if ther is an injection
  */
@@ -194,8 +199,11 @@ function object_analyse_sql_and_script(&$var, $type)
         }
         return true;
     } else {
-        //print_r($var);
-        return (test_sql_and_script_inject($var, $type) <= 0);
+        if (function_exists('test_sql_and_script_inject')) {
+            return (test_sql_and_script_inject($var, $type) <= 0);
+        } else {
+            return (testSqlAndScriptInject($var, $type) <= 0);
+        }
     }
 }
 
@@ -209,9 +217,11 @@ if (is_array($data)) {
     $response = doRpc($data);
 }
 if ($isForm && $isUpload) {
-    echo '<html><body><textarea>';
-    echo json_encode($response);
-    echo '</textarea></body></html>';
+    if ($response['type'] == 'exception') {
+        echo json_encode($response['message'], JSON_FORCE_OBJECT);
+    } else {
+        echo json_encode($response['result'], JSON_FORCE_OBJECT);
+    }
 } else {
     echo json_encode($response);
 }

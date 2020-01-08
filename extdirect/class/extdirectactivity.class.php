@@ -111,7 +111,7 @@ class ExtDirectActivity extends CommonObject
         $sql.= " ".(! isset($this->app_version)?'NULL':"'".$this->db->escape($this->app_version)."'").",";
         $sql.= " ".(! isset($this->activity_name)?'NULL':"'".$this->db->escape($this->activity_name)."'").",";
         $sql.= " ".(! isset($this->activity_id)?'NULL':"'".$this->activity_id."'").",";
-        $sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0?'NULL':$this->db->idate($this->datec)).",";
+        $sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0?'NULL':"'".$this->db->idate($this->datec)."'").",";
         $sql.= " ".(! isset($this->status)?'NULL':"'".$this->db->escape($this->status)."'")."";
         $sql.= ")";
         $this->db->begin();
@@ -174,12 +174,8 @@ class ExtDirectActivity extends CommonObject
         $sql.= " eu.requestid,";
         $sql.= " eu.app_name,";
         $sql.= " u.firstname,";
-    	if (ExtDirect::checkDolVersion() >= 3.4) {
-            $sql.= " u.lastname";
-        } else {
-            $sql.= " u.name";
-        }
-            
+        $sql.= " u.lastname";
+
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_activity as ea, ";
         $sql.= MAIN_DB_PREFIX."extdirect_user as eu, ".MAIN_DB_PREFIX."user as u";
         $sql.= " WHERE ea.app_id = eu.app_id AND ea.fk_user = u.rowid";
@@ -209,11 +205,7 @@ class ExtDirectActivity extends CommonObject
                 $this->dataset[$i]['requestid'] = $obj->requestid;
                 $this->dataset[$i]['app_name'] = $obj->app_name;
                 $this->dataset[$i]['firstname'] = $obj->firstname;
-            	if (ExtDirect::checkDolVersion() >= 3.4) {
-                    $this->dataset[$i++]['lastname'] = $obj->lastname;
-                } else {
-                    $this->dataset[$i++]['lastname'] = $obj->name;
-                }
+                $this->dataset[$i++]['lastname'] = $obj->lastname;
             }
             $this->db->free($resql);
     
@@ -261,13 +253,13 @@ class ExtDirectActivity extends CommonObject
             foreach ($this->dataset as &$data) {
                 $data['duration'] = '';
                 
-                if (($data['status'] === 'START')) {// && ($startTime[$data['activity_name']] === 0)) {
+                if ($data['status'] === 'START') {
                     $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                     $stopTime[$data['activity_name']] = 0;
                     $activityId[$data['activity_name']] = $data['activity_id'];
                 }
-                if ((($data['status'] === 'VALIDATE') || ($data['status'] === 'ERROR') || ($data['status'] === 'CANCEL')|| ($data['status'] === 'DONE')) 
-                                && ($stopTime[$data['activity_name']] === 0) && ($activityId[$data['activity_name']] === $data['activity_id'])) {
+                if (($data['status'] === 'VALIDATE' || $data['status'] === 'ERROR' || $data['status'] === 'CANCEL' || $data['status'] === 'DONE' || $data['status'] === 'DRAFT') 
+                                && $stopTime[$data['activity_name']] === 0 && $activityId[$data['activity_name']] === $data['activity_id']) {
                     $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                     $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
                     $startTime[$data['activity_name']] = 0;

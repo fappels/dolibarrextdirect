@@ -33,8 +33,8 @@ class ExtDirectFormProduct extends FormProduct
     private $_user;
     
     const ALLWAREHOUSE_ID = 0;
-    const ALLWAREHOUSE_LABEL = 'All';
-    const ALLWAREHOUSE_DESCRIPTION = 'AllLocations';
+    const ALLWAREHOUSE_LABEL = 'AllLocationsLabel';
+    const ALLWAREHOUSE_DESCRIPTION = 'AllLocationsDesc';
     
     /** Constructor
      *
@@ -47,7 +47,7 @@ class ExtDirectFormProduct extends FormProduct
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -108,6 +108,8 @@ class ExtDirectFormProduct extends FormProduct
         }
         if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $limit, $start)) < 0) return $result;
         
+        $this->_makeNumericLabelSortable();
+
         if ($start == 0) {
             // create allwarehouse record with total warehouse stock, only for first page
             $row = new stdClass;
@@ -193,13 +195,13 @@ class ExtDirectFormProduct extends FormProduct
         $results = array();
         
         if (! empty($conf->product->enabled)) {
-        	$row = new stdClass;
+            $row = new stdClass;
             $row->id = 0;
             $row->label = $langs->trans("Product") ? $langs->transnoentities("Product") : "Product";
             array_push($results, $row);
         }
         if (! empty($conf->service->enabled)) {
-        	$row = new stdClass;
+            $row = new stdClass;
             $row->id = 1;
             $row->label = $langs->trans("Service") ? $langs->transnoentities("Service") : "Service";
             array_push($results, $row);
@@ -208,7 +210,7 @@ class ExtDirectFormProduct extends FormProduct
         return $results;
     }
     
-	/**
+    /**
      *    Load available price_base_types
      *
      *    @param    stdClass    $params     not used
@@ -300,8 +302,8 @@ class ExtDirectFormProduct extends FormProduct
      * @param   int     $batch          Add quantity of batch stock in label for product with batch name batch. Nothing if '' batch name precedes batch_id.
      * @param   string  $statusFilter   warehouse status filter, following comma separated filter options can be used
      *										'warehouseopen' = select products from open warehouses,
-	 *										'warehouseclosed' = select products from closed warehouses, 
-	 *										'warehouseinternal' = select products from warehouses for internal correct/transfer only
+     *										'warehouseclosed' = select products from closed warehouses, 
+     *										'warehouseinternal' = select products from warehouses for internal correct/transfer only
      * @param   string  $contentValue   content search string
      * @param	boolean	$sumStock		sum total stock of a warehouse, default true
      * @param   int     $limit          paging limit
@@ -311,23 +313,26 @@ class ExtDirectFormProduct extends FormProduct
     private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
     {
         dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
-        
+
         $warehouseStatus = array();
 
-		if (preg_match('/warehouseclosed/', $statusFilter)) 
-		{
-			$warehouseStatus[] = Entrepot::STATUS_CLOSED;
-		}
-		if (preg_match('/warehouseopen/', $statusFilter)) 
-		{
-			$warehouseStatus[] = Entrepot::STATUS_OPEN_ALL;
-		}
-		if (preg_match('/warehouseinternal/', $statusFilter)) 
-		{
-			$warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
-		}
-        
-        $sql = "SELECT e.rowid, e.label, e.description, e.statut";
+        if (preg_match('/warehouseclosed/', $statusFilter)) 
+        {
+            $warehouseStatus[] = Entrepot::STATUS_CLOSED;
+        }
+        if (preg_match('/warehouseopen/', $statusFilter)) 
+        {
+            $warehouseStatus[] = Entrepot::STATUS_OPEN_ALL;
+        }
+        if (preg_match('/warehouseinternal/', $statusFilter)) 
+        {
+            $warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
+        }
+        if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+            $sql = "SELECT e.rowid, e.ref as label, e.description, e.statut";
+        } else {
+            $sql = "SELECT e.rowid, e.label, e.description, e.statut";
+        }
         if (!empty($fk_product)) 
         {
             if (!empty($fk_batch) || !empty($batch)) 
@@ -358,26 +363,38 @@ class ExtDirectFormProduct extends FormProduct
                 $sql.= " AND pb.rowid = ".$fk_batch;
             }
         }
-        
+
         $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
         if (count($warehouseStatus))
-		{
-			$sql.= " AND e.statut IN (".implode(',',$warehouseStatus).")";
-		}
-		else
-		{
-			$sql.= " AND e.statut > 0";
-		}
-        if (!empty($contentValue)) {
-            $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+        {
+            $sql.= " AND e.statut IN (".implode(',',$warehouseStatus).")";
         }
-        
-        if ($sumStock && empty($fk_product)) $sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
-        $sql.= " ORDER BY e.label";        
+        else
+        {
+            $sql.= " AND e.statut > 0";
+        }
+        if (!empty($contentValue)) {
+            if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+                $sql.= " AND (LOWER(e.ref) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+            } else {
+                $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+            }
+        }
+        if ($sumStock && empty($fk_product)) {
+            if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+                $sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut";
+            } else {
+                $sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
+            }
+        }
+        if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+            $sql.= " ORDER BY e.ref";
+        } else {
+            $sql.= " ORDER BY e.label";
+        }
         if (!empty($limit)) {
             $sql .= $this->db->plimit($limit, $start);
         }
-        
         $resql = $this->db->query($sql);
         if ($resql)
         {
@@ -400,6 +417,25 @@ class ExtDirectFormProduct extends FormProduct
         {
             dol_print_error($this->db);
             return -1;
+        }
+    }
+
+    private function _makeNumericLabelSortable()
+    {
+        $numericLabel = array();
+        $maxLabel = 0;
+
+        foreach ($this->cache_warehouses as $warehouse) {
+            if (preg_match('/(^[0-9]*)([a-z_A-Z-0-9\s]*)/', $warehouse['label'], $matches)) {
+                $numericLabel[$warehouse['id']] = (int) $matches[1];
+                $alphaLabel[$warehouse['id']] = $matches[2];
+                if ($numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
+            }
+        }
+        $digits = '%0'.strlen((string) $maxLabel).'d';
+        foreach ($this->cache_warehouses as &$warehouse) {
+            $numericPart = ($numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
+            $warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
         }
     }
 

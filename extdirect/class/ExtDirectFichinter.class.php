@@ -1,0 +1,846 @@
+<?PHP
+
+/*
+ * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * or see http://www.gnu.org/
+ */
+
+/**
+ *  \file       htdocs/extdirect/class/ExtDirectFichinter.class.php
+ *  \brief      Sencha Ext.Direct interventions remoting class
+ */
+
+require_once DOL_DOCUMENT_ROOT.'/fichinter/class/fichinter.class.php';
+require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/price.lib.php';
+dol_include_once('/extdirect/class/extdirect.class.php');
+
+/**
+ * ExtDirectFichinter class
+ * 
+ * Interventions Class to with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
+ */
+class ExtDirectFichinter extends Fichinter
+{
+    private $_user;
+    private $_constants = array(
+        'FICHINTER_PRINT_PRODUCTS',
+        'FICHINTER_USE_SERVICE_DURATION',
+        'FICHINTER_WITHOUT_DURATION',
+        'FICHINTER_DATE_WITHOUT_HOUR'
+    );
+    
+    /** 
+     * Constructor
+     *
+     * @param string $login user name
+     */
+    public function __construct($login) 
+    {
+        global $langs,$db,$user;
+        
+        if (!empty($login)) {
+            if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
+                $user->getrights();
+                $this->_user = $user;  //commande.class uses global user
+                if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+                    $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+                }
+                $langs->load("interventions");
+                parent::__construct($db);
+            }
+        }
+    }
+    
+    /**
+     *	Load intervention related constants
+     * 
+     *	@param			stdClass	$params		filter with elements
+     *		constant	name of specific constant
+     *
+     *	@return			stdClass result data with specific constant value
+     */
+    public function readConstants(stdClass $params)
+    {
+    	if (!isset($this->db)) return CONNECTERROR;
+    	if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
+    	
+    	$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_constants);
+    	
+    	return $results;
+    }
+    
+    /**
+     *    Load intervention from database into memory
+     *
+     *    @param    stdClass    $params     filter with elements:
+     *      id                  Id of order to load
+     *      ref                 ref, ref_int
+     *      
+     *    @return     stdClass result data or error number
+     */
+    public function readIntervention(stdClass $params)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
+        $myUser = new User($this->db);
+        $mySociete = new Societe($this->db);
+        if (! empty($conf->projet->enabled))
+        {
+            require_once DOL_DOCUMENT_ROOT.'/projet/class/project.class.php';
+            $project = new Project($this->db);
+        }
+        if ($conf->contrat->enabled)
+        {
+            require_once DOL_DOCUMENT_ROOT."/contrat/class/contrat.class.php";
+            $contrat = new Contrat($this->db);
+        }
+        
+        $results = array();
+        $row = new stdClass;
+        $id = 0;
+        $ref = '';
+        $status_ids = array();
+        
+        if (isset($params->filter)) {
+            foreach ($params->filter as $key => $filter) {
+                if ($filter->property == 'id') $id=$filter->value;
+                else if ($filter->property == 'ref') $ref=$filter->value;
+                else if ($filter->property == 'status_id') array_push($status_ids,$filter->value);
+            }
+        }
+        
+        if (($id > 0) || ($ref != '')) {
+            if (($result = $this->fetch($id, $ref)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if ($this->id) {
+                $row->id = $this->id ;
+                //! Ref
+                $row->ref= $this->ref;
+                $row->customer_id = $this->socid;
+                if ($mySociete->fetch($this->socid)>0) {
+                    $row->customer_name = $mySociete->name;
+                }
+                //! -1 for cancelled, 0 for draft, 1 for validated, 2 for send, 3 for closed
+                $row->status_id = $this->statut;
+                $row->status = $this->getLibStatut(1);
+                $row->description = $this->description;
+                $row->note_private = $this->note_private;
+                $row->note_public = $this->note_public;
+                $row->model_pdf = $this->modelpdf;
+                $row->user_id = $this->user_creation;
+                if ($myUser->fetch($this->user_creation)>0) {
+                    $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
+                }
+                $row->create_date = $this->datec;
+                $row->valid_date= $this->datev;
+                if (isset($project) && $this->fk_project > 0) {
+                    $project->fetch($this->fk_project);
+                    $row->project_id = $this->fk_project;
+                    $row->project_ref = $project->ref;
+                }
+                if (isset($contrat) && $this->fk_contrat > 0) {
+                    $contrat->fetch($this->fk_contrat);
+                    $row->contract_id = $this->fk_contrat;
+                    $row->contract_ref = $contrat->ref;
+                }
+                
+                
+                $row->duration = $this->duration;
+                $row->has_signature = 0;
+                if (empty($status_ids)) {
+                    array_push($results, $row);
+                } else {
+                    foreach($status_ids as $status_id) {
+                        if ($status_id == $row->status_id) {
+                            array_push($results, $row);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $results;
+    }
+
+    /**
+    * public method to read available optionals (extra fields)
+    *
+    * @return stdClass result data or ERROR
+    */
+    public function readOptionalModel(stdClass $param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        
+        return ExtDirect::readOptionalModel($this);
+    }
+
+    /**
+     * public method to read intervention optionals (extra fields) from database
+     *
+     *    @param    stdClass    $param  filter with elements:
+     *      id                  Id of order to load
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readOptionals(stdClass $param)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
+        $results = array();
+        $id = 0;
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'id') $id=$filter->value;
+            }
+        }
+        
+        if ($id > 0) {
+            $extraFields = new ExtraFields($this->db);
+            if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if (! $this->error) {
+                $extraFields->fetch_name_optionals_label($this->table_element);
+                foreach ($this->array_options as $key => $value) {
+                    $row = new stdClass;
+                    $name = substr($key,8); // strip options_
+                    $row->name = $name;
+                    $row->value = $extraFields->showOutputField($name,$value);
+                    $results[] = $row;
+                }
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * Ext.direct method to Create intervention
+     * 
+     * @param unknown_type $param object or object array with intervention model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createIntervention($param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
+        $notrigger=0;
+        $paramArray = ExtDirect::toArray($param);
+        
+        foreach ($paramArray as &$params) {
+            // prepare fields
+            $this->prepareInterventionFields($params);
+            if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            
+            $params->id=$this->id;
+        }
+
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
+    }
+
+    /**
+     * Ext.direct method to update intervention
+     * 
+     * @param unknown_type $param object or object array with intervention model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateIntervention($param) 
+    {
+        global $conf, $langs, $mysoc;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($param);
+        $notrigger=0;
+
+        foreach ($paramArray as &$params) {
+            // prepare fields
+            if ($params->id) {
+                if (($result = $this->fetch($params->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                $this->prepareInterventionFields($params);
+                // update
+                switch ($params->status_id) {
+                    case self::STATUS_DRAFT:
+                        $result = $this->setDraft($this->_user);
+                        break;
+                    case self::STATUS_VALIDATED:
+                        // set global $mysoc required to set pdf sender
+                        $mysoc = new Societe($this->db);
+                        $mysoc->setMysoc($conf);
+                        $result = $this->setValid($this->_user, $notrigger);
+                        // PDF generating
+                        if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
+                            if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                            $hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
+                            $hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
+                            $hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
+                            $outputlangs = $langs;
+                            if ($conf->global->MAIN_MULTILANGS)	{
+                                $this->fetch_thirdparty();
+                                $newlang = $this->thirdparty->default_lang;
+                                $outputlangs = new Translate("", $conf);
+                                $outputlangs->setDefaultLang($newlang);
+                            }
+                            if (ExtDirect::checkDolVersion(0,'3.7','')) {
+                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            } else {
+                                require_once DOL_DOCUMENT_ROOT.'/core/modules/fichinter/modules_fichinter.php';
+                                commande_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+                            }
+                        }
+                        break;
+                    case self::STATUS_CLOSED:
+                        $result = $this->setStatut(self::STATUS_CLOSED);;
+                        break;
+                    case self::STATUS_BILLED:
+                        $result = $this->setStatut(self::STATUS_BILLED);;
+                        break;
+                    default:
+                        break;   
+                }
+                
+                if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (ExtDirect::checkDolVersion(0,'3.5','') && $this->fk_contrat > 0) {
+                    if (($result = $this->set_contrat($this->_user, $this->fk_contrat)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
+                if (($result = $this->update($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
+    }
+
+    /**
+     * Ext.direct method to destroy intervention
+     * 
+     * @param unknown_type $param object or object array with order model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyIntervention($param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->supprimer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($param);
+        $notrigger=0;
+
+        foreach ($paramArray as &$params) {
+            // prepare fields
+            if ($params->id) {
+                $this->id = $params->id;
+                // delete 
+                if (($result = $this->delete($this->_user, $notrigger)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
+    }
+
+    /**
+     * Ext.direct method to upload file for intervention object
+     * 
+     * @param unknown_type $params object or object array with uploaded file(s)
+     * @return Array    ExtDirect response message
+     */
+    public function fileUpload($params) 
+    {
+        global $conf;
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+        $dir = null;
+        
+        foreach ($paramArray as &$param) {
+            if (isset($param['extTID'])) 
+            {
+                $id = $param['extTID'];
+                if ($this->fetch($id)) 
+                {
+                    $dir = $conf->ficheinter->dir_output.'/'.dol_sanitizeFileName($this->ref);
+                }
+                else
+                {
+                    $response = PARAMETERERROR;
+                    $break;
+                }
+            } elseif (isset($param['file']) && isset($dir)) {
+                $response = ExtDirect::fileUpload($param, $dir);
+            } else {
+                $response = PARAMETERERROR;
+                $break;
+            }
+        }
+        return $response;
+    }
+    
+    /**
+     * private method to copy order fields into dolibarr object
+     * 
+     * @param stdclass $params object with fields
+     * @return null
+     */
+    private function prepareInterventionFields($params) 
+    {
+        isset($params->ref) ? ( $this->ref = $params->ref ) : ( $this->ref = null);
+        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( $this->socid = null);
+        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
+        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);      
+        isset($params->description) ? ( $this->description =$params->description) : ($this->description = null);
+        isset($params->duration) ? ( $this->duration =$params->duration) : ($this->duration = null);
+        isset($params->project_id) ? ( $this->fk_projet =$params->project_id) : ($this->fk_projet = null);
+        isset($params->contract_id) ? ( $this->fk_contrat =$params->contract_id) : ($this->fk_contrat = null);
+    } 
+    
+    /**
+     * public method to read a list of interventions
+     *
+     * @param stdClass $params to filter on order status and ref
+     * @return     stdClass result data or error number
+     */
+    public function readList(stdClass $params) 
+    {
+        global $conf;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
+        $result = new stdClass;
+        $data = array();
+
+        $myUser = new User($this->db);
+        $statusFilterCount = 0;
+        $ref = null;
+        $contactTypeId = 0;
+        $barcode = null;
+
+        $includeTotal = false;
+
+        if (isset($params->limit)) {
+            $limit = $params->limit;
+            $start = $params->start;
+        }
+        if (isset($params->include_total)) {
+            $includeTotal = $params->include_total;
+        }
+
+        if (isset($params->filter)) {
+            foreach ($params->filter as $key => $filter) {
+                if ($filter->property == 'status_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
+                if ($filter->property == 'ref') $ref=$filter->value;
+                if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+                if ($filter->property == 'contact_id') $contactId = $filter->value;
+                if ($filter->property == 'barcode') $barcode = $filter->value;
+            }
+        }
+        
+        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
+        $sqlFrom = " FROM ".MAIN_DB_PREFIX."fichinter as i";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
+        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON i.rowid = ec.element_id";
+        $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+        $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
+        $sqlFrom .= "   FROM (";
+        $sqlFrom .= "    SELECT MAX( rowid ) AS maxrow, activity_id";
+        $sqlFrom .= "    FROM ".MAIN_DB_PREFIX."extdirect_activity";
+        $sqlFrom .= "    GROUP BY activity_id";
+        $sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
+        $sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
+        $sqlFrom .= " ) AS ea ON i.rowid = ea.activity_id";
+        $sqlWhere = " WHERE i.entity IN (".getEntity('fichinter', 1).')';
+        
+        if ($statusFilterCount>0) {
+            $sqlWhere .= " AND ( ";
+            foreach ($orderstatus_id as $key => $fk_statut) {
+                $sqlWhere  .= "i.fk_statut = ".$fk_statut;
+                if ($key < ($statusFilterCount-1)) $sqlWhere  .= " OR ";
+            }
+            $sqlWhere .= ")";
+        }
+        if ($ref) {
+            $sqlWhere .= " AND i.ref = '".$ref."'";
+        }
+        if ($contactTypeId > 0) {
+            $sqlWhere .= " AND ec.fk_c_type_contact = ".$contactTypeId;
+            $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
+        }
+    	if ($barcode) {
+            $sqlWhere .= " AND (i.ref = '".$this->db->escape($barcode)."' OR i.ref_ext = '".$this->db->escape($barcode)."')";
+        }
+        $sqlOrder = " ORDER BY i.datec DESC";
+
+        if ($limit) {
+            $sqlLimit = $this->db->plimit($limit, $start);
+        }
+
+        if ($includeTotal) {
+            $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
+            $resql=$this->db->query($sqlTotal);
+            
+            if ($resql) {
+                $obj = $this->db->fetch_object($resql);
+                $total = $obj->total;
+                $this->db->free($resql);
+            } else {
+                $error="Error ".$this->db->lasterror();
+                dol_syslog(get_class($this)."::readInterventionList ".$error, LOG_ERR);
+                return SQLERROR;
+            }
+        }
+
+        $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
+
+        $resql=$this->db->query($sql);
+        
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
+                $row->id            = (int) $obj->rowid;
+                $row->customer      = $obj->nom;
+                $row->customer_id   = (int) $obj->socid;
+                $row->ref           = $obj->ref;
+                $row->description   = $obj->description;
+                $row->status_id= (int) $obj->fk_statut;
+                $row->status   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
+                $row->user_id 		= $obj->fk_user_author;
+                if ($myUser->fetch($row->user_id)>0) {
+                    $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
+                }
+                $row->create_date  = $this->db->jdate($obj->datec);
+                array_push($data, $row);
+            }
+            $this->db->free($resql);
+            if ($includeTotal) {
+                $result->total = $total;
+                $result->data = $data;
+                return $result;
+            } else {
+                return $data;
+            }
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readInterventionList ".$error, LOG_ERR);
+            return SQLERROR;
+        }
+    }
+    
+    /**
+     * public method to read a list of interventionstatusses
+     *
+     * @return     stdClass result data or error number
+     */
+    public function readStatus()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        $statut = 0;
+        while (($result = $this->LibStatut($statut, 1)) != '') {
+            if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
+            $row = new stdClass;
+            $row->id = $statut++;
+            $row->status = html_entity_decode($result);
+            array_push($results, $row);
+        }
+        return $results;
+    }
+    
+    /**
+     * public method to read a list of contac types
+     *
+     * @return     stdClass result data or error number
+     */
+    public function readContactTypes()
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        $results = array();
+        if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        // add empty type
+        $row->id = 0;
+        $row->label = '';
+        array_push($results, $row);
+        foreach ($result as $id => $label) {
+            $row = new stdClass;
+            $row->id = $id;
+            $row->label = html_entity_decode($label);
+            array_push($results, $row);
+        }
+        return $results;
+    }
+
+    /**
+     *    Load intervention lines from database into memory
+     *
+     *    @param    stdClass    $params     filter with elements:
+     *                              intervention_id Id of intervention to load lines
+     *                              
+     *    @return     stdClass result data or error number
+     */
+    public function readInterventionLine(stdClass $params)
+    {
+        global $conf;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
+        
+        $results = array();
+        $intervention_id = 0;
+
+        if (isset($params->filter)) {
+            foreach ($params->filter as $key => $filter) {
+                if ($filter->property == 'intervention_id') $intervention_id=$filter->value;
+            }
+        }
+
+        if ($intervention_id > 0) {
+            $this->id=$intervention_id;
+            if (($result = $this->fetch_lines()) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if (!$this->error) {
+                foreach ($this->lines as $line) {
+                    // get orderline with complete stock
+                    $row = new stdClass;
+                    $row->id = $line->id;
+                    $row->origin_id = $intervention_id;
+                    $row->line_id = $line->id;
+                    $row->description = $line->desc;
+                    $row->qty = $line->qty;
+                    $row->duration = $line->duration;
+                    $row->date = $line->date;
+                    $row->rang = $line->rang;
+                    $row->product_type = $line->product_type;
+                    array_push($results, $row);
+                }
+            } else {
+                return 0;
+            }
+        }
+        return $results;
+    }
+
+    /**
+    * public method to read available line optionals (extra fields)
+    *
+    * @return stdClass result data or ERROR
+    */
+    public function readLineOptionalModel(stdClass $param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+
+        $line = new FichinterLigne($this->db);
+
+        return ExtDirect::readOptionalModel($line);
+    }
+
+    /**
+     * public method to read intervention line optionals (extra fields) from database
+     *
+     *    @param    stdClass    $param  filter with elements:
+     *      id                  Id of order to load
+     *
+     *    @return     stdClass result data or -1
+     */
+    public function readLineOptionals(stdClass $param)
+    {
+        global $conf;
+
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
+        $results = array();
+        $line_id = 0;
+        
+        if (isset($param->filter)) {
+            foreach ($param->filter as $key => $filter) {
+                if ($filter->property == 'line_id') $line_id=$filter->value;
+            }
+        }
+        
+        if ($line_id > 0) {
+            $extraFields = new ExtraFields($this->db);
+            $line = new FichinterLigne($this->db);
+            $line->id = $line_id;
+            if (($result = $orderLine->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+            if (! $line->error) {
+                $extraFields->fetch_name_optionals_label($line->table_element);
+                foreach ($line->array_options as $key => $value) {
+                    if (!empty($value)) {
+                        $row = new stdClass;
+                        $name = substr($key,8); // strip options_
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $results[] = $row;
+                    }
+                }
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * Ext.direct method to Create intervention lines
+     *
+     * @param unknown_type $param object or object array with product model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createInterventionLine($param) 
+    {
+        global $conf, $mysoc;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
+        $line = new FichinterLigne($this->db);
+        
+        $notrigger=0;
+        $paramArray = ExtDirect::toArray($param);
+
+        foreach ($paramArray as &$params) {
+            if ($params->origin_id > 0 && !empty($params->date) && !empty($params->duration)) {
+                // prepare fields
+                $this->prepareInterventionLineFields($params, $line);
+                if (($result = $this->fetch($line->fk_fichinter)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                
+                if (ExtDirect::checkDolVersion(0,'3.5','')) {
+                    if (($result = $this->addline(
+                        $this->_user,
+                        $line->fk_fichinter,
+                        $line->desc,
+                        $line->datei,
+                        $line->duration
+                    )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    $params->id=$result;
+                } else {
+                    if (($result = $this->addline(
+                        $line->fk_fichinter,
+                        $line->desc,
+                        $line->datei,
+                        $line->duration
+                    )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
+    }
+
+    /**
+     * Ext.direct method to update interventionlines
+     *
+     * @param unknown_type $param object or object array with order model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateInterventionLine($param) 
+    {
+        global $conf, $mysoc;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
+        $orderlineUpdated = false;
+        $line = new FichinterLigne($this->db);
+        $paramArray = ExtDirect::toArray($param);
+        $notrigger=0;
+
+        foreach ($paramArray as &$params) {
+            if ($params->line_id > 0) {
+                // get old line
+                if (($result = $line->fetch($params->line_id)) < 0)  return ExtDirect::getDolError($result, $line->errors, $line->error);
+
+                if (!$this->error) {
+                    $this->prepareInterventionLineFields($params, $line);
+                    if (($result = $line->update($this->_user, $notrigger)) < 0)  return ExtDirect::getDolError($result, $line->errors, $line->error);
+                }
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
+    }
+    
+    /**
+     * Ext.direct method to destroy orderlines
+     *
+     * @param unknown_type $param object or object array with order model(s)
+     * @return Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyInterventionLine($param) 
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->ficheinter->supprimer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($param);
+        $line = new FichinterLigne($this->db);
+        $notrigger=0;
+
+        foreach ($paramArray as &$params) {
+            if ($params->id) {
+                // prepare fields
+                $line->fetch($params->id);
+                $this->id = $line->fk_fichinter;
+                // delete 
+                if (($result = $line->deleteline($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+            } else {
+                return PARAMETERERROR;
+            }
+        }
+    
+        if (is_array($param)) {
+            return $paramArray;
+        } else {
+            return $params;
+        }
+    }
+    
+    /**
+     * private method to copy intervention fields into dolibarr object
+     *
+     * @param stdclass $params object with fields
+     * @param stdclass $orderLine object
+     * @return null
+     */
+    private function prepareInterventionLineFields($params,&$line) 
+    {
+        isset($params->line_id) ? ( $line->rowid= $params->line_id) : null;
+        isset($params->line_id) ? ( $line->id= $params->line_id) : null;
+        isset($params->origin_id) ? ( $line->fk_fichinter= $params->origin_id) : null;
+        isset($params->date) ? ( $line->datei = $params->date) : null;
+        isset($params->duration) ? ( $line->duration = $params->duration) : null;
+        isset($params->description) ? ( $line->desc = $params->description) : null;
+        isset($params->rang) ? ($line->rang = $params->rang) : null;
+    }
+}

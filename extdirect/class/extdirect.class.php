@@ -26,6 +26,9 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/product.lib.php'; // required for showing product units in pdf's from version 4.0
+require_once DOL_DOCUMENT_ROOT.'/core/lib/images.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 
 /**
  * Constant to return when there is a database connection error
@@ -307,11 +310,14 @@ class ExtDirect
                 $this->dev_platform = $obj->dev_platform;
                 $this->dev_type = $obj->dev_type;
 
-                
+                return 1;
+            } else {
+                return 0;
             }
+
             $this->db->free($resql);
 
-            return 1;
+           
         } else {
             $this->error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::fetch ".$this->error, LOG_ERR);
@@ -476,27 +482,26 @@ class ExtDirect
      *
      * @return return validation 0 (not valid) or 1 (valid) or string with major.minor version
      */
-    
-    public static function checkDolVersion($validate = 0, $minVersion = '', $maxVersion = '') 
+    public static function checkDolVersion($validate = 0, $minVersion = '', $maxVersion = '')
     {
         $dolVersion = versiondolibarrarray();
         $dolMajorMinorVersion = $dolVersion[0].'.'.$dolVersion[1];
 
-        if($validate) 
+        if($validate)
         {
-            $minVersion = '3.3';
-            $maxVersion = '6.0'; // tested version
+            $minVersion = '3.4';
+            $maxVersion = '11.0'; // tested version
         }
         if (empty($minVersion) && empty($maxVersion)) {
             return $dolMajorMinorVersion;
         } else {
-            if (empty($minVersion)) $minVersion = '3.3';
-            if (empty($maxVersion)) $maxVersion = '7.0'; // debugging version
-            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) 
+            if (empty($minVersion)) $minVersion = '3.4';
+            if (empty($maxVersion)) $maxVersion = '11.0'; // debugging version
+            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>='))
             {
             	return 1;
             }
-            else 
+            else
             {
                 return 0;
             }
@@ -567,37 +572,53 @@ class ExtDirect
      * static method to copy field into dolibarr object element and check if changed
      *
      * @param boolean $diff diff status of param elements
-     * @param stdclass $param object with fields
-     * @param stdclass $object dolibarr object
-     * @param string $paramName param object field name
-     * @param string $propertyName object property name
+     * @param unknown_type $param object with fields
+     * @param unknown_type $object dolibarr object
+     * @param string $paramName param object field name, if null $param is value
+     * @param string $propertyName object property name, if null $object is value
+     * @param unknown_type $default default value
+     * @param unknown_type $paramIndex array index if paramName is array
+     * @param unknown_type $propertyIndex array index if propertyName is array
      * 
      * @return boolean true if param $diff true or true on param element change
      */
-    public static function prepareField($diff, $param, $object, $paramName, $propertyName)
+    public static function prepareField($diff, $param, $object, $paramName = null, $propertyName = null, $default = null, $paramIndex = null, $propertyIndex = null)
     {
-    	$epsilon = 0.00001;
-    	$propertySet = isset($object->$propertyName);
-    	if (is_numeric($object->$propertyName) || is_numeric($param->$paramName)) {
-    		$equal = (abs($object->$propertyName - $param->$paramName) < $epsilon);
-    		$paramSet = isset($param->$paramName);
-    	} else {
-    		$equal = ($param->$paramName == $object->$propertyName);
-    		$paramSet = !empty($param->$paramName);
-    	}
-    	if ($paramSet && (!$equal || !$propertySet)) {
-    		$object->$propertyName = $param->$paramName;
-           	return true;
-    	} else {
-        	if ($diff) {
-        		return true;
-        	} else {
-        		return false;
-        	}
+        $epsilon = 0.00001;
+        if (!empty($propertyName)) {
+            $propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
+        } else {
+            $propertyValue = $object;
+        }
+       
+        if (!empty($paramName)) {
+            $paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
+        } else {
+            $paramValue = $param;
+        }
+        
+        $propertySet = isset($propertyValue);
+        if (is_numeric($paramValue) && (is_numeric($propertyValue) || (!isset($propertyValue)))) {
+            $equal = (abs($propertyValue - $paramValue) < $epsilon);
+            $paramSet = isset($paramValue);
+        } else {
+            $equal = ($paramValue == $propertyValue);
+            $paramSet = !empty($paramValue);
+        }
+        if (!$paramSet && !$propertySet && isset($default)) {
+            $propertyIndex ? $object->{$propertyName}[$propertyIndex] = $default : $object->$propertyName = $default;
+        } else if ($paramSet && (!$equal || !$propertySet)) {
+            $propertyIndex ? $object->{$propertyName}[$propertyIndex] = $paramValue : $object->$propertyName = $paramValue;
+            return true;
+        }
+        if ($diff) {
+            return true;
+        } else {
+            return false;
         }
     }
     
-	/**
+    /**
      *	Load Dolibarr constants
      * 
      *	@param			DoliDb		$db					Database handle
@@ -610,26 +631,113 @@ class ExtDirect
      */
     public static function readConstants(DoliDb $db, stdClass $params, user $user, $moduleConstants = array())
     {
-    	$constants =  array();
-    	$results = array();
-        $row = new stdClass;
+        $constants =  array();
+        $results = array();
         $entity = ($user->entity > 0) ? $user->entity : 1;
-        $constants += $moduleConstants;
-    	
-    	if (isset($params->filter)) {
-    		if ($filter->property == 'constant') {
-    			$row->constant = $filter->value;
-    			$row->value = dolibarr_get_const($db, $constant, $entity);
-    			array_push($results, $row);
-    		}
-    	} else {
-    		foreach ($constants as $constant) {
-    			$row = null;
-    			$row->constant = $constant;
-    			$row->value = dolibarr_get_const($db, $constant, $entity);
-    			array_push($results, $row);
-    		}
-    	}
-    	return $results;
+        if (!empty($moduleConstants)) {
+            $constants += $moduleConstants;
+        }
+        
+        if (isset($params->filter)) {
+            if ($filter->property == 'constant') {
+                $row = new stdClass;
+                $row->constant = $filter->value;
+                $row->value = dolibarr_get_const($db, $constant, $entity);
+                array_push($results, $row);
+            }
+        } else {
+            foreach ($constants as $constant) {
+                $row = new stdClass;
+                $row->constant = $constant;
+                $row->value = dolibarr_get_const($db, $constant, $entity);
+                array_push($results, $row);
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * Load available object Optionals (extra fields)
+     *
+     * @return stdClass array result data
+     */
+    public static function readOptionalModel($object) 
+    {
+        $results = array();
+        
+        $extraFields = new ExtraFields($object->db);
+        $optionalLabel = $extraFields->fetch_name_optionals_label($object->table_element);
+        if (count($optionalLabel) > 0) {
+            foreach ($optionalLabel as $name => $label) {
+                $row = new stdClass;
+                $row->name = $name;
+                $row->label = $label;
+                $row->type = $extraFields->attributes[$object->table_element]['type'][$name];
+                $row->default = $extraFields->attributes[$object->table_element]['default'][$name];
+                $results[] = $row;
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * Upload file to ECM
+     * 
+     * @param Array     $param ExtDirect uploaded item
+     * @param String    Object dir
+     * 
+     * @return Array    ExtDirect response message
+     */
+    public static function fileUpload($param, $dir)
+    {
+        global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
+        
+        $response = array(
+            'success' => false,
+            'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
+        );
+
+        if (empty($conf->global->MAIN_UPLOAD_DOC)) {
+            // block upload
+            return $response;
+        }
+        
+        if (is_array($param['file']) && is_uploaded_file($param['file']['tmp_name']))
+        {
+            dol_mkdir($dir);
+            if (@is_dir($dir))
+            {
+                $newfile=$dir.'/'.dol_sanitizeFileName($param['file']['name']);
+                $result = dol_move_uploaded_file($param['file']['tmp_name'], $newfile,0,0,$param['file']['error']);
+
+                if (is_string($result))
+                {
+                    $errors[] = $result;
+                    $response = ExtDirect::getDolError($result, $errors, $result);
+                }
+                else
+                {
+                    if (image_format_supported($newfile) > 0) {
+                        // Create thumbs
+                        $file_osencoded=dol_osencode($newfile);
+                        if (file_exists($file_osencoded))
+                        {
+                            // Create small thumbs (Ratio is near 16/9)
+                            // Used on logon for example
+                            vignette($file_osencoded, $maxwidthsmall, $maxheightsmall, '_small', $quality);
+
+                            // Create mini thumbs (Ratio is near 16/9)
+                            // Used on menu or for setup page for example
+                            vignette($file_osencoded, $maxwidthmini, $maxheightmini, '_mini', $quality);
+                        }
+                    }
+                    $response = array(
+                        'success' => true,
+                        'message' => 'Successful upload: ' . $param['file']['name']
+                    );
+                }
+            }
+        }
+        return $response;
     }
 }

@@ -48,6 +48,15 @@ $API = array(
             ),
             'readConstants'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -67,6 +76,15 @@ $API = array(
             ),
             'destroyContact'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -89,6 +107,15 @@ $API = array(
             ),
             'getAllUsers'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -130,6 +157,15 @@ $API = array(
             ),
             'readProductBatchList'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readAttributes'=>array(
+                    'len'=>1
             )
         )
     ),
@@ -161,6 +197,9 @@ $API = array(
                     'len'=>1
             ),
             'readSupplierReputations'=>array(
+                    'len'=>1
+            ),
+            'readProductUnits'=>array(
                     'len'=>1
             )
         )
@@ -246,6 +285,21 @@ $API = array(
             ),
             'readConstants'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -286,6 +340,21 @@ $API = array(
             ),
             'readConstants'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     ),
@@ -326,6 +395,76 @@ $API = array(
             ),
             'readConstants'=>array(
                     'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
+            )
+        )
+    ),
+    'ExtDirectFichinter'=>array(
+        'methods'=>array(
+            'readIntervention'=>array(
+                    'len'=>1
+            ),
+            'createIntervention'=>array(
+                    'len'=>1
+            ),
+            'updateIntervention'=>array(
+                    'len'=>1
+            ),
+            'destroyIntervention'=>array(
+                    'len'=>1
+            ),
+            'readList'=>array(
+                    'len'=>1
+            ),
+            'readStatus'=>array(
+                    'len'=>1
+            ),
+            'readContactTypes'=>array(
+                    'len'=>1
+            ),
+            'readInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'createInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'updateInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'destroyInterventionLine'=>array(
+                    'len'=>1
+            ),
+            'readConstants'=>array(
+                    'len'=>1
+            ),
+            'readOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionalModel'=>array(
+                    'len'=>1
+            ),
+            'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'fileUpload'=>array(
+                    'formHandler'=>true
             )
         )
     )

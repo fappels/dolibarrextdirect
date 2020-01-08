@@ -48,7 +48,7 @@ class ExtDirectTranslate
         global $user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $this->_user = $user;
                 $this->_translate = true;
             }

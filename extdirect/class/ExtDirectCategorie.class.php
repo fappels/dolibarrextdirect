@@ -51,7 +51,7 @@ class ExtDirectCategorie extends Categorie
         global $langs,$db,$user;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
                 $this->_user = $user;  //product.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -90,42 +90,24 @@ class ExtDirectCategorie extends Categorie
                 else if ($filter->property == 'label') $label=$filter->value;
             }
         }
-        
+
         if (($id > 0) || ($label != '')) {
-            if (ExtDirect::checkDolVersion() >= 3.4) {
-                if (($result = $this->fetch($id, $label)) < 0)    return $result;
-                if (!$this->error) {
-                    $row->id           = $this->id ;
-                    $row->fk_parent    = $this->fk_parent;
-                    $row->label        = $this->label;
-                    $row->description  = $this->description?$this->description:'';
-                    $row->company_id   = $this->socid;
-                    // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
-                    $row->type= $this->type;
-                    $row->entity= $this->entity;
-                    array_push($results, $row);
-                } else {
-                    return 0;
-                }
+            if (($result = $this->fetch($id, $label)) < 0)    return $result;
+            if (!$this->error) {
+                $row->id           = $this->id ;
+                $row->fk_parent    = $this->fk_parent;
+                $row->label        = $this->label;
+                $row->description  = $this->description?$this->description:'';
+                $row->company_id   = $this->socid;
+                // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
+                $row->type= $this->type;
+                $row->entity= $this->entity;
+                array_push($results, $row);
             } else {
-                for ($type = 0; $type < 4; $type++) {
-                    if (($result = $this->rechercher($id, $label, $type)) < 0)    return $result;
-                    if (! empty($result)) {
-                        $cat = $result[0];
-                        $row->id           = $cat->id ;
-                        $row->fk_parent    = $cat->fk_parent;
-                        $row->label        = $cat->label;
-                        $row->description  = $cat->description?$cat->description:'';
-                        $row->company_id   = $cat->socid;
-                        // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
-                        $row->type= $cat->type;
-                        $row->entity= $cat->entity;
-                        array_push($results, $row);
-                    }
-                }                
-            }            
+                return 0;
+            }
         }
-        
+
         return $results;
     }
 
@@ -254,7 +236,7 @@ class ExtDirectCategorie extends Categorie
         array_push($results, $row);
 
         foreach ($cats as $cat) {
-            $row=null;
+            $row = new stdClass;
             $row->id = $cat->id;
             $row->categorie = $cat->label;
             array_push($results, $row);

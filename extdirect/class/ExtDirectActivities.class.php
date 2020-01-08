@@ -43,7 +43,7 @@ class ExtDirectActivities extends ExtDirectActivity
         global $langs,$user,$db;
         
         if (!empty($login)) {
-            if ($user->fetch('', $login)>0) {
+            if ($user->fetch('', $login, '', 1)>0) {
                 $user->getrights();
                 $this->_user = $user;  //commande.class uses global user
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
@@ -96,7 +96,6 @@ class ExtDirectActivities extends ExtDirectActivity
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $row = new stdClass;
         
         $listfilter = "";
         if (isset($param->filter)) {
@@ -117,7 +116,7 @@ class ExtDirectActivities extends ExtDirectActivity
         if (($resql = $this->fetchList($listfilter, 'rowid')) < 0) return $resql;
         if (! empty($this->dataset)) {
             foreach ($this->dataset as $data) {
-                $row = null;
+                $row = new stdClass;
                 $row->id = (int) $data['rowid'];
                 $row->app_id = (int) $data['app_id'];
                 $row->app_version = $data['app_version'];                

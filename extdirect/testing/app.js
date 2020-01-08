@@ -61214,6 +61214,12 @@ Ext.define('ConnectorTest.model.CompanyList', {
             },
             {
                 name: 'logo_small'
+            },
+            {
+                name: 'code_supplier'
+            },
+            {
+                name: 'code_client'
             }
         ]
     }
@@ -61700,6 +61706,13 @@ Ext.define('ConnectorTest.model.Order', {
             {
                 name: 'reduction',
                 type: 'float'
+            },
+            {
+                name: 'has_signature',
+                type: 'int'
+            },
+            {
+                name: 'signature'
             },
             {
                 name: 'app_id'
@@ -63017,6 +63030,245 @@ Ext.define('ConnectorTest.model.DataConstant', {
 });
 
 /*
+ * File: app/model/OptionalModel.js
+ *
+ */
+Ext.define('ConnectorTest.model.OptionalModel', {
+    extend: Ext.data.Model,
+    config: {
+        fields: [
+            {
+                name: 'name'
+            },
+            {
+                name: 'label'
+            },
+            {
+                name: 'type'
+            },
+            {
+                name: 'default'
+            }
+        ]
+    }
+});
+
+/*
+ * File: app/model/Optional.js
+ *
+ */
+Ext.define('ConnectorTest.model.Optional', {
+    extend: Ext.data.Model,
+    config: {
+        fields: [
+            {
+                name: 'name'
+            },
+            {
+                name: 'value'
+            }
+        ]
+    }
+});
+
+/*
+ * File: app/model/Intervention.js
+ *
+ */
+Ext.define('ConnectorTest.model.Intervention', {
+    extend: Ext.data.Model,
+    config: {
+        fields: [
+            {
+                name: 'id'
+            },
+            {
+                name: 'local_id'
+            },
+            {
+                name: 'origin'
+            },
+            {
+                name: 'origin_id',
+                type: 'int'
+            },
+            {
+                name: 'ref'
+            },
+            {
+                name: 'description'
+            },
+            {
+                name: 'customer_id',
+                type: 'int'
+            },
+            {
+                name: 'user_id',
+                type: 'int'
+            },
+            {
+                name: 'user_valid_id',
+                type: 'int'
+            },
+            {
+                name: 'status_id',
+                type: 'int'
+            },
+            {
+                dateFormat: 'timestamp',
+                name: 'create_date',
+                type: 'date'
+            },
+            {
+                dateFormat: 'timestamp',
+                name: 'valid_date',
+                type: 'date'
+            },
+            {
+                name: 'note_private'
+            },
+            {
+                name: 'note_public'
+            },
+            {
+                name: 'user_name'
+            },
+            {
+                name: 'customer_name'
+            },
+            {
+                name: 'status'
+            },
+            {
+                name: 'model_pdf'
+            },
+            {
+                name: 'project_id',
+                type: 'int'
+            },
+            {
+                name: 'project_ref'
+            },
+            {
+                name: 'contract_id',
+                type: 'int'
+            },
+            {
+                name: 'contract_ref'
+            },
+            {
+                name: 'duration',
+                type: 'float'
+            },
+            {
+                name: 'has_signature',
+                type: 'int'
+            },
+            {
+                name: 'signature'
+            },
+            {
+                name: 'app_id'
+            }
+        ]
+    }
+});
+
+/*
+ * File: app/model/InterventionLine.js
+ *
+ */
+Ext.define('ConnectorTest.model.InterventionLine', {
+    extend: Ext.data.Model,
+    config: {
+        fields: [
+            {
+                name: 'id'
+            },
+            {
+                name: 'local_id'
+            },
+            {
+                name: 'line_id'
+            },
+            {
+                name: 'origin_id',
+                type: 'int'
+            },
+            {
+                name: 'description'
+            },
+            {
+                defaultValue: 0,
+                name: 'duration',
+                type: 'float'
+            },
+            {
+                name: 'rang'
+            },
+            {
+                dateFormat: 'timestamp',
+                name: 'date',
+                type: 'date'
+            },
+            {
+                name: 'app_id'
+            }
+        ]
+    }
+});
+
+/*
+ * File: app/model/InterventionList.js
+ *
+ */
+Ext.define('ConnectorTest.model.InterventionList', {
+    extend: Ext.data.Model,
+    config: {
+        fields: [
+            {
+                name: 'id'
+            },
+            {
+                name: 'ref'
+            },
+            {
+                name: 'description'
+            },
+            {
+                name: 'customer'
+            },
+            {
+                name: 'status_id',
+                type: 'int'
+            },
+            {
+                name: 'status'
+            },
+            {
+                name: 'customer_id',
+                type: 'int'
+            },
+            {
+                name: 'status'
+            },
+            {
+                name: 'user_id',
+                type: 'int'
+            },
+            {
+                name: 'user_name'
+            },
+            {
+                dateFormat: 'timestamp',
+                name: 'create_date',
+                type: 'date'
+            }
+        ]
+    }
+});
+
+/*
  * File: app/controller/Main.js
  *	
  *	Main Controller for ControllerTest
@@ -63084,6 +63336,18 @@ Ext.define('ConnectorTest.controller.Main', /**
                     {
                         "name": "readProductBatchList",
                         "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readAttributes",
+                        "len": 1
                     }
                 ],
                 "ExtDirectTranslate": [
@@ -63115,6 +63379,10 @@ Ext.define('ConnectorTest.controller.Main', /**
                     },
                     {
                         "name": "readSupplierReputations",
+                        "len": 1
+                    },
+                    {
+                        "name": "readProductUnits",
                         "len": 1
                     }
                 ],
@@ -63214,6 +63482,22 @@ Ext.define('ConnectorTest.controller.Main', /**
                     {
                         "name": "readConstants",
                         "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionals",
+                        "len": 1
                     }
                 ],
                 "ExtDirectCommandeFournisseur": [
@@ -63264,6 +63548,22 @@ Ext.define('ConnectorTest.controller.Main', /**
                     {
                         "name": "readConstants",
                         "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionals",
+                        "len": 1
                     }
                 ],
                 "ExtDirectExpedition": [
@@ -63313,6 +63613,22 @@ Ext.define('ConnectorTest.controller.Main', /**
                     },
                     {
                         "name": "readConstants",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionals",
                         "len": 1
                     }
                 ],
@@ -63372,6 +63688,14 @@ Ext.define('ConnectorTest.controller.Main', /**
                     {
                         "name": "readConstants",
                         "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
                     }
                 ],
                 "ExtDirectContact": [
@@ -63393,6 +63717,14 @@ Ext.define('ConnectorTest.controller.Main', /**
                     },
                     {
                         "name": "destroyContact",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
                         "len": 1
                     }
                 ],
@@ -63420,6 +63752,14 @@ Ext.define('ConnectorTest.controller.Main', /**
                     {
                         "name": "getAllUsers",
                         "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
                     }
                 ],
                 "ExtDirectCategorie": [
@@ -63441,6 +63781,72 @@ Ext.define('ConnectorTest.controller.Main', /**
                     },
                     {
                         "name": "readCategorieList",
+                        "len": 1
+                    }
+                ],
+                "ExtDirectFichinter": [
+                    {
+                        "name": "readIntervention",
+                        "len": 1
+                    },
+                    {
+                        "name": "createIntervention",
+                        "len": 1
+                    },
+                    {
+                        "name": "updateIntervention",
+                        "len": 1
+                    },
+                    {
+                        "name": "destroyIntervention",
+                        "len": 1
+                    },
+                    {
+                        "name": "readList",
+                        "len": 1
+                    },
+                    {
+                        "name": "readStatus",
+                        "len": 1
+                    },
+                    {
+                        "name": "readContactTypes",
+                        "len": 1
+                    },
+                    {
+                        "name": "readInterventionLine",
+                        "len": 1
+                    },
+                    {
+                        "name": "createInterventionLine",
+                        "len": 1
+                    },
+                    {
+                        "name": "updateInterventionLine",
+                        "len": 1
+                    },
+                    {
+                        "name": "destroyInterventionLine",
+                        "len": 1
+                    },
+                    {
+                        "name": "readConstants",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readOptionals",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionalModel",
+                        "len": 1
+                    },
+                    {
+                        "name": "readLineOptionals",
                         "len": 1
                     }
                 ]
@@ -63536,6 +63942,24 @@ Ext.define('ConnectorTest.controller.Main', /**
                 destroy: ExtDirectCommandeFournisseur.destroyOrderLine
             }
         });
+        Ext.getStore('Intervention').setProxy({
+            type: 'direct',
+            api: {
+                create: ExtDirectFichinter.createIntervention,
+                read: ExtDirectFichinter.readIntervention,
+                update: ExtDirectFichinter.updateIntervention,
+                destroy: ExtDirectFichinter.destroyIntervention
+            }
+        });
+        Ext.getStore('InterventionLines').setProxy({
+            type: 'direct',
+            api: {
+                create: ExtDirectFichinter.createInterventionLine,
+                read: ExtDirectFichinter.readInterventionLine,
+                update: ExtDirectFichinter.updateInterventionLine,
+                destroy: ExtDirectFichinter.destroyInterventionLine
+            }
+        });
         Ext.getStore('companies').setProxy({
             type: 'direct',
             api: {
@@ -63608,6 +64032,10 @@ Ext.define('ConnectorTest.controller.Main', /**
             type: 'direct',
             directFn: ExtDirectCommandeFournisseur.readOrderList
         });
+        Ext.getStore('InterventionList').setProxy({
+            type: 'direct',
+            directFn: ExtDirectFichinter.readList
+        });
         Ext.getStore('productlist').setProxy({
             type: 'direct',
             directFn: ExtDirectProduct.readProductList
@@ -63623,6 +64051,10 @@ Ext.define('ConnectorTest.controller.Main', /**
         Ext.getStore('PurchaseOrderStatus').setProxy({
             type: 'direct',
             directFn: ExtDirectCommandeFournisseur.readOrderStatus
+        });
+        Ext.getStore('InterventionStatus').setProxy({
+            type: 'direct',
+            directFn: ExtDirectFichinter.readStatus
         });
         Ext.getStore('lang').setProxy({
             type: 'direct',
@@ -63712,9 +64144,21 @@ Ext.define('ConnectorTest.controller.Main', /**
             type: 'direct',
             directFn: ExtDirectCommandeFournisseur.readConstants
         });
+        Ext.getStore('InterventionConstants').setProxy({
+            type: 'direct',
+            directFn: ExtDirectFichinter.readConstants
+        });
         Ext.getStore('SupplierReputations').setProxy({
             type: 'direct',
             directFn: ExtDirectFormProduct.readSupplierReputations
+        });
+        Ext.getStore('ProductOptionalModel').setProxy({
+            type: 'direct',
+            directFn: ExtDirectProduct.readOptionalModel
+        });
+        Ext.getStore('ProductOptionals').setProxy({
+            type: 'direct',
+            directFn: ExtDirectProduct.readOptionals
         });
     },
     /**
@@ -64828,6 +65272,102 @@ Ext.define('ConnectorTest.store.PurchaseConstants', {
 });
 
 /*
+ * File: app/store/ProductOptionalModel.js
+ *
+ */
+Ext.define('ConnectorTest.store.ProductOptionalModel', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.OptionalModel',
+        remoteFilter: true,
+        storeId: 'ProductOptionalModel'
+    }
+});
+
+/*
+ * File: app/store/ProductOptionals.js
+ *
+ */
+Ext.define('ConnectorTest.store.ProductOptionals', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.Optional',
+        remoteFilter: true,
+        storeId: 'ProductOptionals'
+    }
+});
+
+/*
+ * File: app/store/Intervention.js
+ *
+ */
+Ext.define('ConnectorTest.store.Intervention', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.Intervention',
+        remoteFilter: true,
+        storeId: 'Intervention'
+    }
+});
+
+/*
+ * File: app/store/InterventionLines.js
+ *
+ */
+Ext.define('ConnectorTest.store.InterventionLines', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.InterventionLine',
+        remoteFilter: true,
+        storeId: 'InterventionLines'
+    }
+});
+
+/*
+ * File: app/store/InterventionList.js
+ *
+ */
+Ext.define('ConnectorTest.store.InterventionList', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.InterventionList',
+        remoteFilter: true,
+        storeId: 'InterventionList',
+        grouper: {
+            groupFn: function(item) {
+                return item.get('status');
+            },
+            sortProperty: 'status_id'
+        }
+    }
+});
+
+/*
+ * File: app/store/InterventionConstants.js
+ *
+ */
+Ext.define('ConnectorTest.store.InterventionConstants', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.Constant',
+        remoteFilter: true,
+        storeId: 'InterventionConstants'
+    }
+});
+
+/*
+ * File: app/store/InterventionStatus.js
+ *
+ */
+Ext.define('ConnectorTest.store.InterventionStatus', {
+    extend: Ext.data.Store,
+    config: {
+        model: 'ConnectorTest.model.OrderStatus',
+        storeId: 'InterventionStatus'
+    }
+});
+
+/*
  * File: app/view/MainView.js
  *
  * This file was generated by Sencha Architect version 3.1.0.
@@ -64927,7 +65467,12 @@ Ext.application({
         'PriceBaseType',
         'ShipmentList',
         'Constant',
-        'DataConstant'
+        'DataConstant',
+        'OptionalModel',
+        'Optional',
+        'Intervention',
+        'InterventionLine',
+        'InterventionList'
     ],
     stores: [
         'ActionList',
@@ -64979,7 +65524,14 @@ Ext.application({
         'ShipmentConstants',
         'CompanyConstants',
         'SupplierReputations',
-        'PurchaseConstants'
+        'PurchaseConstants',
+        'ProductOptionalModel',
+        'ProductOptionals',
+        'Intervention',
+        'InterventionLines',
+        'InterventionList',
+        'InterventionConstants',
+        'InterventionStatus'
     ],
     views: [
         'MainView'
