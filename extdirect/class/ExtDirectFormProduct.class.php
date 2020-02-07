@@ -75,7 +75,8 @@ class ExtDirectFormProduct extends FormProduct
 
         if (!isset($this->db)) return CONNECTERROR;
         
-        $results = array();
+        $result = new stdClass;
+        $data = array();
         
         $fkProduct = 0;
         $fkBatch = 0;
@@ -90,10 +91,19 @@ class ExtDirectFormProduct extends FormProduct
             $statusFilter = '';
         }
         
+        $includeTotal = false;
         
         if (isset($params->limit)) {
             $limit = $params->limit;
             $start = $params->start;
+        }
+
+        if (isset($params->allow_paging)) { // for backwards compatibility (actual app already sends include_total but is not ready for order paging)
+            if (isset($params->include_total)) {
+                $includeTotal = $params->include_total;
+            }
+        } else {
+            $limit = 0;
         }
                 
         if (isset($params->filter)) {
@@ -106,8 +116,14 @@ class ExtDirectFormProduct extends FormProduct
                 if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);  
             }
         }
-        if (($result = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $limit, $start)) < 0) return $result;
-        
+
+        if ($includeTotal) {
+            $res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock);
+            $total = $res;
+        } else {
+            $res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $limit, $start);
+        }
+
         $this->_makeNumericLabelSortable();
 
         if ($start == 0) {
@@ -125,30 +141,41 @@ class ExtDirectFormProduct extends FormProduct
                 if ($obj) {
                     $row->stock = price2num($obj->stock,5);
                 }
+                array_push($data, $row);
                 $this->db->free($resql);
             }
             else
             {
-                return SQLERROR;
+                $res = SQLERROR;
             }
-            array_push($results, $row);
+            
         }
 
-        if (!$this->error) {
+        if ($res > 0) {
+            $recordNbr = 1;
             foreach ($this->cache_warehouses as $warehouseId => $warehouse) {
-                $row = new stdClass;
-                $row->id = $warehouseId;
-                isset($warehouse['label']) ? $row->label = $warehouse['label'] : $row->label='';
-                isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
-                isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
-                isset($warehouse['status']) ? $row->status = $warehouse['status'] : $row->status=null;
-                array_push($results, $row);
+                if ($limit == 0 || ($recordNbr > $start && $recordNbr <= $start + $limit)) {
+                    $row = new stdClass;
+                    $row->id = $warehouseId;
+                    isset($warehouse['label']) ? $row->label = $warehouse['label'] : $row->label='';
+                    isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
+                    isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
+                    isset($warehouse['status']) ? $row->status = $warehouse['status'] : $row->status=null;
+                    array_push($data, $row);
+                }
+                $recordNbr++;
             }
         } else {
-            ExtDirect::getDolError($result, $this->errors, $this->error);
+            return ExtDirect::getDolError($res, $this->errors, $this->error);
         }
-        
-        return $results;
+
+        if ($includeTotal) {
+            $result->total = $total;
+            $result->data = $data;
+            return $result;
+        } else {
+            return $data;
+        }
     }
     
     /**

@@ -764,7 +764,7 @@ class ExtDirectExpedition extends Expedition
                     }                    
                 } else {
                     // no batch
-                    if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);;
+                    if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship, 0)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                     $params->line_id=$result;
                 }
             } else {
@@ -861,7 +861,7 @@ class ExtDirectExpedition extends Expedition
             }
         }
         foreach ($stockLocationQty as $stockLocation => $qty) {
-            if (($result = $this->create_line($stockLocation, $stockLocationOriginLineId[$stockLocation], $qty)) < 0)  {
+            if (($result = $this->create_line($stockLocation, $stockLocationOriginLineId[$stockLocation], $qty, 0)) < 0)  {
                 return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 // create shipment batch lines for stockLocation
