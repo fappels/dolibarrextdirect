@@ -165,7 +165,7 @@ class ExtDirectFormProduct extends FormProduct
                 }
                 $recordNbr++;
             }
-        } else {
+        } else if ($res < 0) {
             return ExtDirect::getDolError($res, $this->errors, $this->error);
         }
 
@@ -257,6 +257,11 @@ class ExtDirectFormProduct extends FormProduct
         $row = new stdClass;
         $row->code = 'TTC';
         $row->label = $langs->transnoentities("TTC") ? $langs->trans("TTC") : "Inc. tax";
+        array_push($results, $row);
+        // workaround for pick last item in list issue, add dummy last item
+        $row = new stdClass;
+        $row->code = 'TTC';
+        $row->label = '';
         array_push($results, $row);
         
         return $results;
