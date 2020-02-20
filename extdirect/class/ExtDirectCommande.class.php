@@ -980,7 +980,7 @@ class ExtDirectCommande extends Commande
                             }
                             $row->unit_id = $line->fk_unit;
                             // split orderlines by batch
-                            $row->has_batch = $myprod->status_batch;
+                            if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                             $row->is_sub_product = false;
                             if (empty($conf->productbatch->enabled) || empty($line_warehouse_id)) {
                                 array_push($results, $row);
@@ -1043,7 +1043,7 @@ class ExtDirectCommande extends Commande
                                 }
                                 $row->unit_id = $line->fk_unit;
                                 // split orderlines by batch
-                                $row->has_batch = $myprod->status_batch;
+                                if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->is_sub_product = false;
                                 if (empty($conf->productbatch->enabled)) {
                                     array_push($results, $row);

@@ -182,7 +182,7 @@ class ExtDirectProduct extends Product
                 $row->localtax2_tx = $this->localtax2_tx;
                 
                 // batch managed product
-                $row->has_batch = $this->status_batch;
+                if (!empty($conf->productbatch->enabled)) $row->has_batch = $this->status_batch;
                     
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
