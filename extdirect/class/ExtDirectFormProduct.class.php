@@ -518,7 +518,11 @@ class ExtDirectFormProduct extends FormProduct
     
         $results = array();
         if (ExtDirect::checkDolVersion(0, '3.8', '')) {
-            $sql = "SELECT rowid, label, code, short_label";
+            if (ExtDirect::checkDolVersion(0, '10.0', '')) {
+                $sql = "SELECT rowid, label, code, short_label, scale, unit_type";
+            } else {
+                $sql = "SELECT rowid, label, code, short_label";
+            }
             $sql.= " FROM ".MAIN_DB_PREFIX."c_units";
             $sql.= " WHERE active > 0";
             $sql.= " ORDER BY rowid";
@@ -532,6 +536,10 @@ class ExtDirectFormProduct extends FormProduct
                     $row->id = $obj->rowid;
                     $row->label = ($langs->transnoentities('unit'.$obj->code)!=$obj->label?$langs->transnoentities('unit'.$obj->code):$obj->label);
                     $row->short_label = ($langs->transnoentities($obj->short_label)!=$obj->short_label?$langs->transnoentities($obj->short_label):$obj->short_label);
+                    if (ExtDirect::checkDolVersion(0, '10.0', '')) {
+                        $row->scale = $obj->scale;
+                        $row->unit_type = $obj->unit_type;
+                    }
                     array_push($results, $row);
                     $i++;
                 }
