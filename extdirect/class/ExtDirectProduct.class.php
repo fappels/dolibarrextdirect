@@ -182,7 +182,7 @@ class ExtDirectProduct extends Product
                 $row->localtax2_tx = $this->localtax2_tx;
                 
                 // batch managed product
-                $row->has_batch = $this->status_batch;
+                if (!empty($conf->productbatch->enabled)) $row->has_batch = $this->status_batch;
                     
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
@@ -279,8 +279,12 @@ class ExtDirectProduct extends Product
                 //measurements and units
                 $row->weight= $this->weight;
                 $row->weight_units= $this->weight_units;
-                $row->length= $this->length;
+                $row->product_length= $this->length; // length is ext direct reader reserved object element.
                 $row->length_units= $this->length_units;
+                $row->width= $this->width;
+                $row->width_units= $this->width_units;
+                $row->height= $this->height;
+                $row->height_units= $this->height_units;
                 $row->surface= $this->surface;
                 $row->surface_units= $this->surface_units;
                 $row->volume= $this->volume;
@@ -1366,8 +1370,12 @@ class ExtDirectProduct extends Product
         //! Unites de mesure
         $diff = ExtDirect::prepareField($diff, $param, $this, 'weight', 'weight');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'weight_units', 'weight_units');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'length', 'length');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'product_length', 'length');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'length_units', 'length_units');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'width', 'width');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'width_units', 'width_units');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'height', 'height');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'height_units', 'height_units');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'surface', 'surface');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'surface_units', 'surface_units');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'volume', 'volume');
@@ -1521,7 +1529,7 @@ class ExtDirectProduct extends Product
                 }
                 $batchesQty += $batch->qty;
             }
-        } else if(isset($row->id)) {
+        } else if(isset($row->id) && !empty($productStockId)) {
             // no batch
             $num++;
             $row->is_sub_product = false;

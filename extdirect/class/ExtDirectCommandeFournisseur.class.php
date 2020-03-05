@@ -841,7 +841,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 } else {
                                     $row->warehouse_id = $warehouse_id;
                                 }
-                                $row->has_batch = $myprod->status_batch;
+                                if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!$isFreeLine && !empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
@@ -899,7 +899,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->total_stock = $myprod->stock_reel;
                                 $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse_id;
-                                $row->has_batch = $myprod->status_batch;
+                                if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
@@ -920,69 +920,70 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $warehouseObject = new Entrepot($this->db);
                             $warehouseList = $warehouseObject->list_array();
                             foreach ($warehouseList as $warehouse=>$warehouseLabel) {
-                            //foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
-                                $row = new stdClass;
-                                $row->id = $line->id.'_'.$warehouse;
-                                $row->origin_id = $this->id;
-                                $row->origin_line_id = $line->id;
-                                if (empty($line->label)) {
-                                    $row->label = $line->product_label;
-                                } else {
-                                    $row->label = $line->label;
-                                }
-                                $row->description = $line->description;
-                                $row->product_id = $line->fk_product;
-                                $row->ref = $line->product_ref;
-                                $row->product_label = $line->product_label;
-                                $row->product_desc = $line->product_desc;
-                                $row->product_type = $line->product_type;
-                                $row->barcode = $myprod->barcode?$myprod->barcode:'';
-                                $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
-                                $row->qty_asked = $line->qty;
-                                $row->tax_tx = $line->tva_tx;
-                                $row->localtax1_tx = $line->localtax1_tx;
-                                $row->localtax2_tx = $line->localtax2_tx;
-                                $row->total_net = $line->total_ht;
-                                $row->total_inc = $line->total_ttc;
-                                $row->total_tax = $line->total_tva;
-                                $row->total_localtax1 = $line->total_localtax1;
-                                $row->total_localtax2 = $line->total_localtax2;
-                                $row->subprice = $line->pu_ht;
-                                if (isset($line->rang)) {
-                                    $row->rang = $line->rang;
-                                } else {
-                                    $row->rang = $line->id;
-                                }
-                                $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-                                $row->reduction_percent = $line->remise_percent;
-                                $row->ref_supplier = $line->ref_supplier;
-                                $row->date_start = $line->date_start;
-                                $row->date_end = $line->date_end;
-                                // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
-                                $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
-                                $row->total_stock = $myprod->stock_reel;
-                                $row->desiredstock = $myprod->desiredstock;
-                                $row->warehouse_id = $warehouse;
-                                $row->has_batch = $myprod->status_batch;
-                                $row->has_photo = 0;
-                                if (!empty($photoSize)) {
-                                    $myprod->fetchPhoto($row, $photoSize);
-                                }
-                                $row->unit_id = $line->fk_unit;
-                                if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
-                                    if (empty($batchId)) {
-                                        if (empty($batch)) {
-                                            array_push($results, $row);
-                                        } else {
-                                            if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
-                                            if ($res == 0) {
-                                                array_push($results, $row);
-                                            }
-                                        }
+                                if (!empty($myprod->stock_warehouse[$warehouse]->real)) {
+                                    $row = new stdClass;
+                                    $row->id = $line->id.'_'.$warehouse;
+                                    $row->origin_id = $this->id;
+                                    $row->origin_line_id = $line->id;
+                                    if (empty($line->label)) {
+                                        $row->label = $line->product_label;
                                     } else {
-                                        if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $myprod->stock_warehouse[$warehouse]->id, false, $batchId)) < 0) return $res;
+                                        $row->label = $line->label;
+                                    }
+                                    $row->description = $line->description;
+                                    $row->product_id = $line->fk_product;
+                                    $row->ref = $line->product_ref;
+                                    $row->product_label = $line->product_label;
+                                    $row->product_desc = $line->product_desc;
+                                    $row->product_type = $line->product_type;
+                                    $row->barcode = $myprod->barcode?$myprod->barcode:'';
+                                    $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+                                    $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
+                                    $row->qty_asked = $line->qty;
+                                    $row->tax_tx = $line->tva_tx;
+                                    $row->localtax1_tx = $line->localtax1_tx;
+                                    $row->localtax2_tx = $line->localtax2_tx;
+                                    $row->total_net = $line->total_ht;
+                                    $row->total_inc = $line->total_ttc;
+                                    $row->total_tax = $line->total_tva;
+                                    $row->total_localtax1 = $line->total_localtax1;
+                                    $row->total_localtax2 = $line->total_localtax2;
+                                    $row->subprice = $line->pu_ht;
+                                    if (isset($line->rang)) {
+                                        $row->rang = $line->rang;
+                                    } else {
+                                        $row->rang = $line->id;
+                                    }
+                                    $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+                                    $row->reduction_percent = $line->remise_percent;
+                                    $row->ref_supplier = $line->ref_supplier;
+                                    $row->date_start = $line->date_start;
+                                    $row->date_end = $line->date_end;
+                                    // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
+                                    $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
+                                    $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
+                                    $row->total_stock = $myprod->stock_reel;
+                                    $row->desiredstock = $myprod->desiredstock;
+                                    $row->warehouse_id = $warehouse;
+                                    if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
+                                    $row->has_photo = 0;
+                                    if (!empty($photoSize)) {
+                                        $myprod->fetchPhoto($row, $photoSize);
+                                    }
+                                    $row->unit_id = $line->fk_unit;
+                                    if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
+                                        if (empty($batchId)) {
+                                            if (empty($batch)) {
+                                                array_push($results, $row);
+                                            } else {
+                                                if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res; 
+                                                if ($res == 0) {
+                                                    array_push($results, $row);
+                                                }
+                                            }
+                                        } else {
+                                            if (($res = $myprod->fetchBatches($results, $row, $line->id.'_'.$warehouse, $warehouse, $myprod->stock_warehouse[$warehouse]->id, false, $batchId)) < 0) return $res;
+                                        }
                                     }
                                 }
                             }
