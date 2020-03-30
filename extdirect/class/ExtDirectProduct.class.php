@@ -926,8 +926,8 @@ class ExtDirectProduct extends Product
                 // add photo
                 $photo = new stdClass;
                 $this->fetchPhoto($photo);
-                if (!empty($param->has_photo) && !empty($param->photo) && empty($photo->has_photo) && isset($this->_user->rights->produit->creer)) {
-                    if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if ($param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
+                    if (($result = $this->addBase64Jpeg($param->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             } else {
                 return PARAMETERERROR;
@@ -1597,8 +1597,8 @@ class ExtDirectProduct extends Product
         
         $photos = $this->liste_photos($dir,$maxNum);
         
-        if (!empty($photos)) {
-            $row->has_photo = 1;
+        if (is_array($photos) && !empty($photos)) {
+            $row->has_photo = count($photos);
             $row->photo_size = $format;
             $photoFile = $photos[$num]['photo'];
             $photo_parts = pathinfo($photoFile);
@@ -1640,7 +1640,7 @@ class ExtDirectProduct extends Product
      * 
      * @return > 0 photo accepted < 0 photo not accepted
      */
-    public function addBase64Jpeg($base64JpegUrl) {
+    public function addBase64Jpeg($base64JpegUrl, $index = 1) {
         // get photo
         global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
 
@@ -1674,12 +1674,7 @@ class ExtDirectProduct extends Product
         $imgdata = base64_decode($base64[1]);
         
         if (substr($imgdata,0,3)=="\xff\xd8\xff") { // only jpeg
-            $filename = 'ExtDirectUpload'.$this->id.'.jpg';    
-            $i = 1;    
-            while (file_exists($tdir.$filename)) {
-                $filename = 'ExtDirectUpload'.$this->id.'('.$i.').jpg';
-                $i++;
-            }
+            $filename = 'ExtDirectUpload'. $this->id . '_' . $index . '.jpg';    
             if (is_dir($tdir) && (file_put_contents($tdir.$filename, $imgdata, LOCK_EX) > 0)) {
                 if (is_dir($dir)) {
                     dol_move($tdir.$filename, $dir.'/'.$filename);

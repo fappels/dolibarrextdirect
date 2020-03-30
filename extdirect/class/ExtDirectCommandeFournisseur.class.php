@@ -1193,8 +1193,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             // add photo
                             $photo = new stdClass;
                             $product->fetchPhoto($photo);
-                            if (!empty($params->has_photo) && !empty($params->photo) && empty($photo->has_photo) && isset($this->_user->rights->produit->creer)) {
-                                if (($result = $product->addBase64Jpeg($params->photo)) < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
+                            if ($param->has_photo > $photo->has_photo && !empty($params->photo) && isset($this->_user->rights->produit->creer)) {
+                                if (($result = $product->addBase64Jpeg($params->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
                             }
                             
                             // update unit price
