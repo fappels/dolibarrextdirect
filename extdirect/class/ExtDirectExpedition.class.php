@@ -102,18 +102,17 @@ class ExtDirectExpedition extends Expedition
         $id = 0;
         $ref = '';
         $ref_ext = '';
-        $ref_int = '';
         
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
                 else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'ref_int') $ref_int=$filter->value;
+                else if ($filter->property == 'ref_ext') $ref_ext=$filter->value;
             }
         }
         
-        if (($id > 0) || ($ref != '') || ($ref_int != '')) {
-            if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int)) < 0) {
+        if (($id > 0) || ($ref != '') || ($ref_ext != '')) {
+            if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) {
                 if ($result = -2) {
                     return 0;// return 0 whem not found
                 } else {
@@ -155,7 +154,7 @@ class ExtDirectExpedition extends Expedition
 				$row->model_pdf = $this->model_pdf;
 				$row->create_date = $this->date_creation;
 				$row->delivery_address_id = $this->fk_delivery_address;
-				$row->ref_int = $this->ref_int;
+				$row->ref_ext = $this->ref_ext;
                 array_push($results, $row);
             } else {
                 return 0;
@@ -394,7 +393,7 @@ class ExtDirectExpedition extends Expedition
     {
         isset($params->origin_id) ? ( $this->origin_id = $params->origin_id) : isset($this->origin_id)?null:$this->origin_id=null;
         isset($params->origin) ? ( $this->origin = $params->origin) : isset($this->origin)?null:( $this->origin = null);
-        isset($params->ref_int) ? ( $this->ref_int = $params->ref_int) : isset($this->ref_int)?null:( $this->ref_int = null);
+        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext) : isset($this->ref_ext)?null:( $this->ref_ext = null);
         isset($params->ref_customer) ? ( $this->ref_customer = $params->ref_customer) : isset($this->ref_customer)?null:( $this->ref_customer = null);
         isset($params->customer_id) ? ( $this->socid = $params->customer_id) : isset($this->socid)?null:( $this->socid = null);
         isset($params->deliver_date) ? ( $this->date_delivery =$params->deliver_date) : isset($this->date_delivery)?null:($this->date_delivery = null);
@@ -459,7 +458,7 @@ class ExtDirectExpedition extends Expedition
             }
         }
         
-        $sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_int, ea.status, csm.libelle as mode";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
         if ($originId) {
@@ -529,7 +528,7 @@ class ExtDirectExpedition extends Expedition
                 $row->customer      = $obj->nom;
                 $row->customer_id   = (int) $obj->socid;
                 $row->ref           = $obj->ref;
-                $row->ref_int           = $obj->ref_int;
+                $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, 1));
                 $row->status        = $obj->status;

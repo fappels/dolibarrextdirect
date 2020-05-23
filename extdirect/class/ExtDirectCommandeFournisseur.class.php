@@ -99,7 +99,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      *
      *    @param    stdClass    $params     filter with elements:
      *      id                  Id of order to load
-     *      ref                 ref, ref_int
+     *      ref                 ref
      *      
      *    @return     stdClass result data or error number
      */
@@ -113,15 +113,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $row = new stdClass;
         $id = 0;
         $ref = '';
-        $ref_ext = '';
-        $ref_int = '';
         $orderstatus_ids = array();
         
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
                 else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'ref_int') $ref_int=$filter->value;
                 else if ($filter->property == 'orderstatus_id') array_push($orderstatus_ids,$filter->value);
             }
         }

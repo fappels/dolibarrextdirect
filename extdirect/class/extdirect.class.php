@@ -496,7 +496,7 @@ class ExtDirect
             return $dolMajorMinorVersion;
         } else {
             if (empty($minVersion)) $minVersion = '3.4';
-            if (empty($maxVersion)) $maxVersion = '11.0'; // debugging version
+            if (empty($maxVersion)) $maxVersion = '12.0'; // debugging version
             if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>='))
             {
             	return 1;

@@ -1755,7 +1755,7 @@ describe("order", function () {
 
 			flag = false;
 			orderData = {
-				ref_int: 'CT0001',
+				ref_ext: 'CT0001',
 				note_private: 'connectortest private',
 				note_public: 'connectortest public',
 				ref_customer: 'connectortest',
@@ -1776,7 +1776,7 @@ describe("order", function () {
 			orderStore.add(order);					
 			orderStore.sync();
 			orderStore.clearFilter();
-			orderStore.filter([Ext.create('Ext.util.Filter',{property:"ref_int",value:'CT0001'})]);
+			orderStore.filter([Ext.create('Ext.util.Filter',{property:"ref_ext",value:'CT0001'})]);
 			orderStore.load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
@@ -1804,7 +1804,7 @@ describe("order", function () {
 				callback: function(records) {
 					Ext.Array.each(records, function (record,index) {
 						testresults[index] = record.get('ref');
-						if (record.get('ref_int') == 'CT0001') {
+						if (record.get('ref_ext') == 'CT0001') {
 							orderRef = record.get('ref');
 							orderId = record.getId();
 						}
@@ -2113,7 +2113,7 @@ describe("shipment", function ()
 
             flag = false;
             shipmentData = {
-                ref_int: 'CT0001',
+                ref_ext: 'CT0001',
                 origin: 'commande',
                 origin_id: orderId,
                 ref_customer: 'connectortest',
@@ -2140,7 +2140,7 @@ describe("shipment", function ()
             Ext.getStore('shipment').add(shipment);
             Ext.getStore('shipment').sync();
             Ext.getStore('shipment').clearFilter();
-            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "ref_int", value: 'CT0001' })]);
+            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "ref_ext", value: 'CT0001' })]);
             Ext.getStore('shipment').load({
                 callback: function (records)
                 {
@@ -2175,7 +2175,7 @@ describe("shipment", function ()
 					Ext.Array.each(records, function (record,index) {
 						testresult = records.length;
 						testresults[index] = record.get('ref');
-						if (record.get('ref_int') == 'CT0001') {
+						if (record.get('ref_ext') == 'CT0001') {
 							shipmentRef = record.get('ref');
 							shipmentId = record.getId();
 						}

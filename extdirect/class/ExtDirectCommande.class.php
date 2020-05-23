@@ -109,17 +109,19 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'id') $id=$filter->value;
                 else if ($filter->property == 'ref') $ref=$filter->value;
                 else if ($filter->property == 'ref_int') $ref_int=$filter->value;
+                else if ($filter->property == 'ref_ext') $ref_ext=$filter->value;
                 else if ($filter->property == 'orderstatus_id') array_push($orderstatus_ids,$filter->value);
             }
         }
         
-        if (($id > 0) || ($ref != '') || ($ref_int != '')) {
+        if (($id > 0) || ($ref != '') || ($ref_int != '') || ($ref_ext != '')) {
             if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 $row->id = $this->id ;
                 //! Ref
                 $row->ref= $this->ref;
                 $row->ref_customer= $this->ref_client;
+                $row->ref_ext= $this->ref_ext;
                 $row->customer_id = $this->socid;
                 if ($mySociete->fetch($this->socid)>0) {
                     $row->customer_name = $mySociete->name;
@@ -399,6 +401,7 @@ class ExtDirectCommande extends Commande
     {
         isset($params->ref) ? ( $this->ref = $params->ref ) : ( $this->ref = null);
         isset($params->ref_int) ? ( $this->ref_int = $params->ref_int ) : ( $this->ref_int = null);
+        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext ) : ( $this->ref_ext = null);
         isset($params->ref_customer) ? ( $this->ref_client = $params->ref_customer) : ( $this->ref_client = null);
         isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( $this->socid = null);
         //isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ($this->statut  = 0);
@@ -462,7 +465,7 @@ class ExtDirectCommande extends Commande
             }
         }
         
-        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_int, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande";
+        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode) {
@@ -537,7 +540,7 @@ class ExtDirectCommande extends Commande
                 $row->customer      = $obj->nom;
                 $row->customer_id   = (int) $obj->socid;
                 $row->ref           = $obj->ref;
-                $row->ref_int           = $obj->ref_int;
+                $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
                 $row->availability_id = $obj->fk_availability;
