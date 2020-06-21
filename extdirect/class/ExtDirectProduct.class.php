@@ -51,7 +51,7 @@ class ExtDirectProduct extends Product
      */
     public function __construct($login) 
     {
-        global $langs,$db,$user,$conf;
+        global $langs, $db, $user, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -60,6 +60,9 @@ class ExtDirectProduct extends Product
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("products");
                 $langs->load("stocks");
                 $langs->load("productbatch");
@@ -86,7 +89,7 @@ class ExtDirectProduct extends Product
      */
     public function readProduct(stdClass $param)
     {
-        global $conf;
+        global $conf, $mysoc;
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
@@ -122,7 +125,7 @@ class ExtDirectProduct extends Product
         
         if (($id > 0) || ($ref != '')) {
             if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            if (!$this->error) {
+            if ($this->id > 0) {
                 $row->id = $this->id ;
                 //! Ref
                 $row->ref= $this->ref;
@@ -147,8 +150,6 @@ class ExtDirectProduct extends Product
                     } else {
                         $customer = new Societe($this->db);
                         if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
-                        $mysoc = new Societe($this->db);
-                        $mysoc->setMysoc($conf);
                         if ($result > 0 && $mysoc->id > 0) {
                             $row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
                         }

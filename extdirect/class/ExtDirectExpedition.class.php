@@ -48,7 +48,7 @@ class ExtDirectExpedition extends Expedition
      */
     public function __construct($login) 
     {
-        global $langs,$user,$db;
+        global $langs, $user, $db, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -57,6 +57,9 @@ class ExtDirectExpedition extends Expedition
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("sendings");
                 $langs->load("products");
                 $langs->load("stocks");
@@ -186,8 +189,6 @@ class ExtDirectExpedition extends Expedition
      */
     public function readOptionals(stdClass $param)
     {
-        global $conf;
-
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
@@ -251,7 +252,7 @@ class ExtDirectExpedition extends Expedition
      */
     public function updateShipment($param) 
     {
-        global $conf, $langs, $mysoc;
+        global $conf, $langs;
         
         if (!isset($this->db)) return CONNECTERROR;
         
@@ -272,9 +273,6 @@ class ExtDirectExpedition extends Expedition
                         
                         break;
                     case 1:
-                        // set global $mysoc required to set pdf sender
-                        $mysoc = new Societe($this->db);
-                        $mysoc->setMysoc($conf);
                         $result = $this->valid($this->_user);
                         // PDF generating
                         if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
@@ -821,7 +819,7 @@ class ExtDirectExpedition extends Expedition
                 $line->detail_batch->dluo_qty = $params->qty_toship; // deprecated for 9.0
                 $line->detail_batch->qty = $params->qty_toship;
                 $line->detail_batch->fk_origin_stock = $params->batch_id;
-                if (($result = $line->update()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+                if (($result = $line->update($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -932,7 +930,7 @@ class ExtDirectExpedition extends Expedition
                     $line = new ExtDirectExpeditionLine($this->db);
                 }
                 $line->id = $lineId;
-                if (($result = $line->delete()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+                if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
             }

@@ -51,7 +51,7 @@ class ExtDirectFichinter extends Fichinter
      */
     public function __construct($login) 
     {
-        global $langs,$db,$user;
+        global $langs, $db, $user, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -60,6 +60,9 @@ class ExtDirectFichinter extends Fichinter
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("interventions");
                 parent::__construct($db);
             }
@@ -266,7 +269,7 @@ class ExtDirectFichinter extends Fichinter
      */
     public function updateIntervention($param) 
     {
-        global $conf, $langs, $mysoc;
+        global $conf, $langs;
         
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
@@ -284,9 +287,6 @@ class ExtDirectFichinter extends Fichinter
                         $result = $this->setDraft($this->_user);
                         break;
                     case self::STATUS_VALIDATED:
-                        // set global $mysoc required to set pdf sender
-                        $mysoc = new Societe($this->db);
-                        $mysoc->setMysoc($conf);
                         $result = $this->setValid($this->_user, $notrigger);
                         // PDF generating
                         if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {

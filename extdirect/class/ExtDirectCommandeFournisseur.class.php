@@ -61,7 +61,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     public function __construct($login) 
     {
-        global $langs,$db,$user;
+        global $langs, $db, $user, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -70,6 +70,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("orders");
                 parent::__construct($db);
             }
@@ -105,10 +108,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     public function readOrder(stdClass $params)
     {
+        global $conf, $mysoc;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
         $myUser = new User($this->db);
-        $mySociete = new Societe($this->db);
+        $thirdparty = new Societe($this->db);
         $results = array();
         $row = new stdClass;
         $id = 0;
@@ -131,8 +136,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->ref= $this->ref;
                 $row->ref_supplier= $this->ref_client;
                 $row->supplier_id = $this->socid;
-                if ($mySociete->fetch($this->socid)>0) {
-                    $row->supplier_name = $mySociete->name;
+                if ($thirdparty->fetch($this->socid)>0) {
+                    $row->supplier_name = $thirdparty->name;
                 }
                 //! -1 for cancelled, 0 for draft, 1 for validated, 2 for send, 3 for closed
                 $row->orderstatus_id = $this->statut;
@@ -156,7 +161,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->reduction = 0;
                 foreach ($this->lines as $line) {
                     if ($line->remise_percent > 0) {
-                        $tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type);	
+                        $localtaxes_array = getLocalTaxesFromRate($line->tva_tx, 0, $thirdparty, $mysoc);
+                        $tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type, $mysoc, $localtaxes_array);	
                         $noDiscountHT = $tabprice[0];
                         $row->reduction += round($noDiscountHT - $line->total_ht, 2);
                     }
@@ -1067,10 +1073,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
         $orderLine = new CommandeFournisseurLigne($this->db);
         
-         // set global $mysoc required for private calculation
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
-
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
     
@@ -1131,10 +1133,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
         $orderlineUpdated = false;
-
-        // set global $mysoc required for price calculation
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
 
         $paramArray = ExtDirect::toArray($param);
 

@@ -47,7 +47,7 @@ class ExtDirectCommande extends Commande
      */
     public function __construct($login) 
     {
-        global $langs,$db,$user;
+        global $langs, $db, $user, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -56,6 +56,9 @@ class ExtDirectCommande extends Commande
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("orders");
                 $langs->load("sendings"); // for shipment methods
                 parent::__construct($db);
@@ -95,7 +98,8 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
         $myUser = new User($this->db);
-        $mySociete = new Societe($this->db);
+        $thirdparty = new Societe($this->db);
+
         $results = array();
         $row = new stdClass;
         $id = 0;
@@ -123,8 +127,8 @@ class ExtDirectCommande extends Commande
                 $row->ref_customer= $this->ref_client;
                 $row->ref_ext= $this->ref_ext;
                 $row->customer_id = $this->socid;
-                if ($mySociete->fetch($this->socid)>0) {
-                    $row->customer_name = $mySociete->name;
+                if ($thirdparty->fetch($this->socid)>0) {
+                    $row->customer_name = $thirdparty->name;
                 }
                 //! -1 for cancelled, 0 for draft, 1 for validated, 2 for send, 3 for closed
                 $row->orderstatus_id = $this->statut;
@@ -148,13 +152,14 @@ class ExtDirectCommande extends Commande
                 $row->shipping_method_id = $this->shipping_method_id;
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
-                $row->customer_type = $mySociete->typent_code;
+                $row->customer_type = $thirdparty->typent_code;
                 //$row->has_signature = 0; not yet implemented
 	            if ($this->remise == 0) {
 	            	$row->reduction = 0;
 	            	foreach ($this->lines as $line) {
 	            		if ($line->remise_percent > 0) {
-		            		$tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type);	
+                            $localtaxes_array = getLocalTaxesFromRate($line->tva_tx, 0, $thirdparty, $mysoc);
+		            		$tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type, $mysoc, $localtaxes_array);	
 							$noDiscountHT = $tabprice[0];
 							$noDiscountTTC = $tabprice[2];
 			            	if ($row->customer_type == 'TE_PRIVATE') {
@@ -271,7 +276,7 @@ class ExtDirectCommande extends Commande
      */
     public function updateOrder($param) 
     {
-        global $conf, $langs, $mysoc;
+        global $conf, $langs;
         
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
@@ -295,9 +300,6 @@ class ExtDirectCommande extends Commande
                         }
                         break;
                     case 1:
-                        // set global $mysoc required to set pdf sender
-                        $mysoc = new Societe($this->db);
-                        $mysoc->setMysoc($conf);
                         if ($params->warehouse_id > 0) {
                             $warehouseId = $params->warehouse_id;
                         } else {
@@ -1138,10 +1140,6 @@ class ExtDirectCommande extends Commande
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $orderLine = new OrderLine($this->db);
         
-        // set global $mysoc required for price calculation
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
-        
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
 
@@ -1165,22 +1163,23 @@ class ExtDirectCommande extends Commande
             // Local Taxes
             $localtax1_tx = get_localtax($tva_tx, 1, $this->thirdparty);
             $localtax2_tx = get_localtax($tva_tx, 2, $this->thirdparty);
+            $localtaxes_array = getLocalTaxesFromRate($tva_tx, 0, $this->thirdparty, $mysoc);
             
             $info_bits = 0;
             if ($tva_npr) $info_bits |= 0x01;
             if (!empty($params->product_price) || !empty($params->product_price_ttc)) {
                 // when product_price is available, use product price for calculating unit price
                 if ($orderLine->price_base_type == 'TTC') {
-                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price_ttc, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type, $mysoc, $localtaxes_array);	
                     $pu_ht = $tabprice[3];
                     $pu_ttc = $tabprice[5];
                 } else {
-                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type);	
+                    $tabprice = calcul_price_total($orderLine->qty, $params->product_price, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, $orderLine->price_base_type, $info_bits, $orderLine->product_type, $mysoc, $localtaxes_array);	
                     $pu_ht = $tabprice[3];
                     $pu_ttc = $tabprice[5];
                 }
             } else {
-                $tabprice = calcul_price_total($orderLine->qty, $orderLine->subprice, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, 'HT', $info_bits, $orderLine->product_type);	
+                $tabprice = calcul_price_total($orderLine->qty, $orderLine->subprice, $orderLine->remise_percent, $tva_tx, $localtax1_tx, $localtax2_tx, 0, 'HT', $info_bits, $orderLine->product_type, $mysoc, $localtaxes_array);	
                 $pu_ht = $tabprice[3];
                 $pu_ttc = $tabprice[5];
             }
@@ -1261,10 +1260,6 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $orderlineUpdated = false;
-        
-        // set global $mysoc required for price calculation
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
         
         $paramArray = ExtDirect::toArray($param);
 
