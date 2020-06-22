@@ -844,6 +844,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 } else {
                                     $row->warehouse_id = $warehouse_id;
                                 }
+                                $row->default_warehouse_id = $myprod->fk_default_warehouse;
                                 if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!$isFreeLine && !empty($photoSize)) {
@@ -902,6 +903,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->total_stock = $myprod->stock_reel;
                                 $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse_id;
+                                $row->default_warehouse_id = $myprod->fk_default_warehouse;
                                 if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!empty($photoSize)) {
@@ -968,6 +970,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->total_stock = $myprod->stock_reel;
                                     $row->desiredstock = $myprod->desiredstock;
                                     $row->warehouse_id = $warehouse;
+                                    $row->default_warehouse_id = $myprod->fk_default_warehouse;
                                     if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                     $row->has_photo = 0;
                                     if (!empty($photoSize)) {

@@ -308,7 +308,6 @@ class ExtDirectCommande extends Commande
                         $result = $this->valid($this->_user, $warehouseId);
                         // PDF generating
                         if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
-                            if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                             $hidedetails = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
                             $hidedesc = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0);
                             $hideref = (! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
@@ -843,6 +842,9 @@ class ExtDirectCommande extends Commande
         if ($order_id > 0) {
             $this->id=$order_id;
             $this->loadExpeditions();
+            if (!empty($conf->global->WAREHOUSE_ASK_WAREHOUSE_DURING_ORDER)) {
+                if (($result = $this->fetch($order_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+            }
             if (($result = $this->fetch_lines($onlyProduct)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (!$this->error) {
                 foreach ($this->lines as $line) {
@@ -927,6 +929,11 @@ class ExtDirectCommande extends Commande
                                 array_push($results, $row);
                                 $myprod->fetchSubProducts($results, clone $row, $photoSize);
                             }
+                            if ($this->warehouse_id > 0) {
+                                $row->default_warehouse_id = $this->warehouse_id;
+                            } else {
+                                $row->default_warehouse_id = $myprod->fk_default_warehouse;
+                            }
                         } else {
                             // get orderline with stock of warehouse
                             if (!isset($warehouse_id)) {
@@ -979,6 +986,11 @@ class ExtDirectCommande extends Commande
                             !empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_reel;
                             $row->total_stock = $myprod->stock_reel;
                             $row->warehouse_id = $line_warehouse_id;
+                            if ($this->warehouse_id > 0) {
+                                $row->default_warehouse_id = $this->warehouse_id;
+                            } else {
+                                $row->default_warehouse_id = $myprod->fk_default_warehouse;
+                            }
                             $row->has_photo = 0;
                             if (!$isFreeLine && !empty($photoSize)) {
                                 $myprod->fetchPhoto($row, $photoSize);
@@ -1042,6 +1054,11 @@ class ExtDirectCommande extends Commande
                                 $row->stock = (float) $stock_warehouse->real;
                                 $row->total_stock = $myprod->stock_reel;
                                 $row->warehouse_id = $warehouse;
+                                if ($this->warehouse_id > 0) {
+                                    $row->default_warehouse_id = $this->warehouse_id;
+                                } else {
+                                    $row->default_warehouse_id = $myprod->fk_default_warehouse;
+                                }
                                 $row->has_photo = 0;
                                 if (!empty($photoSize)) {
                                     $myprod->fetchPhoto($row, $photoSize);
