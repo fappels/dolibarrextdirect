@@ -146,8 +146,6 @@ class ExtDirectActionComm extends ActionComm
      */
     public function readOptionals(stdClass $param)
     {
-        global $conf;
-
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->agenda->myactions->read) 
             || !isset($this->_user->rights->agenda->allactions->read)) return PERMISSIONERROR;
@@ -174,16 +172,102 @@ class ExtDirectActionComm extends ActionComm
                 } else {
                     $this->fetch_optionals();
                 }
-                foreach ($this->array_options as $key => $value) {
-                    $row = new stdClass;
-                    $name = substr($key,8); // strip options_
-                    $row->name = $name;
-                    $row->value = $extraFields->showOutputField($name,$value);
-                    $results[] = $row;
+                $index = 1;
+                if (empty($this->array_options)) {
+                    // create empty optionals to be able to add optionals
+                    $optionsArray = (!empty($extraFields->attributes[$this->table_element]['label']) ? $extraFields->attributes[$this->table_element]['label'] : null);
+                    if (is_array($optionsArray) && count($optionsArray) > 0) {
+                        foreach ($optionsArray as $name => $label) {
+                            $row = new stdClass;
+                            $row->id = $index++;
+                            $row->name = $name;
+                            $row->value = '';
+                            $row->object_id = $this->id;
+                            $row->object_element = $this->element;
+                            $row->raw_value = null;
+                            $results[] = $row;
+                        }
+                    }
+                } else {
+                    foreach ($this->array_options as $key => $value) {
+                        $row = new stdClass;
+                        $name = substr($key,8); // strip options_
+                        $row->id = $index++; // ExtJs needs id to be able to destroy records
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $row->object_id = $this->id;
+                        $row->object_element = $this->element;
+                        $row->raw_value = $value;
+                        $results[] = $row;
+                    }
                 }
             }
         }
         return $results;
+    }
+
+    /**
+     * public method to update optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->agenda->myactions->create) 
+            || !isset($this->_user->rights->agenda->allactions->create)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            $this->array_options['options_'.$param->name] = $param->raw_value;
+        }
+        if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
+    }
+
+    /**
+     * public method to add optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createOptionals($params)
+    {
+        return $this->updateOptionals($params);
+    }
+
+    /**
+     * public method to delete optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return    Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->agenda->myactions->create) 
+            || !isset($this->_user->rights->agenda->allactions->create)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        }
+        if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
 
     /**

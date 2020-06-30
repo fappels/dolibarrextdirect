@@ -18,7 +18,8 @@ var appUuid = null,
 	multiPrices = true,
 	dolibarrVersion = null,
 	sellby = Ext.Date.format(new Date(2020,5,30),'U'),
-	eatby = Ext.Date.format(new Date(2020,11,31),'U');
+	eatby = Ext.Date.format(new Date(2020,11,31),'U'),
+	optionalModel = [];
 
 var TIMEOUT = 8000;
 
@@ -1177,8 +1178,7 @@ describe("products", function () {
 		productRefs = [],
 		productBarcodes = [],
 		supplierRefs = [],
-		productStore,
-		optionalModel = [];
+		productStore;
 		
 	beforeEach(function() {
 		testresults = [];
@@ -1194,6 +1194,7 @@ describe("products", function () {
 			Ext.getStore('ProductOptionalModel').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
+						optional = {};
 						optional.name = record.get('name');
 						optional.label = record.get('label');
 						optionalModel.push(optional);
@@ -1207,7 +1208,9 @@ describe("products", function () {
 		
 		runs(function () {
 			Ext.Array.each(optionalModel,function (optional) {
-				expect(optional.label).toBe('Test');
+				if (optional.name == 'test') {
+					expect(optional.label).toBe('Test');
+				}
 			});
 		});
 	});
@@ -1394,8 +1397,8 @@ describe("products", function () {
 		});
 	});
 
-	it("read product 1 attributes", function() {
-		var optionalStore = Ext.getStore('ProductOptionals');
+	it("read-write product 1 optionals", function() {
+		var optionalStore = Ext.getStore('ProductOptionals'), option;
 
 		runs(function() {
 			flag = false;
@@ -1404,9 +1407,22 @@ describe("products", function () {
 			optionalStore.load({
 				callback: function () {
 					Ext.Array.each(optionalModel,function (optional) {
-						testresult = optionalStore.findRecord('name',optional.name);
+						if (optional.name == 'test') {
+							if ((option = optionalStore.findExact('name',optional.name)) >= 0) {
+								testresult = optionalStore.getAt(option);
+								testresult.set('raw_value', 'connectortest');
+							}
+							optionalStore.sync();
+							optionalStore.load({
+								callback: function () {
+									if ((option = optionalStore.findExact('name',optional.name)) >= 0) {
+										testresult = optionalStore.getAt(option);
+										flag = true;
+									};
+								}
+							});
+						}
 					});
-					flag = true;
 				}
 			});
 		});
@@ -1414,7 +1430,7 @@ describe("products", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(testresult.get('value')).toBe('test');
+			expect(testresult.get('value')).toBe('connectortest');
 		});
 	});
 	
@@ -3639,6 +3655,38 @@ describe("delete products", function () {
 		
 	beforeEach(function() {
 		testresult = null;
+	});
+
+	it("destroy product 1 optionals", function() {
+		var optionalStore = Ext.getStore('ProductOptionals');
+
+		optionalStore.setDestroyRemovedRecords(true);
+		optionalStore.setSyncRemovedRecords(true);
+		runs(function() {
+			flag = false;
+			optionalStore.clearFilter();
+			optionalStore.filter([Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
+			optionalStore.load({
+				callback: function (records) {
+					optionalStore.remove(records);
+					optionalStore.sync();
+					optionalStore.load({
+						callback: function () {
+							Ext.Array.each(optionalModel,function (optional) {
+								testresult = optionalStore.find('name',optional.name);
+							});
+							flag = true;
+						}
+					});
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult).toBe(-1);
+		});
 	});
 	
 	it("destroy product 1", function() {
