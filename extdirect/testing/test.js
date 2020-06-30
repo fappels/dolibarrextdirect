@@ -3658,7 +3658,7 @@ describe("delete products", function () {
 	});
 
 	it("destroy product 1 optionals", function() {
-		var optionalStore = Ext.getStore('ProductOptionals');
+		var optionalStore = Ext.getStore('ProductOptionals'), option;
 
 		optionalStore.setDestroyRemovedRecords(true);
 		optionalStore.setSyncRemovedRecords(true);
@@ -3672,9 +3672,8 @@ describe("delete products", function () {
 					optionalStore.sync();
 					optionalStore.load({
 						callback: function () {
-							Ext.Array.each(optionalModel,function (optional) {
-								testresult = optionalStore.find('name',optional.name);
-							});
+							option = optionalStore.find('name','test');
+							testresult = optionalStore.getAt(option);
 							flag = true;
 						}
 					});
@@ -3685,7 +3684,7 @@ describe("delete products", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(testresult).toBe(-1);
+			expect(testresult.get('value')).toBe('');
 		});
 	});
 	

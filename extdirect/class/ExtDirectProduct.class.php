@@ -491,26 +491,26 @@ class ExtDirectProduct extends Product
      /**
      * public method to update product or lot optionals (extra fields) into database
      *
-     *    @param    stdClass    $param  optionals
+     *    @param    unknown_type    $params  optionals
      *
      *    @return     Ambigous <multitype:, unknown_type>|unknown
      */
-    public function updateOptionals(stdClass $param)
+    public function updateOptionals($params)
     {
         global $conf;
         
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
         if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
-        $paramArray = ExtDirect::toArray($param);
+        $paramArray = ExtDirect::toArray($params);
 
         foreach ($paramArray as &$param) {
             if ($param->element == 'productlot') {
                 $productLot = new Productlot($this->db);
-                if (($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+                if ($productLot->id != $param->object_id && ($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
                 $productLot->array_options['options_'.$param->name] = $param->raw_value;
             } else {
-                if (($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 $this->array_options['options_'.$param->name] = $param->raw_value;
             }
         }
@@ -529,39 +529,39 @@ class ExtDirectProduct extends Product
     /**
      * public method to add product or lot optionals (extra fields) into database
      *
-     *    @param    stdClass    $param  optionals
+     *    @param    unknown_type    $params  optionals
      *
      *
      *    @return     Ambigous <multitype:, unknown_type>|unknown
      */
-    public function createOptionals(stdClass $param)
+    public function createOptionals($params)
     {
-        return $this->updateOptionals($param);
+        return $this->updateOptionals($params);
     }
 
     /**
      * public method to delete product or lot optionals (extra fields) into database
      *
-     *    @param    stdClass    $param  optionals
+     *    @param    unknown_type    $params  optionals
      *
      *    @return    Ambigous <multitype:, unknown_type>|unknown
      */
-    public function destroyOptionals(stdClass $param)
+    public function destroyOptionals($params)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
-        $paramArray = ExtDirect::toArray($param);
+        $paramArray = ExtDirect::toArray($params);
 
         foreach ($paramArray as &$param) {
             if ($param->element == 'productlot') {
                 $productLot = new Productlot($this->db);
                 if (($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
             } else {
-                if (($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             }
         }
         if (isset($productLot)) {
-            if (($result = $productLot->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if ($productLot->id != $param->object_id && ($result = $productLot->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
         } else {
             if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
         }
