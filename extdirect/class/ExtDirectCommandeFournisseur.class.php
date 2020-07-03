@@ -858,7 +858,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             $myprod = new ExtDirectProduct($this->_user->login);
                             if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                             if (ExtDirect::checkDolVersion() >= 3.5) {
-                                if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
+                                if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
                             } 
                         } else {
                             $isFreeLine = true;
@@ -916,7 +916,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
                                 $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
-                                $row->stock = $myprod->stock_reel;
+                                $row->stock = $myprod->stock_theorique;
                                 $row->total_stock = $row->stock;
                                 $row->desiredstock = $myprod->desiredstock;
                                 if ($isService) {
@@ -981,8 +981,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
                                 $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
-                                $warehouse_id ? $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_reel;
-                                $row->total_stock = $myprod->stock_reel;
+                                $warehouse_id ? $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real : $row->stock = $myprod->stock_theorique;
+                                $row->total_stock = $myprod->stock_theorique;
                                 $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse_id;
                                 $row->default_warehouse_id = $myprod->fk_default_warehouse;
@@ -1049,7 +1049,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
                                     $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
                                     $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
-                                    $row->total_stock = $myprod->stock_reel;
+                                    $row->total_stock = $myprod->stock_theorique;
                                     $row->desiredstock = $myprod->desiredstock;
                                     $row->warehouse_id = $warehouse;
                                     $row->default_warehouse_id = $myprod->fk_default_warehouse;
