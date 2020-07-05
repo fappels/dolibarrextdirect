@@ -55,6 +55,15 @@ $API = array(
             'readOptionals'=>array(
                     'len'=>1
             ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
+                    'len'=>1
+            ),
             'fileUpload'=>array(
                     'formHandler'=>true
             )
@@ -81,6 +90,15 @@ $API = array(
                     'len'=>1
             ),
             'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
                     'len'=>1
             ),
             'fileUpload'=>array(
@@ -112,6 +130,15 @@ $API = array(
                     'len'=>1
             ),
             'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
                     'len'=>1
             ),
             'fileUpload'=>array(
@@ -162,6 +189,15 @@ $API = array(
                     'len'=>1
             ),
             'readOptionals'=>array(
+                    'len'=>1
+            ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
                     'len'=>1
             ),
             'readAttributes'=>array(
@@ -292,10 +328,28 @@ $API = array(
             'readOptionals'=>array(
                     'len'=>1
             ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
+                    'len'=>1
+            ),
             'readLineOptionalModel'=>array(
                     'len'=>1
             ),
             'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'createLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyLineOptionals'=>array(
                     'len'=>1
             ),
             'fileUpload'=>array(
@@ -347,10 +401,28 @@ $API = array(
             'readOptionals'=>array(
                     'len'=>1
             ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
+                    'len'=>1
+            ),
             'readLineOptionalModel'=>array(
                     'len'=>1
             ),
             'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'createLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyLineOptionals'=>array(
                     'len'=>1
             ),
             'fileUpload'=>array(
@@ -402,10 +474,28 @@ $API = array(
             'readOptionals'=>array(
                     'len'=>1
             ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
+                    'len'=>1
+            ),
             'readLineOptionalModel'=>array(
                     'len'=>1
             ),
             'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'createLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyLineOptionals'=>array(
                     'len'=>1
             ),
             'fileUpload'=>array(
@@ -457,10 +547,28 @@ $API = array(
             'readOptionals'=>array(
                     'len'=>1
             ),
+            'createOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyOptionals'=>array(
+                    'len'=>1
+            ),
             'readLineOptionalModel'=>array(
                     'len'=>1
             ),
             'readLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'createLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'updateLineOptionals'=>array(
+                    'len'=>1
+            ),
+            'destroyLineOptionals'=>array(
                     'len'=>1
             ),
             'fileUpload'=>array(

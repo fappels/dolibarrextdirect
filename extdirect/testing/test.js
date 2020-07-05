@@ -18,7 +18,8 @@ var appUuid = null,
 	multiPrices = true,
 	dolibarrVersion = null,
 	sellby = Ext.Date.format(new Date(2020,5,30),'U'),
-	eatby = Ext.Date.format(new Date(2020,11,31),'U');
+	eatby = Ext.Date.format(new Date(2020,11,31),'U'),
+	optionalModel = [];
 
 var TIMEOUT = 8000;
 
@@ -1177,8 +1178,7 @@ describe("products", function () {
 		productRefs = [],
 		productBarcodes = [],
 		supplierRefs = [],
-		productStore,
-		optionalModel = [];
+		productStore;
 		
 	beforeEach(function() {
 		testresults = [];
@@ -1194,6 +1194,7 @@ describe("products", function () {
 			Ext.getStore('ProductOptionalModel').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
+						optional = {};
 						optional.name = record.get('name');
 						optional.label = record.get('label');
 						optionalModel.push(optional);
@@ -1207,7 +1208,9 @@ describe("products", function () {
 		
 		runs(function () {
 			Ext.Array.each(optionalModel,function (optional) {
-				expect(optional.label).toBe('Test');
+				if (optional.name == 'test') {
+					expect(optional.label).toBe('Test');
+				}
 			});
 		});
 	});
@@ -1256,7 +1259,8 @@ describe("products", function () {
 						productData.barcode = '123456';
 						productData.has_photo = 1;
 						productData.photo = "data: image\/jpeg;base64,\/9j\/4AAQSkZJRgABAQAAAQABAAD\/\/gA7Q1JFQVRPUjogZ2QtanBlZyB2MS4wICh1c2luZyBJSkcgSlBFRyB2ODApLCBxdWFsaXR5ID0gODAK\/9sAQwAGBAUGBQQGBgUGBwcGCAoQCgoJCQoUDg8MEBcUGBgXFBYWGh0lHxobIxwWFiAsICMmJykqKRkfLTAtKDAlKCko\/9sAQwEHBwcKCAoTCgoTKBoWGigoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgo\/8AAEQgAlgCWAwEiAAIRAQMRAf\/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC\/\/EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29\/j5+v\/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC\/\/EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29\/j5+v\/aAAwDAQACEQMRAD8A+qaKKKACjNFIaAFzRSUooAKKDQKAEPSmb13bc8+lV9Sl8m3DFWYb1BCjJ6ivmf8AaA8U6lYeP7aDTZbe3dYFKpcyTQM7HptdGUfmRWEq3LNQKULq59RilzUFq7vBE0i7ZGQFl9DjpU1bki0ZpKKAFzRSUooAKKKKACiiigAooooAKQ0tNPWgB1FItLQAUUUUAU9SbFuPeRB\/48K+RP2rJFX4jWLHAbCBT6AAZ\/8AQhX1rrkhjtYyNvMyD5jgDnrXx5+1hdJL4+tmiMc2yAHdGcgdPTPpXBUTddL+tmax0i2faMR3Ip9qfiq2myedZW8o6PGrfmKtV3IyYmKUUUUwA0CiigAooooAKKKKACiiigANNpxph60xDlpaRaWkMKKKKAOA+L6xzaLpltNGkkcl\/HlXGQcKx6fhXhXiTRNNNzdkWFqDk9Il\/wAK9w+K7F5\/D0A6tdO+PZYz\/jXlGuRf6ZcqR\/Ea+MzvEThi7RbVkup6WFinHVH0H4Pk83wro7+tpF\/6AK2K5n4by+d4H0Vs9LcL+XH9K6Wvr6MuanGXdI8+StJoXNGaSlFaEhRSZpRQAUUUUAFFFFABRRRQAU3FOpByaBAKWjFFAwooooA838cSi58aafADkWlq7ke7kD+S159rEYk1G5\/3zXY3c32vxlrdxnKoyQL9FXn9TXJ3\/N7cH\/bP86\/Os4r+0ryku7\/DT\/M9bDRtFHpXwfuN3hhrQnm1ndR9GO8fqx\/Ku5ryr4S3Yh1m+tCflniWQfVTg\/8AoX6V6rX2eT1vbYOEvK33HBiY8tRoXNGaSivSMBc0UYooAKKKKACiiigAooooAKQdaWkHWgQtFFFAwNRXEixRSSN0RSxqU1g+NLr7J4bvpAcEpsH1PFZVqnsoSm+ib+4cY8zsebeH2MsFzcufmnmd\/rk1hXHzXEp9WJ\/Wug04eRpkQXYHIyAzAVhzqoncAnOSTyDX5XXk5xTPcpqzZP4TvP7P8X6ZKThHkMTfRhj+ZFe7AV85Xu+JRMgIaMhwfcHNfQum3K3lhb3KHKyxq4\/EV9jwxV5qEqb6P80cGOjaakWzQKDSV9QcIYpRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAAa4r4pztFoMSD7skwB\/Dmu1NcP8V0L6Hb47TD+Vedm3+51fRm1D+JH1OATWHihCeUhwMBhwazVkYnnB+tQy5XIPaokfHWvzKzase4kkT3h3IRxj2r2j4dytL4M00sckRlc+wJxXhl1N8pr234Yn\/iidO\/3T\/M19Rwumqs\/T9Thx\/wxOqpaSlFfbHliClpKUUAFFFFABRRRQAUUUUAFFFFABRRRQAGsLxNp8WpRW1vcbvLaQk7Tg8KTW6az9SIWS3ZjgBzkn\/dNc+JhGpTcJq6f+aKi2ndHEXngrTwCRPcD8Qf6Vz974WtYSSJ5yPoP8K9EvsfOdpPToOvb+tcvqBmwQUVhgjIB7815E8qwielNfj\/mdCxNTuc\/D4Vsrn5WluMdD0H9K9P8IWcen6HFaQFjFESq7jk46\/1rjrFf36AoxIP3tuB0rutC\/wCPNv8Af\/oK9DB4SjQV6cUjGpVnN+8zTooorvMwooooAKKKKACiiigAooooAKKKKACiiigANcJ8Y9Yu9A8D3eqaeU+02zxsoddykb1DAj0IJH413ZrgvjZY3Gp\/D7UbGz8vzpwqqXbA4YH+lYYiSjTcm7JGlPWaRyPhf41eFtetkS\/ul0i\/Iw8F0Tsz32yY2kfXB9qxNR+IrvrSz2+nxyaegIDlyJGH970GOeP1FeJXWi+KdGsRDd6XA0EfSRpon45\/vE46+grIczup2G2WdxuKfZ4SFcds7cYI\/AVxqUcQlKnNW8rM6nCFPpe59Ha\/8V\/CugWzPJqcd7cFcpbWvzuxPYkcL75Irv8A4Ka\/c+J\/h9aazfKqTXU9w2xTkKomdVX3wABnvivjay8O+KdTgeG20y2jjlGwyfaokwMY6Kwzx7GvsT4F2d1p3w40+wv3ie6ty6OY2BAG4lRnA6KQPwrpp16Tn7OMk32OaUbK56CKWkFLXUZBRRR3oAKKKKACiiigAooooAKYCS1PooAKKKKAA1z\/AI40SXxB4avdPtZhBcyp+6lJICt2Jx2roKMVM4qacZK6Y07Hw\/4h+A\/xIjdgmmW2qDeT5kV7GOuOcOVPaueHwN+JO4A+FpuP+nmDB\/8AH6\/QDAoxihRSVkLzPiLw5+z\/APESaZTcWFlpiHgme7RuPpGWr63+HnhpvCnhSy0qacXM8S\/vZgCPMc9Tz+X0FdNiinZbgGKMUtFMAo70maUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAIKDRRQAUooooAQUGiigBTQKKKACiiigAooooA\/\/2Q==";
-						productData.unit_id = 6; // kg
+                        productData.unit_id = 6; // kg
+                        productData.default_warehouse_id = warehouseIds[1];
 						break;
 						
 					case 2:
@@ -1393,8 +1397,8 @@ describe("products", function () {
 		});
 	});
 
-	it("read product 1 attributes", function() {
-		var optionalStore = Ext.getStore('ProductOptionals');
+	it("read-write product 1 optionals", function() {
+		var optionalStore = Ext.getStore('ProductOptionals'), option;
 
 		runs(function() {
 			flag = false;
@@ -1403,9 +1407,22 @@ describe("products", function () {
 			optionalStore.load({
 				callback: function () {
 					Ext.Array.each(optionalModel,function (optional) {
-						testresult = optionalStore.findRecord('name',optional.name);
+						if (optional.name == 'test') {
+							if ((option = optionalStore.findExact('name',optional.name)) >= 0) {
+								testresult = optionalStore.getAt(option);
+								testresult.set('raw_value', 'connectortest');
+							}
+							optionalStore.sync();
+							optionalStore.load({
+								callback: function () {
+									if ((option = optionalStore.findExact('name',optional.name)) >= 0) {
+										testresult = optionalStore.getAt(option);
+										flag = true;
+									};
+								}
+							});
+						}
 					});
-					flag = true;
 				}
 			});
 		});
@@ -1413,7 +1430,7 @@ describe("products", function () {
 		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
 		
 		runs(function () {
-			expect(testresult.get('value')).toBe('test');
+			expect(testresult.get('value')).toBe('connectortest');
 		});
 	});
 	
@@ -1755,7 +1772,7 @@ describe("order", function () {
 
 			flag = false;
 			orderData = {
-				ref_int: 'CT0001',
+				ref_ext: 'CT0001',
 				note_private: 'connectortest private',
 				note_public: 'connectortest public',
 				ref_customer: 'connectortest',
@@ -1776,7 +1793,7 @@ describe("order", function () {
 			orderStore.add(order);					
 			orderStore.sync();
 			orderStore.clearFilter();
-			orderStore.filter([Ext.create('Ext.util.Filter',{property:"ref_int",value:'CT0001'})]);
+			orderStore.filter([Ext.create('Ext.util.Filter',{property:"ref_ext",value:'CT0001'})]);
 			orderStore.load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
@@ -1804,7 +1821,7 @@ describe("order", function () {
 				callback: function(records) {
 					Ext.Array.each(records, function (record,index) {
 						testresults[index] = record.get('ref');
-						if (record.get('ref_int') == 'CT0001') {
+						if (record.get('ref_ext') == 'CT0001') {
 							orderRef = record.get('ref');
 							orderId = record.getId();
 						}
@@ -1953,7 +1970,7 @@ describe("order", function () {
 		var stock=0,
 			asked=0,
 			photo='',
-			unitIds = [];
+			defaultWarehouseIds = [];
 		
 		runs(function() {
 			flag = false;
@@ -1963,7 +1980,8 @@ describe("order", function () {
 			Ext.getStore('orderline').load({
 				callback: function (records) {
 					Ext.Array.each(records,function (record) {
-						testresults.push(record.get('warehouse_id'));
+                        testresults.push(record.get('warehouse_id'));
+                        defaultWarehouseIds.push(record.get('default_warehouse_id'));
 						stock+=record.get('stock');
 						asked+=record.get('qty_asked');
                         if (record.get('batch_id')) {
@@ -1982,7 +2000,10 @@ describe("order", function () {
 		
 		runs(function () {
 			expect(testresults).toContain(warehouseIds[1]);
-			expect(testresults).toContain(warehouseIds[2]);
+            expect(testresults).toContain(warehouseIds[2]);
+            if (dolibarrVersion >= 9.0) {
+                expect(defaultWarehouseIds).toContain(warehouseIds[1]);
+            }
 			if (dolibarrVersion >= 3.7) {
 				expect(testresults.length).toBe(6);
 				expect(stock).toBe(33);
@@ -2113,7 +2134,7 @@ describe("shipment", function ()
 
             flag = false;
             shipmentData = {
-                ref_int: 'CT0001',
+                ref_ext: 'CT0001',
                 origin: 'commande',
                 origin_id: orderId,
                 ref_customer: 'connectortest',
@@ -2140,7 +2161,7 @@ describe("shipment", function ()
             Ext.getStore('shipment').add(shipment);
             Ext.getStore('shipment').sync();
             Ext.getStore('shipment').clearFilter();
-            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "ref_int", value: 'CT0001' })]);
+            Ext.getStore('shipment').filter([Ext.create('Ext.util.Filter', { property: "ref_ext", value: 'CT0001' })]);
             Ext.getStore('shipment').load({
                 callback: function (records)
                 {
@@ -2175,7 +2196,7 @@ describe("shipment", function ()
 					Ext.Array.each(records, function (record,index) {
 						testresult = records.length;
 						testresults[index] = record.get('ref');
-						if (record.get('ref_int') == 'CT0001') {
+						if (record.get('ref_ext') == 'CT0001') {
 							shipmentRef = record.get('ref');
 							shipmentId = record.getId();
 						}
@@ -3634,6 +3655,37 @@ describe("delete products", function () {
 		
 	beforeEach(function() {
 		testresult = null;
+	});
+
+	it("destroy product 1 optionals", function() {
+		var optionalStore = Ext.getStore('ProductOptionals'), option;
+
+		optionalStore.setDestroyRemovedRecords(true);
+		optionalStore.setSyncRemovedRecords(true);
+		runs(function() {
+			flag = false;
+			optionalStore.clearFilter();
+			optionalStore.filter([Ext.create('Ext.util.Filter',{property:"id",value:productIds[0]})]);
+			optionalStore.load({
+				callback: function (records) {
+					optionalStore.remove(records);
+					optionalStore.sync();
+					optionalStore.load({
+						callback: function () {
+							option = optionalStore.find('name','test');
+							testresult = optionalStore.getAt(option);
+							flag = true;
+						}
+					});
+				}
+			});
+		});
+		
+		waitsFor(function() {return flag;},"extdirect timeout",TIMEOUT);
+		
+		runs(function () {
+			expect(testresult.get('value')).toBe('');
+		});
 	});
 	
 	it("destroy product 1", function() {

@@ -113,7 +113,7 @@ class ExtDirectFormProduct extends FormProduct
                 if ($filter->property == 'batch') $batch=$this->db->escape($filter->value);
                 if ($filter->property == 'sumstock') $sumStock=$filter->value;
                 if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));
-                if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);  
+                if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);
             }
         }
 
@@ -161,6 +161,7 @@ class ExtDirectFormProduct extends FormProduct
                     isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
                     isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
                     isset($warehouse['status']) ? $row->status = $warehouse['status'] : $row->status=null;
+                    isset($warehouse['parent_id']) ? $row->parent_id = $warehouse['parent_id'] : $row->parent_id=null;
                     array_push($data, $row);
                 }
                 $recordNbr++;
@@ -361,7 +362,7 @@ class ExtDirectFormProduct extends FormProduct
             $warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
         }
         if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-            $sql = "SELECT e.rowid, e.ref as label, e.description, e.statut";
+            $sql = "SELECT e.rowid, e.ref as label, e.description, e.statut, e.fk_parent";
         } else {
             $sql = "SELECT e.rowid, e.label, e.description, e.statut";
         }
@@ -407,14 +408,14 @@ class ExtDirectFormProduct extends FormProduct
         }
         if (!empty($contentValue)) {
             if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-                $sql.= " AND (LOWER(e.ref) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+                $sql.= " AND (LOWER(e.ref) like '%".$this->db->escape($contentValue)."%' OR LOWER(e.description) like '%".$this->db->escape($contentValue)."%')";
             } else {
-                $sql.= " AND (LOWER(e.label) like '%".$contentValue."%' OR LOWER(e.description) like '%".$contentValue."%')";
+                $sql.= " AND (LOWER(e.label) like '%".$this->db->escape($contentValue)."%' OR LOWER(e.description) like '%".$this->db->escape($contentValue)."%')";
             }
         }
         if ($sumStock && empty($fk_product)) {
             if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-                $sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut";
+                $sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut, e.fk_parent";
             } else {
                 $sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
             }
@@ -441,6 +442,7 @@ class ExtDirectFormProduct extends FormProduct
                 $this->cache_warehouses[$obj->rowid]['description'] = $obj->description;
                 $this->cache_warehouses[$obj->rowid]['stock'] = $obj->stock;
                 $this->cache_warehouses[$obj->rowid]['status'] = $obj->statut;
+                $this->cache_warehouses[$obj->rowid]['parent_id'] = $obj->fk_parent;
                 $i++;
             }
             return $num;

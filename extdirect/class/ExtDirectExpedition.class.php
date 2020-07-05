@@ -48,7 +48,7 @@ class ExtDirectExpedition extends Expedition
      */
     public function __construct($login) 
     {
-        global $langs,$user,$db;
+        global $langs, $user, $db, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -57,6 +57,9 @@ class ExtDirectExpedition extends Expedition
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("sendings");
                 $langs->load("products");
                 $langs->load("stocks");
@@ -102,18 +105,17 @@ class ExtDirectExpedition extends Expedition
         $id = 0;
         $ref = '';
         $ref_ext = '';
-        $ref_int = '';
         
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
                 else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'ref_int') $ref_int=$filter->value;
+                else if ($filter->property == 'ref_ext') $ref_ext=$filter->value;
             }
         }
         
-        if (($id > 0) || ($ref != '') || ($ref_int != '')) {
-            if (($result = $this->fetch($id, $ref, $ref_ext, $ref_int)) < 0) {
+        if (($id > 0) || ($ref != '') || ($ref_ext != '')) {
+            if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) {
                 if ($result = -2) {
                     return 0;// return 0 whem not found
                 } else {
@@ -155,7 +157,7 @@ class ExtDirectExpedition extends Expedition
 				$row->model_pdf = $this->model_pdf;
 				$row->create_date = $this->date_creation;
 				$row->delivery_address_id = $this->fk_delivery_address;
-				$row->ref_int = $this->ref_int;
+				$row->ref_ext = $this->ref_ext;
                 array_push($results, $row);
             } else {
                 return 0;
@@ -187,8 +189,6 @@ class ExtDirectExpedition extends Expedition
      */
     public function readOptionals(stdClass $param)
     {
-        global $conf;
-
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
@@ -205,16 +205,100 @@ class ExtDirectExpedition extends Expedition
             if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (! $this->error) {
                 $extraFields->fetch_name_optionals_label($this->table_element);
-                foreach ($this->array_options as $key => $value) {
-                    $row = new stdClass;
-                    $name = substr($key,8); // strip options_
-                    $row->name = $name;
-                    $row->value = $extraFields->showOutputField($name,$value);
-                    $results[] = $row;
+                $index = 1;
+                if (empty($this->array_options)) {
+                    // create empty optionals to be able to add optionals
+                    $optionsArray = (!empty($extraFields->attributes[$this->table_element]['label']) ? $extraFields->attributes[$this->table_element]['label'] : null);
+                    if (is_array($optionsArray) && count($optionsArray) > 0) {
+                        foreach ($optionsArray as $name => $label) {
+                            $row = new stdClass;
+                            $row->id = $index++;
+                            $row->name = $name;
+                            $row->value = '';
+                            $row->object_id = $this->id;
+                            $row->object_element = $this->element;
+                            $row->raw_value = null;
+                            $results[] = $row;
+                        }
+                    }
+                } else {
+                    foreach ($this->array_options as $key => $value) {
+                        $row = new stdClass;
+                        $name = substr($key,8); // strip options_
+                        $row->id = $index++; // ExtJs needs id to be able to destroy records
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $row->object_id = $this->id;
+                        $row->object_element = $this->element;
+                        $row->raw_value = $value;
+                        $results[] = $row;
+                    }
                 }
             }
         }
         return $results;
+    }
+
+    /**
+     * public method to update optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            $this->array_options['options_'.$param->name] = $param->raw_value;
+        }
+        if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
+    }
+
+    /**
+     * public method to add optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createOptionals($params)
+    {
+        return $this->updateOptionals($params);
+    }
+
+    /**
+     * public method to delete optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return    Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        }
+        if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
 
     /**
@@ -252,7 +336,7 @@ class ExtDirectExpedition extends Expedition
      */
     public function updateShipment($param) 
     {
-        global $conf, $langs, $mysoc;
+        global $conf, $langs;
         
         if (!isset($this->db)) return CONNECTERROR;
         
@@ -273,9 +357,6 @@ class ExtDirectExpedition extends Expedition
                         
                         break;
                     case 1:
-                        // set global $mysoc required to set pdf sender
-                        $mysoc = new Societe($this->db);
-                        $mysoc->setMysoc($conf);
                         $result = $this->valid($this->_user);
                         // PDF generating
                         if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
@@ -394,7 +475,7 @@ class ExtDirectExpedition extends Expedition
     {
         isset($params->origin_id) ? ( $this->origin_id = $params->origin_id) : isset($this->origin_id)?null:$this->origin_id=null;
         isset($params->origin) ? ( $this->origin = $params->origin) : isset($this->origin)?null:( $this->origin = null);
-        isset($params->ref_int) ? ( $this->ref_int = $params->ref_int) : isset($this->ref_int)?null:( $this->ref_int = null);
+        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext) : isset($this->ref_ext)?null:( $this->ref_ext = null);
         isset($params->ref_customer) ? ( $this->ref_customer = $params->ref_customer) : isset($this->ref_customer)?null:( $this->ref_customer = null);
         isset($params->customer_id) ? ( $this->socid = $params->customer_id) : isset($this->socid)?null:( $this->socid = null);
         isset($params->deliver_date) ? ( $this->date_delivery =$params->deliver_date) : isset($this->date_delivery)?null:($this->date_delivery = null);
@@ -459,7 +540,7 @@ class ExtDirectExpedition extends Expedition
             }
         }
         
-        $sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_int, ea.status, csm.libelle as mode";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
         if ($originId) {
@@ -529,7 +610,7 @@ class ExtDirectExpedition extends Expedition
                 $row->customer      = $obj->nom;
                 $row->customer_id   = (int) $obj->socid;
                 $row->ref           = $obj->ref;
-                $row->ref_int           = $obj->ref_int;
+                $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, 1));
                 $row->status        = $obj->status;
@@ -666,9 +747,13 @@ class ExtDirectExpedition extends Expedition
     {
         if (!isset($this->db)) return CONNECTERROR;
 
-        $orderLine = new OrderLine($this->db);
+        if (ExtDirect::checkDolVersion(0, '9.0', '')) {
+            $line = new ExpeditionLigne($this->db);
+        } else {
+            $line = new ExtDirectExpeditionLine($this->db);
+        }
 
-        return ExtDirect::readOptionalModel($orderLine);
+        return ExtDirect::readOptionalModel($line);
     }
 
     /**
@@ -681,8 +766,6 @@ class ExtDirectExpedition extends Expedition
      */
     public function readLineOptionals(stdClass $param)
     {
-        global $conf;
-
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
@@ -696,23 +779,127 @@ class ExtDirectExpedition extends Expedition
         
         if ($line_id > 0) {
             $extraFields = new ExtraFields($this->db);
-            $orderLine = new OrderLine($this->db);
-            $orderLine->id = $line_id;
-            if (($result = $orderLine->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
-            if (! $orderLine->error) {
-                $extraFields->fetch_name_optionals_label($orderLine->table_element);
-                foreach ($orderLine->array_options as $key => $value) {
-                    if (!empty($value)) {
-                        $row = new stdClass;
-                        $name = substr($key,8); // strip options_
-                        $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
-                        $results[] = $row;
+            if (ExtDirect::checkDolVersion(0, '9.0', '')) {
+                $line = new ExpeditionLigne($this->db);
+            } else {
+                $line = new ExtDirectExpeditionLine($this->db);
+            }
+            $line->id = $line_id;
+            if (($result = $line->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+            if (! $line->error) {
+                $extraFields->fetch_name_optionals_label($line->table_element);
+                $index = 1;
+                if (empty($line->array_options)) {
+                    // create empty optionals to be able to add optionals
+                    $optionsArray = (!empty($extraFields->attributes[$line->table_element]['label']) ? $extraFields->attributes[$line->table_element]['label'] : null);
+                    if (is_array($optionsArray) && count($optionsArray) > 0) {
+                        foreach ($optionsArray as $name => $label) {
+                            $row = new stdClass;
+                            $row->id = $index++;
+                            $row->name = $name;
+                            $row->value = '';
+                            $row->object_id = $line->id;
+                            $row->object_element = $line->element;
+                            $row->raw_value = null;
+                            $results[] = $row;
+                        }
+                    }
+                } else {
+                    foreach ($line->array_options as $key => $value) {
+                        if (!empty($value)) {
+                            $row = new stdClass;
+                            $name = substr($key,8); // strip options_
+                            $row->id = $index++; // ExtJs needs id to be able to destroy records
+                            $row->name = $name;
+                            $row->value = $extraFields->showOutputField($name,$value);
+                            $row->object_id = $line->id;
+                            $row->object_element = $line->element;
+                            $row->raw_value = $value;
+                            $results[] = $row;
+                        }
                     }
                 }
             }
         }
         return $results;
+    }
+
+     /**
+     * public method to update optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateLineOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        if (ExtDirect::checkDolVersion(0, '9.0', '')) {
+            $line = new ExpeditionLigne($this->db);
+        } else {
+            $line = new ExtDirectExpeditionLine($this->db);
+        }
+        foreach ($paramArray as &$param) {
+            if ($line->id != $param->object_id) {
+                $line->id = $param->object_id;
+                if (($result = $line->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+            }
+            $line->array_options['options_'.$param->name] = $param->raw_value;
+        }
+        if (($result = $line->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
+    }
+
+    /**
+     * public method to add optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createLineOptionals($params)
+    {
+        return $this->updateLineOptionals($params);
+    }
+
+    /**
+     * public method to delete optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return    Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyLineOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        if (ExtDirect::checkDolVersion(0, '9.0', '')) {
+            $line = new ExpeditionLigne($this->db);
+        } else {
+            $line = new ExtDirectExpeditionLine($this->db);
+        }
+        foreach ($paramArray as &$param) {
+            if ($line->id != $param->object_id) {
+                $line->id = $param->object_id;
+                if (($result = $line->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+            }
+        }
+        if (($result = $line->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
     
     /**
@@ -822,7 +1009,7 @@ class ExtDirectExpedition extends Expedition
                 $line->detail_batch->dluo_qty = $params->qty_toship; // deprecated for 9.0
                 $line->detail_batch->qty = $params->qty_toship;
                 $line->detail_batch->fk_origin_stock = $params->batch_id;
-                if (($result = $line->update()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+                if (($result = $line->update($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -933,7 +1120,7 @@ class ExtDirectExpedition extends Expedition
                     $line = new ExtDirectExpeditionLine($this->db);
                 }
                 $line->id = $lineId;
-                if (($result = $line->delete()) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+                if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
             }

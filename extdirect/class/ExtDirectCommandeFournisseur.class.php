@@ -61,7 +61,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     public function __construct($login) 
     {
-        global $langs,$db,$user;
+        global $langs, $db, $user, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -70,6 +70,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("orders");
                 parent::__construct($db);
             }
@@ -99,29 +102,28 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      *
      *    @param    stdClass    $params     filter with elements:
      *      id                  Id of order to load
-     *      ref                 ref, ref_int
+     *      ref                 ref
      *      
      *    @return     stdClass result data or error number
      */
     public function readOrder(stdClass $params)
     {
+        global $conf, $mysoc;
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
         $myUser = new User($this->db);
-        $mySociete = new Societe($this->db);
+        $thirdparty = new Societe($this->db);
         $results = array();
         $row = new stdClass;
         $id = 0;
         $ref = '';
-        $ref_ext = '';
-        $ref_int = '';
         $orderstatus_ids = array();
         
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
                 else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'ref_int') $ref_int=$filter->value;
                 else if ($filter->property == 'orderstatus_id') array_push($orderstatus_ids,$filter->value);
             }
         }
@@ -134,8 +136,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->ref= $this->ref;
                 $row->ref_supplier= $this->ref_client;
                 $row->supplier_id = $this->socid;
-                if ($mySociete->fetch($this->socid)>0) {
-                    $row->supplier_name = $mySociete->name;
+                if ($thirdparty->fetch($this->socid)>0) {
+                    $row->supplier_name = $thirdparty->name;
                 }
                 //! -1 for cancelled, 0 for draft, 1 for validated, 2 for send, 3 for closed
                 $row->orderstatus_id = $this->statut;
@@ -159,7 +161,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->reduction = 0;
                 foreach ($this->lines as $line) {
                     if ($line->remise_percent > 0) {
-                        $tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type);	
+                        $localtaxes_array = getLocalTaxesFromRate($line->tva_tx, 0, $thirdparty, $mysoc);
+                        $tabprice = calcul_price_total($line->qty, $line->subprice, 0, $line->tva_tx, $line->total_localtax1, $line->total_localtax2, 0, 'HT', $line->info_bits, $line->product_type, $mysoc, $localtaxes_array);	
                         $noDiscountHT = $tabprice[0];
                         $row->reduction += round($noDiscountHT - $line->total_ht, 2);
                     }
@@ -209,8 +212,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     public function readOptionals(stdClass $param)
     {
-        global $conf;
-
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
         $results = array();
@@ -227,16 +228,100 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if (! $this->error) {
                 $extraFields->fetch_name_optionals_label($this->table_element);
-                foreach ($this->array_options as $key => $value) {
-                    $row = new stdClass;
-                    $name = substr($key,8); // strip options_
-                    $row->name = $name;
-                    $row->value = $extraFields->showOutputField($name,$value);
-                    $results[] = $row;
+                $index = 1;
+                if (empty($this->array_options)) {
+                    // create empty optionals to be able to add optionals
+                    $optionsArray = (!empty($extraFields->attributes[$this->table_element]['label']) ? $extraFields->attributes[$this->table_element]['label'] : null);
+                    if (is_array($optionsArray) && count($optionsArray) > 0) {
+                        foreach ($optionsArray as $name => $label) {
+                            $row = new stdClass;
+                            $row->id = $index++;
+                            $row->name = $name;
+                            $row->value = '';
+                            $row->object_id = $this->id;
+                            $row->object_element = $this->element;
+                            $row->raw_value = null;
+                            $results[] = $row;
+                        }
+                    }
+                } else {
+                    foreach ($this->array_options as $key => $value) {
+                        $row = new stdClass;
+                        $name = substr($key,8); // strip options_
+                        $row->id = $index++; // ExtJs needs id to be able to destroy records
+                        $row->name = $name;
+                        $row->value = $extraFields->showOutputField($name,$value);
+                        $row->object_id = $this->id;
+                        $row->object_element = $this->element;
+                        $row->raw_value = $value;
+                        $results[] = $row;
+                    }
                 }
             }
         }
         return $results;
+    }
+
+    /**
+     * public method to update optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            $this->array_options['options_'.$param->name] = $param->raw_value;
+        }
+        if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
+    }
+
+    /**
+     * public method to add optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createOptionals($params)
+    {
+        return $this->updateOptionals($params);
+    }
+
+    /**
+     * public method to delete optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return    Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if (($this->id != $param->object_id && $result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        }
+        if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
 
     /**
@@ -841,6 +926,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 } else {
                                     $row->warehouse_id = $warehouse_id;
                                 }
+                                $row->default_warehouse_id = $myprod->fk_default_warehouse;
                                 if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!$isFreeLine && !empty($photoSize)) {
@@ -899,6 +985,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->total_stock = $myprod->stock_reel;
                                 $row->desiredstock = $myprod->desiredstock;
                                 $row->warehouse_id = $warehouse_id;
+                                $row->default_warehouse_id = $myprod->fk_default_warehouse;
                                 if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->has_photo = 0;
                                 if (!empty($photoSize)) {
@@ -965,6 +1052,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->total_stock = $myprod->stock_reel;
                                     $row->desiredstock = $myprod->desiredstock;
                                     $row->warehouse_id = $warehouse;
+                                    $row->default_warehouse_id = $myprod->fk_default_warehouse;
                                     if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                     $row->has_photo = 0;
                                     if (!empty($photoSize)) {
@@ -1021,8 +1109,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     public function readLineOptionals(stdClass $param)
     {
-        global $conf;
-
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
         $results = array();
@@ -1041,18 +1127,110 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             if (($result = $orderLine->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
             if (! $orderLine->error) {
                 $extraFields->fetch_name_optionals_label($orderLine->table_element);
-                foreach ($orderLine->array_options as $key => $value) {
-                    if (!empty($value)) {
-                        $row = new stdClass;
-                        $name = substr($key,8); // strip options_
-                        $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
-                        $results[] = $row;
+                $index = 1;
+                if (empty($orderLine->array_options)) {
+                    // create empty optionals to be able to add optionals
+                    $optionsArray = (!empty($extraFields->attributes[$orderLine->table_element]['label']) ? $extraFields->attributes[$orderLine->table_element]['label'] : null);
+                    if (is_array($optionsArray) && count($optionsArray) > 0) {
+                        foreach ($optionsArray as $name => $label) {
+                            $row = new stdClass;
+                            $row->id = $index++;
+                            $row->name = $name;
+                            $row->value = '';
+                            $row->object_id = $orderLine->id;
+                            $row->object_element = $orderLine->element;
+                            $row->raw_value = null;
+                            $results[] = $row;
+                        }
+                    }
+                } else {
+                    foreach ($orderLine->array_options as $key => $value) {
+                        if (!empty($value)) {
+                            $row = new stdClass;
+                            $name = substr($key,8); // strip options_
+                            $row->id = $index++; // ExtJs needs id to be able to destroy records
+                            $row->name = $name;
+                            $row->value = $extraFields->showOutputField($name,$value);
+                            $row->object_id = $orderLine->id;
+                            $row->object_element = $orderLine->element;
+                            $row->raw_value = $value;
+                            $results[] = $row;
+                        }
                     }
                 }
             }
         }
         return $results;
+    }
+
+    /**
+     * public method to update optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateLineOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        $orderLine = new CommandeFournisseurLigne($this->db);
+        foreach ($paramArray as &$param) {
+            if ($orderLine->id != $param->object_id) {
+                $orderLine->id = $param->object_id;
+                if (($result = $orderLine->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
+            }
+            $orderLine->array_options['options_'.$param->name] = $param->raw_value;
+        }
+        if (($result = $orderLine->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
+    }
+
+    /**
+     * public method to add optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createLineOptionals($params)
+    {
+        return $this->updateLineOptionals($params);
+    }
+
+    /**
+     * public method to delete optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return    Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyLineOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        $orderLine = new CommandeFournisseurLigne($this->db);
+        foreach ($paramArray as &$param) {
+            if ($orderLine->id != $param->object_id) {
+                $orderLine->id = $param->object_id;
+                if (($result = $orderLine->fetch_optionals()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
+            }
+        }
+        if (($result = $orderLine->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
     
     /**
@@ -1070,10 +1248,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
         $orderLine = new CommandeFournisseurLigne($this->db);
         
-         // set global $mysoc required for private calculation
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
-
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
     
@@ -1135,10 +1309,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
         $orderlineUpdated = false;
 
-        // set global $mysoc required for price calculation
-        $mysoc = new Societe($this->db);
-        $mysoc->setMysoc($conf);
-
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {
@@ -1193,8 +1363,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             // add photo
                             $photo = new stdClass;
                             $product->fetchPhoto($photo);
-                            if (!empty($params->has_photo) && !empty($params->photo) && empty($photo->has_photo) && isset($this->_user->rights->produit->creer)) {
-                                if (($result = $product->addBase64Jpeg($params->photo)) < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
+                            if ($param->has_photo > $photo->has_photo && !empty($params->photo) && isset($this->_user->rights->produit->creer)) {
+                                if (($result = $product->addBase64Jpeg($params->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
                             }
                             
                             // update unit price

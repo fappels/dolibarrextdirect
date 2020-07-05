@@ -51,7 +51,7 @@ class ExtDirectProduct extends Product
      */
     public function __construct($login) 
     {
-        global $langs,$db,$user,$conf;
+        global $langs, $db, $user, $conf, $mysoc;
         
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -60,6 +60,9 @@ class ExtDirectProduct extends Product
                 if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
                     $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
                 }
+                // set global $mysoc required for price calculation
+                $mysoc = new Societe($db);
+                $mysoc->setMysoc($conf);
                 $langs->load("products");
                 $langs->load("stocks");
                 $langs->load("productbatch");
@@ -86,7 +89,7 @@ class ExtDirectProduct extends Product
      */
     public function readProduct(stdClass $param)
     {
-        global $conf;
+        global $conf, $mysoc;
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
@@ -122,7 +125,7 @@ class ExtDirectProduct extends Product
         
         if (($id > 0) || ($ref != '')) {
             if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            if (!$this->error) {
+            if ($this->id > 0) {
                 $row->id = $this->id ;
                 //! Ref
                 $row->ref= $this->ref;
@@ -147,8 +150,6 @@ class ExtDirectProduct extends Product
                     } else {
                         $customer = new Societe($this->db);
                         if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
-                        $mysoc = new Societe($this->db);
-                        $mysoc->setMysoc($conf);
                         if ($result > 0 && $mysoc->id > 0) {
                             $row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
                         }
@@ -396,7 +397,7 @@ class ExtDirectProduct extends Product
     public function readOptionals(stdClass $param)
     {
         global $conf;
-
+        
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
         if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
@@ -417,30 +418,158 @@ class ExtDirectProduct extends Product
                 if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (! $this->error) {
                     $extraFields->fetch_name_optionals_label($this->table_element);
-                    foreach ($this->array_options as $key => $value) {
-                        $row = new stdClass;
-                        $name = substr($key,8); // strip options_
-                        $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
-                        $results[] = $row;
+                    $index = 1;
+                    if (empty($this->array_options)) {
+                        // create empty optionals to be able to add optionals
+                        $optionsArray = (!empty($extraFields->attributes[$this->table_element]['label']) ? $extraFields->attributes[$this->table_element]['label'] : null);
+                        if (is_array($optionsArray) && count($optionsArray) > 0) {
+                            foreach ($optionsArray as $name => $label) {
+                                $row = new stdClass;
+                                $row->id = $index++;
+                                $row->name = $name;
+                                $row->value = '';
+                                $row->object_id = $this->id;
+                                $row->object_element = $this->element;
+                                $row->raw_value = null;
+                                $results[] = $row;
+                            }
+                        }
+                    } else {
+                        foreach ($this->array_options as $key => $value) {
+                            $row = new stdClass;
+                            $name = substr($key,8); // strip options_
+                            $row->id = $index++; // ExtJs needs id to be able to destroy records
+                            $row->name = $name;
+                            $row->value = $extraFields->showOutputField($name,$value); // display value
+                            $row->object_id = $this->id;
+                            $row->object_element = $this->element;
+                            $row->raw_value = $value;
+                            $results[] = $row;
+                        }
                     }
                 }
             } else {
                 $productLot = new Productlot($this->db);
-                if (($result = $productLot->fetch(0, $batch, $id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+                if (($result = $productLot->fetch(0, $id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
                 if (! $productLot->error) {
                     $extraFields->fetch_name_optionals_label($productLot->table_element);
-                    foreach ($productLot->array_options as $key => $value) {
-                        $row = new stdClass;
-                        $name = substr($key,8); // strip options_
-                        $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
-                        $results[] = $row;
+                    $index = 1;
+                    if (empty($productLot->array_options)) {
+                        // create empty optionals to be able to add optionals
+                        $optionsArray = (!empty($extraFields->attributes[$productLot->table_element]['label']) ? $extraFields->attributes[$productLot->table_element]['label'] : null);
+                        if (is_array($optionsArray) && count($optionsArray) > 0) {
+                            foreach ($optionsArray as $name => $label) {
+                                $row = new stdClass;
+                                $row->id = $index++;
+                                $row->name = $name;
+                                $row->value = '';
+                                $row->object_id = $productLot->id;
+                                $row->object_element = $productLot->element;
+                                $row->raw_value = null;
+                                $results[] = $row;
+                            }
+                        }
+                    } else {
+                        foreach ($productLot->array_options as $key => $value) {
+                            $row = new stdClass;
+                            $name = substr($key,8); // strip options_
+                            $row->id = $index++;
+                            $row->name = $name;
+                            $row->value = $extraFields->showOutputField($name,$value);
+                            $row->object_id = $productLot->id;
+                            $row->object_element = $productLot->element;
+                            $row->raw_value = $value;
+                            $results[] = $row;
+                        }
                     }
                 }
             }
         }
         return $results;
+    }
+
+     /**
+     * public method to update product or lot optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function updateOptionals($params)
+    {
+        global $conf;
+        
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
+        if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($param->element == 'productlot') {
+                $productLot = new Productlot($this->db);
+                if ($productLot->id != $param->object_id && ($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+                $productLot->array_options['options_'.$param->name] = $param->raw_value;
+            } else {
+                if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                $this->array_options['options_'.$param->name] = $param->raw_value;
+            }
+        }
+        if (isset($productLot)) {
+            if (($result = $productLot->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        } else {
+            if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        }
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
+    }
+
+    /**
+     * public method to add product or lot optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *
+     *    @return     Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function createOptionals($params)
+    {
+        return $this->updateOptionals($params);
+    }
+
+    /**
+     * public method to delete product or lot optionals (extra fields) into database
+     *
+     *    @param    unknown_type    $params  optionals
+     *
+     *    @return    Ambigous <multitype:, unknown_type>|unknown
+     */
+    public function destroyOptionals($params)
+    {
+        if (!isset($this->db)) return CONNECTERROR;
+        if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
+        $paramArray = ExtDirect::toArray($params);
+
+        foreach ($paramArray as &$param) {
+            if ($param->element == 'productlot') {
+                $productLot = new Productlot($this->db);
+                if (($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+            } else {
+                if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            }
+        }
+        if (isset($productLot)) {
+            if ($productLot->id != $param->object_id && ($result = $productLot->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        } else {
+            if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+        }
+        if (is_array($params)) {
+            return $paramArray;
+        } else {
+            return $param;
+        }
     }
 
     /**
@@ -926,8 +1055,8 @@ class ExtDirectProduct extends Product
                 // add photo
                 $photo = new stdClass;
                 $this->fetchPhoto($photo);
-                if (!empty($param->has_photo) && !empty($param->photo) && empty($photo->has_photo) && isset($this->_user->rights->produit->creer)) {
-                    if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if ($param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
+                    if (($result = $this->addBase64Jpeg($param->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             } else {
                 return PARAMETERERROR;
@@ -1597,8 +1726,8 @@ class ExtDirectProduct extends Product
         
         $photos = $this->liste_photos($dir,$maxNum);
         
-        if (!empty($photos)) {
-            $row->has_photo = 1;
+        if (is_array($photos) && !empty($photos)) {
+            $row->has_photo = count($photos);
             $row->photo_size = $format;
             $photoFile = $photos[$num]['photo'];
             $photo_parts = pathinfo($photoFile);
@@ -1640,7 +1769,7 @@ class ExtDirectProduct extends Product
      * 
      * @return > 0 photo accepted < 0 photo not accepted
      */
-    public function addBase64Jpeg($base64JpegUrl) {
+    public function addBase64Jpeg($base64JpegUrl, $index = 1) {
         // get photo
         global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
 
@@ -1674,12 +1803,7 @@ class ExtDirectProduct extends Product
         $imgdata = base64_decode($base64[1]);
         
         if (substr($imgdata,0,3)=="\xff\xd8\xff") { // only jpeg
-            $filename = 'ExtDirectUpload'.$this->id.'.jpg';    
-            $i = 1;    
-            while (file_exists($tdir.$filename)) {
-                $filename = 'ExtDirectUpload'.$this->id.'('.$i.').jpg';
-                $i++;
-            }
+            $filename = 'ExtDirectUpload'. $this->id . '_' . $index . '.jpg';    
             if (is_dir($tdir) && (file_put_contents($tdir.$filename, $imgdata, LOCK_EX) > 0)) {
                 if (is_dir($dir)) {
                     dol_move($tdir.$filename, $dir.'/'.$filename);
