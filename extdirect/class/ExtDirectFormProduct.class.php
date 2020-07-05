@@ -161,7 +161,7 @@ class ExtDirectFormProduct extends FormProduct
                     isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
                     isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
                     isset($warehouse['status']) ? $row->status = $warehouse['status'] : $row->status=null;
-                    isset($warehouse['parent_id']) ? $row->status = $warehouse['parent_id'] : $row->parent_id=null;
+                    isset($warehouse['parent_id']) ? $row->parent_id = $warehouse['parent_id'] : $row->parent_id=null;
                     array_push($data, $row);
                 }
                 $recordNbr++;
