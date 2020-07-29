@@ -133,7 +133,7 @@ class ExtDirectFormProduct extends FormProduct
             $row->id = self::ALLWAREHOUSE_ID;
             $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
             $row->description= $langs->trans(self::ALLWAREHOUSE_DESCRIPTION);
-            if (!empty($fkProduct)) {
+            if (!empty($fkProduct) && !empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                 $product = new Product($this->db);
                 $product->fetch($fkProduct);
                 $product->load_stock();

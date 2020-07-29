@@ -188,7 +188,7 @@ class ExtDirectProduct extends Product
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
                     if (ExtDirect::checkDolVersion() >= 3.5) {
-                        $this->load_stock('warehouseopen, warehouseinternal');
+                        $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                     } 
                     if (ExtDirect::checkDolVersion() >= 3.8) {
                         $row->pmp = $this->pmp;
@@ -250,10 +250,12 @@ class ExtDirectProduct extends Product
                             }
                         }
                     } else {
-                        if (ExtDirect::checkDolVersion() >= 3.5) {
+                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                             $this->load_stock();
-                        } 
-                        $row->stock_reel = (float) $this->stock_theorique;
+                            $row->stock_reel = (float) $this->stock_theorique;
+                        } else {
+                            $row->stock_reel = (float) $this->stock_reel;
+                        }
                     }
                 }
                 // add compatibility with orderline model
