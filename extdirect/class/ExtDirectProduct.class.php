@@ -230,7 +230,7 @@ class ExtDirectProduct extends Product
                         // fetch qty and warehouse of first batch found
                         $formProduct = new FormProduct($this->db);                        
                         if (ExtDirect::checkDolVersion() >= 3.5) {
-                            $this->load_stock('warehouseopen, warehouseinternal');
+                            $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                         }
                         $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
@@ -260,7 +260,11 @@ class ExtDirectProduct extends Product
                 }
                 // add compatibility with orderline model
                 $row->stock = $row->stock_reel;
-                $row->total_stock = (float) $this->stock_theorique;
+                if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                    $row->total_stock = (float) $this->stock_theorique;
+                } else {
+                    $row->total_stock = (float) $this->stock_reel;
+                }
                 //! Stock alert
                 $row->seuil_stock_alerte= $this->seuil_stock_alerte;
                 $row->desiredstock= $this->desiredstock;
