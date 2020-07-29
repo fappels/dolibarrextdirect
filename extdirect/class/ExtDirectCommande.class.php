@@ -935,7 +935,11 @@ class ExtDirectCommande extends Commande
                     $myprod = new ExtDirectProduct($this->_user->login);
                     if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                     if (ExtDirect::checkDolVersion() >= 3.5) {
-                        if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
+                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                            if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                        } else {
+                            if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
+                        }
                     }
                     if (! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
                         $myprod->get_sousproduits_arbo();
@@ -992,7 +996,11 @@ class ExtDirectCommande extends Commande
                             $row->subprice = $line->subprice;
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                            $row->stock = $myprod->stock_reel;
+                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                                $row->stock = $myprod->stock_theorique;
+                            } else {
+                                $row->stock = $myprod->stock_reel;
+                            }
                             $row->total_stock = $row->stock;
                             $row->has_photo = 0;
                             if (!$isFreeLine && !empty($photoSize)) {
@@ -1065,8 +1073,13 @@ class ExtDirectCommande extends Commande
                             $row->subprice = $line->subprice;
                             $row->reduction_percent = $line->remise_percent;
                             $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
-                            !empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_reel;
-                            $row->total_stock = $myprod->stock_reel;
+                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                                !empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_theorique;
+                                $row->total_stock = $myprod->stock_theorique;
+                            } else {
+                                !empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_reel;
+                                $row->total_stock = $myprod->stock_reel;
+                            }
                             $row->warehouse_id = $line_warehouse_id;
                             if ($this->warehouse_id > 0) {
                                 $row->default_warehouse_id = $this->warehouse_id;
@@ -1134,7 +1147,11 @@ class ExtDirectCommande extends Commande
                                 $row->reduction_percent = $line->remise_percent;
                                 $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
                                 $row->stock = (float) $stock_warehouse->real;
-                                $row->total_stock = $myprod->stock_reel;
+                                if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                                    $row->total_stock = $myprod->stock_theorique;
+                                } else {
+                                    $row->total_stock = $myprod->stock_reel;
+                                }
                                 $row->warehouse_id = $warehouse;
                                 if ($this->warehouse_id > 0) {
                                     $row->default_warehouse_id = $this->warehouse_id;

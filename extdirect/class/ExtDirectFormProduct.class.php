@@ -23,6 +23,7 @@
  *  \brief      Sencha Ext.Direct product helpers remoting class
  */
 require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
+require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectFormProduct class
@@ -132,23 +133,30 @@ class ExtDirectFormProduct extends FormProduct
             $row->id = self::ALLWAREHOUSE_ID;
             $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
             $row->description= $langs->trans(self::ALLWAREHOUSE_DESCRIPTION);
-            $sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
-            if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
-            $resql = $this->db->query($sql);
-            if ($resql)
-            {
-                $obj = $this->db->fetch_object($resql);
-                if ($obj) {
-                    $row->stock = price2num($obj->stock,5);
-                }
+            if (!empty($fkProduct) && !empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                $product = new Product($this->db);
+                $product->fetch($fkProduct);
+                $product->load_stock();
+                $row->stock = price2num($product->stock_theorique,5);
                 array_push($data, $row);
-                $this->db->free($resql);
+            } else {
+                $sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
+                if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
+                $resql = $this->db->query($sql);
+                if ($resql)
+                {
+                    $obj = $this->db->fetch_object($resql);
+                    if ($obj) {
+                        $row->stock = price2num($obj->stock,5);
+                    }
+                    array_push($data, $row);
+                    $this->db->free($resql);
+                }
+                else
+                {
+                    $res = SQLERROR;
+                }
             }
-            else
-            {
-                $res = SQLERROR;
-            }
-            
         }
 
         if ($res > 0) {
