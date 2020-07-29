@@ -230,7 +230,11 @@ class ExtDirectProduct extends Product
                         // fetch qty and warehouse of first batch found
                         $formProduct = new FormProduct($this->db);                        
                         if (ExtDirect::checkDolVersion() >= 3.5) {
-                            $this->load_stock('novirtual, warehouseopen, warehouseinternal');
+                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                                $this->load_stock('warehouseopen, warehouseinternal');
+                            } else {
+                                $this->load_stock('novirtual, warehouseopen, warehouseinternal');
+                            }
                         }
                         $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
