@@ -74,6 +74,7 @@ class ExtDirectActionComm extends ActionComm
         if (!isset($this->_user->rights->agenda->myactions->read) 
             || !isset($this->_user->rights->agenda->allactions->read)) return PERMISSIONERROR;
         $results = array();
+        $result = 0;
         
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -546,13 +547,13 @@ class ExtDirectActionComm extends ActionComm
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;

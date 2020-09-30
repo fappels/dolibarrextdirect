@@ -95,6 +95,8 @@ class ExtDirectCommande extends Commande
      */
     public function readOrder(stdClass $params)
     {
+        global $mysoc;
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
         $myUser = new User($this->db);
@@ -664,6 +666,7 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = -1;
+        $row = new stdClass;
         while (($result = $this->LibStatut($statut, false, 1)) != '') {
             if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
@@ -685,6 +688,7 @@ class ExtDirectCommande extends Commande
         $results = array();
         if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
         // add empty type
+        $row = new stdClass;
         $row->id = 0;
         $row->label = '';
         array_push($results, $row);
@@ -858,13 +862,13 @@ class ExtDirectCommande extends Commande
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
@@ -1347,6 +1351,7 @@ class ExtDirectCommande extends Commande
         
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
+        $result = 0;
 
         foreach ($paramArray as &$params) {
             // prepare fields

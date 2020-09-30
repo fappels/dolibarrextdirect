@@ -472,13 +472,13 @@ class ExtDirectFichinter extends Fichinter
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
@@ -645,6 +645,7 @@ class ExtDirectFichinter extends Fichinter
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = 0;
+        $row = new stdClass;
         while (($result = $this->LibStatut($statut, 1)) != '') {
             if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
@@ -666,6 +667,7 @@ class ExtDirectFichinter extends Fichinter
         $results = array();
         if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
         // add empty type
+        $row = new stdClass;
         $row->id = 0;
         $row->label = '';
         array_push($results, $row);
@@ -772,7 +774,7 @@ class ExtDirectFichinter extends Fichinter
                 $index = 1;
                 if (empty($line->array_options)) {
                     // create empty optionals to be able to add optionals
-                    $optionsArray = (!empty($extraFields->attributes[$line->table_element]['label']) ? $extraFields->attributes[$orderLine->table_element]['label'] : null);
+                    $optionsArray = (!empty($extraFields->attributes[$line->table_element]['label']) ? $extraFields->attributes[$line->table_element]['label'] : null);
                     if (is_array($optionsArray) && count($optionsArray) > 0) {
                         foreach ($optionsArray as $name => $label) {
                             $row = new stdClass;
@@ -888,6 +890,7 @@ class ExtDirectFichinter extends Fichinter
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $line = new FichinterLigne($this->db);
+        $result = 0;
         
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);

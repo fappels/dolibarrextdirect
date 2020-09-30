@@ -453,13 +453,13 @@ class ExtDirectExpedition extends Expedition
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
@@ -642,6 +642,7 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = 0;
+        $row = new stdClass;
         while (($result = $this->LibStatut($statut, 1)) !== null) {
             if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
@@ -918,6 +919,8 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
+        $res = 0;
+        $result = 0;
         $batches = array();
         $qtyShipped = 0;
         foreach ($paramArray as &$params) {
@@ -1077,7 +1080,7 @@ class ExtDirectExpedition extends Expedition
                 }
             }
         }
-        return shipmentLineId;
+        return $shipmentLineId;
     }
 
     /**
@@ -1287,7 +1290,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                 {
                     dol_syslog(get_class($this).'::update only possible for batch of same warehouse', LOG_ERR);
                     $this->errors[]='ErrorBadParameters';
-                    $error++;
+                    return -10;
                 }
                 $qty = price2num($this->detail_batch[0]->dluo_qty);
             }
@@ -1301,7 +1304,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
             {
                 dol_syslog(get_class($this).'::update only possible for batch of same warehouse', LOG_ERR);
                 $this->errors[]='ErrorBadParameters';
-                $error++;
+                return -9;
             }
             $qty = price2num($this->detail_batch->dluo_qty);
         }

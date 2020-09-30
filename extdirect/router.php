@@ -102,8 +102,8 @@ function doRpc($cdata)
                 $result = call_user_func_array(array($o, $method), $params);
             }
         }
+        $error = new stdClass;
         if (is_int($result) && ($result < 0)) {
-            $error = new stdClass;
             if ($result > CONNECTERROR) {
                 $error->message = "Error $result from dolibarr: $method on action $action";
             } else {

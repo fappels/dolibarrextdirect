@@ -197,7 +197,7 @@ class ExtDirectAuthenticate extends ExtDirect
                 return PARAMETERERROR;
             }
         }
-        if (is_array($params)) {
+        if (is_array($param)) {
             return $paramArray;
         } else {
             return $param;

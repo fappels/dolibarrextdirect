@@ -1150,7 +1150,7 @@ class ExtDirectProduct extends Product
         $photoSize = '';
         $multiPriceLevel=1;
         $categorieFilter = false;
-        $socid;
+        $socid = null;
         $includeTotal = false;
         
         if (isset($param->limit)) {
@@ -1467,21 +1467,12 @@ class ExtDirectProduct extends Product
         (isset($this->note) ? null : ($this->note = '')); // create new product, set note to ''
         //! Selling price
         
-        if (! empty($conf->global->PRODUIT_MULTIPRICES) && !empty($param->multiprices_index)) {
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'price', 'multiprices', null, null, $param->multiprices_index);
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_ttc', 'multiprices', null, null, $param->multiprices_index);
-            //! Default VAT rate of product
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_tx', 'multiprices_tva_tx', null, null, $param->multiprices_index);
-            //! Base price ('TTC' for price including tax or 'HT' for net price)
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_base_type', 'multiprices_base_type', null, null, $param->multiprices_index);
-        } else {
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'price', 'price');
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_ttc', 'price_ttc');
-            //! Default VAT rate of product
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_tx', 'tva_tx');
-            //! Base price ('TTC' for price including tax or 'HT' for net price)
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_base_type', 'price_base_type');
-        }
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'price', 'price');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'price_ttc', 'price_ttc');
+        //! Default VAT rate of product
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_tx', 'tva_tx');
+        //! Base price ('TTC' for price including tax or 'HT' for net price)
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'price_base_type', 'price_base_type');
             
         $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min', 'price_min');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min_ttc', 'price_min_ttc');

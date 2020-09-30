@@ -383,7 +383,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         else if ($currentStatus == 7) $newstatus=3;	// Canceled->Process running
                         else if ($currentStatus == 9) $newstatus=1;	// Refused->Validated
 
-                        $result = $this->setStatus($user, $newstatus);
+                        $result = $this->setStatus($this->_user, $newstatus);
                         break;
                     case 1:
                         $result = $this->valid($this->_user);
@@ -487,13 +487,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
@@ -696,7 +696,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     {
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        $statut;
+        
         for ($statut = 0; $statut < 10; $statut++) {
             $result = $this->LibStatut($statut, 1);
             $row = new stdClass;
@@ -820,6 +820,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
             
         $results = array();
+        $res = 0;
         $order_id = 0;
         $productAskedQty = array();
         $photoSize = '';
@@ -1264,6 +1265,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
         $orderLine = new CommandeFournisseurLigne($this->db);
+        $result = 0;
         
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);

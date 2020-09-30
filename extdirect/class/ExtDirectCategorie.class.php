@@ -220,6 +220,7 @@ class ExtDirectCategorie extends Categorie
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
         $results = array();
+        $cats = array();
         $row = new stdClass;
         $type = 0;
         

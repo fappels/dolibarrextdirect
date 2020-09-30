@@ -70,6 +70,7 @@ class ExtDirectContact extends Contact
         if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
         
         $results = array();
+        $result = 0;
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id' && $filter->value > 0) {
@@ -527,13 +528,13 @@ class ExtDirectContact extends Contact
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;

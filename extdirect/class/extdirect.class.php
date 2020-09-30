@@ -496,7 +496,7 @@ class ExtDirect
             return $dolMajorMinorVersion;
         } else {
             if (empty($minVersion)) $minVersion = '3.4';
-            if (empty($maxVersion)) $maxVersion = '12.0'; // debugging version
+            if (empty($maxVersion)) $maxVersion = '13.0'; // debugging version
             if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>='))
             {
             	return 1;
@@ -633,16 +633,17 @@ class ExtDirect
     {
         $constants =  array();
         $results = array();
+        $filter = $params->filter;
         $entity = ($user->entity > 0) ? $user->entity : 1;
         if (!empty($moduleConstants)) {
             $constants += $moduleConstants;
         }
         
-        if (isset($params->filter)) {
+        if (isset($filter)) {
             if ($filter->property == 'constant') {
                 $row = new stdClass;
                 $row->constant = $filter->value;
-                $row->value = dolibarr_get_const($db, $constant, $entity);
+                $row->value = dolibarr_get_const($db, $filter->value, $entity);
                 array_push($results, $row);
             }
         } else {

@@ -496,7 +496,7 @@ class ExtDirectFormProduct extends FormProduct
         if (ExtDirect::checkDolVersion(0, '5.0', '')) {
             dol_include_once('/fourn/class/fournisseur.product.class.php');
 
-            $supplierProduct = new ProductFournisseur($db);
+            $supplierProduct = new ProductFournisseur($this->db);
             if (! is_array($result = $supplierProduct->reputations)) {
                 return ExtDirect::getDolError($result, $this->errors, $this->error);
             }

@@ -957,7 +957,7 @@ class ExtDirectSociete extends Societe
      */
     function getCategories(stdClass $params)
     {
-        global $langs;
+        global $conf, $langs;
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
@@ -1072,6 +1072,7 @@ class ExtDirectSociete extends Societe
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
+        $result = 0;
         // dolibarr update settings
         $allowmodcodeclient=1;
         $call_trigger=1;
@@ -1169,13 +1170,13 @@ class ExtDirectSociete extends Societe
                 else
                 {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
@@ -1203,8 +1204,7 @@ class ExtDirectSociete extends Societe
             $this->db->commit();
             return 1;
         } else {
-            $this->db->error = $langs->trans("Error sql=".$sql);
-            dol_syslog(get_class($this)."::Update fails update sql=".$sql, LOG_ERR);
+            dol_syslog(get_class($this)."::Update fails", LOG_ERR);
             $this->db->rollback();
             return -1;
         }
