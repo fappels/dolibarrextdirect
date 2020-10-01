@@ -141,7 +141,7 @@ class ExtDirectCommande extends Commande
                 if ($myUser->fetch($this->user_author_id)>0) {
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
-                $row->order_date = $this->date_commande;
+                $row->order_date = $this->date;
                 $row->deliver_date= $this->date_livraison;
                 $row->availability_id = $this->availability_id;
                 $row->availability_code = $this->availability_code;
@@ -418,7 +418,7 @@ class ExtDirectCommande extends Commande
                 }
                 
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                if (($result = $this->set_date($this->_user, $this->date_commande)) < 0) return $result;
+                if (($result = $this->set_date($this->_user, $this->date)) < 0) return $result;
                 if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (ExtDirect::checkDolVersion(0,'','4.0') && ($this->availability_id > 0) && 
                     ($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -493,7 +493,7 @@ class ExtDirectCommande extends Commande
         isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
         isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);      
         isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ($this->user_author_id = null); 
-        isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ($this->date_commande = null);
+        isset($params->order_date) ? ( $this->date =$params->order_date) : ($this->date = null);
         isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ($this->date_livraison = null);
         isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ($this->availability_id = null);
         isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ($this->availability_code = null);
@@ -955,9 +955,9 @@ class ExtDirectCommande extends Commande
                         if ($isService || $isFreeLine || $warehouse_id == -1) {
                             // get orderline with complete stock
                             $row = new stdClass;
-                            $row->id = $line->rowid;
+                            $row->id = $line->id;
                             $row->origin_id = $line->fk_commande;
-                            $row->origin_line_id = $line->rowid;
+                            $row->origin_line_id = $line->id;
                             if (empty($line->label)) {
                                 if ($isFreeLine) {
                                     $row->label = $line->desc;
@@ -999,7 +999,7 @@ class ExtDirectCommande extends Commande
                             $row->price = $line->price;
                             $row->subprice = $line->subprice;
                             $row->reduction_percent = $line->remise_percent;
-                            $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                            $this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
                             if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                 $row->stock = $myprod->stock_theorique;
                             } else {
@@ -1036,9 +1036,9 @@ class ExtDirectCommande extends Commande
                                 $line_warehouse_id = $warehouse_id;
                             }
                             $row = new stdClass;
-                            $row->id = $line->rowid.'_'.$line_warehouse_id;
+                            $row->id = $line->id.'_'.$line_warehouse_id;
                             $row->origin_id = $line->fk_commande;
-                            $row->origin_line_id = $line->rowid;
+                            $row->origin_line_id = $line->id;
                             if (empty($line->label)) {
                                 $row->label = $line->product_label;
                             } else {
@@ -1076,7 +1076,7 @@ class ExtDirectCommande extends Commande
                             $row->price = $line->price;
                             $row->subprice = $line->subprice;
                             $row->reduction_percent = $line->remise_percent;
-                            $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                            $this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
                             if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                 !empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_theorique;
                                 $row->total_stock = $myprod->stock_theorique;
@@ -1102,16 +1102,16 @@ class ExtDirectCommande extends Commande
                                 array_push($results, $row);
                                 $myprod->fetchSubProducts($results, clone $row, $photoSize);
                             } else {
-                                if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id, false, null, '', $photoSize)) < 0) return $res;
+                                if (($res = $myprod->fetchBatches($results, $row, $line->id, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id, false, null, '', $photoSize)) < 0) return $res;
                             }
                         }
                     } else {
                         foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
                             if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stock_warehouse->real > 0)) {
                                 $row = new stdClass;
-                                $row->id = $line->rowid.'_'.$warehouse;
+                                $row->id = $line->id.'_'.$warehouse;
                                 $row->origin_id = $line->fk_commande;
-                                $row->origin_line_id = $line->rowid;
+                                $row->origin_line_id = $line->id;
                                 if (empty($line->label)) {
                                     $row->label = $line->product_label;
                                 } else {
@@ -1149,7 +1149,7 @@ class ExtDirectCommande extends Commande
                                 $row->price = $line->price;
                                 $row->subprice = $line->subprice;
                                 $row->reduction_percent = $line->remise_percent;
-                                $this->expeditions[$line->rowid]?$row->qty_shipped = $this->expeditions[$line->rowid]:$row->qty_shipped = 0;
+                                $this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
                                 $row->stock = (float) $stock_warehouse->real;
                                 if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                     $row->total_stock = $myprod->stock_theorique;
@@ -1175,7 +1175,7 @@ class ExtDirectCommande extends Commande
                                     $myprod->fetchSubProducts($results, clone $row, $photoSize);
                                     $myprod->fetch($line->fk_product);
                                 } else {
-                                    if (($res = $myprod->fetchBatches($results, $row, $line->rowid, $warehouse, $stock_warehouse->id, false, null, '', $photoSize)) < 0) return $res;
+                                    if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse, $stock_warehouse->id, false, null, '', $photoSize)) < 0) return $res;
                                 }
                             }
                         }
@@ -1483,7 +1483,7 @@ class ExtDirectCommande extends Commande
                 
                 if (!$this->error) {
                     foreach ($this->lines as $orderLine) {
-                        if ($orderLine->rowid == $params->origin_line_id) {
+                        if ($orderLine->id == $params->origin_line_id) {
                             // update fields
                             $this->prepareOrderLineFields($params, $orderLine);
                             if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
@@ -1510,7 +1510,7 @@ class ExtDirectCommande extends Commande
                             }
                             
                             if (($result = $this->updateline(
-                                $orderLine->rowid, 
+                                $orderLine->id, 
                                 $orderLine->desc, 
                                 $orderLine->subprice,
                                 $orderLine->qty, 
