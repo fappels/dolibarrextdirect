@@ -140,7 +140,11 @@ class ExtDirectExpedition extends Expedition
                 if ($myUser->fetch($this->user_author_id)>0) {
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
-                $row->order_date = $this->date_expedition;
+                if (ExtDirect::checkDolVersion(0,'3.8','')) {
+                    $row->order_date = $this->date_shipping;
+                } else {
+                    $row->order_date = $this->date_expedition;
+                }
                 $row->deliver_date= $this->date_delivery;
                 $row->origin_id = $this->origin_id;
                 $row->origin = $this->origin;
@@ -473,26 +477,26 @@ class ExtDirectExpedition extends Expedition
      */
     private function prepareFields($params) 
     {
-        isset($params->origin_id) ? ( $this->origin_id = $params->origin_id) : isset($this->origin_id)?null:$this->origin_id=null;
-        isset($params->origin) ? ( $this->origin = $params->origin) : isset($this->origin)?null:( $this->origin = null);
-        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext) : isset($this->ref_ext)?null:( $this->ref_ext = null);
-        isset($params->ref_customer) ? ( $this->ref_customer = $params->ref_customer) : isset($this->ref_customer)?null:( $this->ref_customer = null);
-        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : isset($this->socid)?null:( $this->socid = null);
-        isset($params->deliver_date) ? ( $this->date_delivery =$params->deliver_date) : isset($this->date_delivery)?null:($this->date_delivery = null);
-        isset($params->weight_units) ? ( $this->weight_units = $params->weight_units) : isset($this->weight_units)?null:($this->weight_units = 0); 
-        isset($params->weight) ? ( $this->weight = $params->weight) : isset($this->weight)?null:($this->weight = 0);
-        isset($params->size_units) ? ( $this->size_units = $params->size_units) : isset($this->size_units)?null:($this->size_units = 0);
+        isset($params->origin_id) ? $this->origin_id = $params->origin_id : ( isset($this->origin_id) ? null:$this->origin_id = null );
+        isset($params->origin) ? $this->origin = $params->origin : ( isset($this->origin) ? null :  $this->origin = null );
+        isset($params->ref_ext) ? $this->ref_ext = $params->ref_ext : ( isset($this->ref_ext) ? null : $this->ref_ext = null );
+        isset($params->ref_customer) ? $this->ref_customer = $params->ref_customer : ( isset($this->ref_customer) ? null : $this->ref_customer = null );
+        isset($params->customer_id) ? $this->socid = $params->customer_id : ( isset($this->socid) ? null : $this->socid = null );
+        isset($params->deliver_date) ? $this->date_delivery = $params->deliver_date : ( isset($this->date_delivery) ? null : $this->date_delivery = null );
+        isset($params->weight_units) ? $this->weight_units = $params->weight_units : ( isset($this->weight_units) ? null : $this->weight_units = 0 ); 
+        isset($params->weight) ? $this->weight = $params->weight : ( isset($this->weight) ? null : $this->weight = 0 );
+        isset($params->size_units) ? $this->size_units = $params->size_units : ( isset($this->size_units) ? null : $this->size_units = 0 );
         // sizes for create
-        isset($params->trueDepth) ? ( $this->sizeS = $params->trueDepth) : isset($this->sizeS)?null:($this->sizeS = 0);
-        isset($params->trueWidth) ? ( $this->sizeW = $params->trueWidth) : isset($this->sizeW)?null:($this->sizeW = 0);
-        isset($params->trueHeight) ? ( $this->sizeH = $params->trueHeight) : isset($this->sizeH)?null:($this->sizeH = 0);   
+        isset($params->trueDepth) ? $this->sizeS = $params->trueDepth : ( isset($this->sizeS) ? null : $this->sizeS = 0 );
+        isset($params->trueWidth) ? $this->sizeW = $params->trueWidth : ( isset($this->sizeW) ? null: $this->sizeW = 0 );
+        isset($params->trueHeight) ? $this->sizeH = $params->trueHeight : ( isset($this->sizeH) ? null: $this->sizeH = 0 );   
         // sizes for update
-        isset($params->trueDepth) ? ( $this->trueDepth = $params->trueDepth) : isset($this->trueDepth)?null:($this->trueDepth = 0);
-        isset($params->trueWidth) ? ( $this->trueWidth = $params->trueWidth) : isset($this->trueWidth)?null:($this->trueWidth = 0);
-        isset($params->trueHeight) ? ( $this->trueHeight = $params->trueHeight) : isset($this->trueHeight)?null:($this->trueHeight = 0);   
-        isset($params->shipping_method_id) ? ($this->shipping_method_id = $params->shipping_method_id) : null;
-        isset($params->incoterms_id) ? ($this->fk_incoterms = $params->incoterms_id) : null;
-        isset($params->location_incoterms) ? ($this->location_incoterms = $params->location_incoterms) : null;    
+        isset($params->trueDepth) ? $this->trueDepth = $params->trueDepth : ( isset($this->trueDepth) ? null : $this->trueDepth = 0 );
+        isset($params->trueWidth) ? $this->trueWidth = $params->trueWidth : ( isset($this->trueWidth) ? null: $this->trueWidth = 0 );
+        isset($params->trueHeight) ? $this->trueHeight = $params->trueHeight : ( isset($this->trueHeight) ? null: $this->trueHeight = 0 );   
+        isset($params->shipping_method_id) ? $this->shipping_method_id = $params->shipping_method_id : null;
+        isset($params->incoterms_id) ? $this->fk_incoterms = $params->incoterms_id : null;
+        isset($params->location_incoterms) ? $this->location_incoterms = $params->location_incoterms : null;    
         isset($params->tracking_number) ? $this->tracking_number = $params->tracking_number : null;
 		isset($params->model_pdf) ? $this->model_pdf = $params->model_pdf : null;
 		isset($params->note_public) ? $this->note_public = $params->note_public : null;
@@ -1413,7 +1417,6 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
         
         if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) // For avoid conflicts if trigger used
         {
-            $this->id=$this->rowid;
             $result=$this->insertExtraFields();
             if ($result < 0)
             {
