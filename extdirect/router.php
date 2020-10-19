@@ -17,7 +17,7 @@ if (! $res && file_exists("../main.inc.php")) $res=@include("../main.inc.php");
 if (! $res && file_exists("../../main.inc.php")) $res=@include("../../main.inc.php");
 if (! $res && file_exists("../../../main.inc.php")) $res=@include("../../../main.inc.php");
 if (! $res) die("Include of main fails");
-require('class/extdirect.class.php');
+dol_include_once("/extdirect/class/extdirect.class.php");
 require('config.php');
 $debugData = '[]';
 
