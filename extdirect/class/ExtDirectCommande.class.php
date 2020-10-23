@@ -945,7 +945,7 @@ class ExtDirectCommande extends Commande
                             if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                         }
                     }
-                    if (! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
+                    if (!$isFreeLine && ! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
                         $myprod->get_sousproduits_arbo();
                     }
                     if ($line->product_type == 1) {
