@@ -484,26 +484,26 @@ class ExtDirectCommande extends Commande
      */
     private function prepareOrderFields($params) 
     {
-        isset($params->ref) ? ( $this->ref = $params->ref ) : ( $this->ref = null);
-        isset($params->ref_int) ? ( $this->ref_int = $params->ref_int ) : ( $this->ref_int = null);
-        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext ) : ( $this->ref_ext = null);
-        isset($params->ref_customer) ? ( $this->ref_client = $params->ref_customer) : ( $this->ref_client = null);
-        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( $this->socid = null);
-        //isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ($this->statut  = 0);
-        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
-        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);      
-        isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ($this->user_author_id = null); 
-        isset($params->order_date) ? ( $this->date =$params->order_date) : ($this->date = null);
-        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ($this->date_livraison = null);
-        isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ($this->availability_id = null);
-        isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ($this->availability_code = null);
+        isset($params->ref) ? ( $this->ref = $params->ref ) : ( isset($this->ref) ? null : ( $this->ref = null));
+        isset($params->ref_int) ? ( $this->ref_int = $params->ref_int ) : ( isset($this->ref_int) ? null : ( $this->ref_int = null));
+        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext ) : ( isset($this->ref_ext) ? null : ( $this->ref_ext = null));
+        isset($params->ref_customer) ? ( $this->ref_client = $params->ref_customer) : ( isset($this->ref_client) ? null : ( $this->ref_client = null));
+        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( isset($this->socid) ? null : ( $this->socid = null));
+        //isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ( isset($this->statut) ? null : ($this->statut  = 0));
+        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( isset($this->note_private) ? null : ( $this->note_private = null));
+        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
+        isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
+        isset($params->order_date) ? ( $this->date =$params->order_date) : ( isset($this->date) ? null : ($this->date = null));
+        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ( isset($this->availability_id) ? null : ($this->availability_id = null));
+        isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ( isset($this->availability_code) ? null : ($this->availability_code = null));
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
         isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
         isset($params->shipping_method_id) ? ($this->shipping_method_id = $params->shipping_method_id) : null;
         isset($params->incoterms_id) ? ($this->fk_incoterms = $params->incoterms_id) : null;
         isset($params->location_incoterms) ? ($this->location_incoterms = $params->location_incoterms) : null;
-    } 
+    }
     
     /**
      * public method to read a list of orders

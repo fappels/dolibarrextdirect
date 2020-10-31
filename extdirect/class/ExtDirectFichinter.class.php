@@ -490,17 +490,17 @@ class ExtDirectFichinter extends Fichinter
      * @param stdclass $params object with fields
      * @return null
      */
-    private function prepareInterventionFields($params) 
+    private function prepareInterventionFields($params)
     {
-        isset($params->ref) ? ( $this->ref = $params->ref ) : ( $this->ref = null);
-        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( $this->socid = null);
-        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
-        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);      
-        isset($params->description) ? ( $this->description =$params->description) : ($this->description = null);
-        isset($params->duration) ? ( $this->duration =$params->duration) : ($this->duration = null);
-        isset($params->project_id) ? ( $this->fk_projet =$params->project_id) : ($this->fk_projet = null);
-        isset($params->contract_id) ? ( $this->fk_contrat =$params->contract_id) : ($this->fk_contrat = null);
-    } 
+        isset($params->ref) ? ( $this->ref = $params->ref ) : null;
+        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : null;
+        isset($params->note_private) ? ( $this->note_private =$params->note_private) : null;
+        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : null;
+        isset($params->description) ? ( $this->description =$params->description) : null;
+        isset($params->duration) ? ( $this->duration =$params->duration) : null;
+        isset($params->project_id) ? ( $this->fk_projet =$params->project_id) : null;
+        isset($params->contract_id) ? ( $this->fk_contrat =$params->contract_id) :null;
+    }
     
     /**
      * public method to read a list of interventions
