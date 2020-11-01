@@ -419,7 +419,11 @@ class ExtDirectCommande extends Commande
 
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->set_date($this->_user, $this->date)) < 0) return $result;
-                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (function_exists('setDeliveryDate')) {
+                    if (($result = $this->setDeliveryDate($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                } else {
+                    if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
                 if (ExtDirect::checkDolVersion(0, '', '4.0') && ($this->availability_id > 0) &&
                     ($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (ExtDirect::checkDolVersion(0, '5.0', '') && ($this->availability_id > 0) &&

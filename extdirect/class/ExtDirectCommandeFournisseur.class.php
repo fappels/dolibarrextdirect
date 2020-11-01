@@ -412,7 +412,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         break;
                 }
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (function_exists('setDeliveryDate')) {
+                    if (($result = $this->setDeliveryDate($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                } else {
+                    if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                }
                 if (isset($this->cond_reglement_id) &&
                     ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->mode_reglement_id) &&
@@ -503,15 +507,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      */
     private function prepareOrderFields($params)
     {
-        isset($params->ref) ? ( $this->ref = $params->ref ) : ( $this->ref = null);
-        isset($params->ref_supplier) ? ( $this->ref_supplier = $params->ref_supplier) : ( $this->ref_supplier = null);
-        isset($params->supplier_id) ? ( $this->socid = $params->supplier_id) : ( $this->socid = null);
-        isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ($this->statut  = 0);
-        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
-        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);
-        isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ($this->user_author_id = null);
-        isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ($this->date_commande = null);
-        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ($this->date_livraison = null);
+        isset($params->ref) ? ( $this->ref = $params->ref ) : ( isset($this->ref) ? null : ( $this->ref = null));
+        isset($params->ref_supplier) ? ( $this->ref_supplier = $params->ref_supplier) : ( isset($this->ref_supplier) ? null : ( $this->ref_supplier = null));
+        isset($params->supplier_id) ? ( $this->socid = $params->supplier_id) : ( isset($this->socid) ? null : ( $this->socid = null));
+        isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ( isset($this->statut) ? null : ($this->statut  = 0));
+        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( isset($this->note_private) ? null : ( $this->note_private= null));
+        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
+        isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
+        isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
+        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
         isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
