@@ -1,7 +1,7 @@
 <?php
 /* Copyright (C) 2007-2012 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2012      Francis Appels       <francis.appels@yahoo.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -67,9 +67,9 @@ class ExtDirect
     public $db;                         //!< To store db handler
     public $error;                          //!< To return error code (or message)
     public $errors=array();             //!< To return several error codes (or messages)
-    
+
     public $id;
-    
+
     public $fk_user;
     public $app_id;
     public $app_name;
@@ -81,7 +81,7 @@ class ExtDirect
     public $dev_type;
     // array with multiple records
     public $dataset=array();
-    
+
     /**
      *  Constructor
      *
@@ -91,8 +91,8 @@ class ExtDirect
     {
         $this->db = $db;
         return 1;
-    }    
-    
+    }
+
     /**
      *  Create object into database
      *
@@ -100,18 +100,18 @@ class ExtDirect
      *  @param  int     $notrigger   0=launch triggers after, 1=disable triggers
      *  @return int                  <0 if KO, Id of created object if OK
      */
-    public function create($user, $notrigger=0)
+    public function create($user, $notrigger = 0)
     {
         global $conf, $langs;
         $error=0;
-        
+
         if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
             $this->fk_user = $conf->global->DIRECTCONNECT_AUTO_USER;
-            $this->ack_id = uniqid('llx',true);
+            $this->ack_id = uniqid('llx', true);
         }
-        
+
         // Clean parameters
-        
+
         if (isset($this->fk_user)) $this->fk_user=trim($this->fk_user);
         if (isset($this->app_id)) $this->app_id=trim($this->app_id);
         if (isset($this->app_name)) $this->app_name=trim($this->app_name);
@@ -120,14 +120,11 @@ class ExtDirect
         if (isset($this->dev_platform)) $this->dev_platform=trim($this->dev_platform);
         if (isset($this->dev_type)) $this->dev_type=trim($this->dev_type);
 
-        
-
         // Check parameters
         // Put here code to add control on parameters values
 
         // Insert request
         $sql = "INSERT INTO ".MAIN_DB_PREFIX."extdirect_user(";
-        
         $sql.= "fk_user,";
         $sql.= "app_id,";
         $sql.= "app_name,";
@@ -137,10 +134,7 @@ class ExtDirect
         $sql.= "date_last_connect,";
         $sql.= "dev_platform,";
         $sql.= "dev_type";
-
-        
         $sql.= ") VALUES (";
-        
         $sql.= " ".(! isset($this->fk_user)?'NULL':"'".$this->fk_user."'").",";
         $sql.= " ".(! isset($this->app_id)?'NULL':"'".$this->db->escape($this->app_id)."'").",";
         $sql.= " ".(! isset($this->app_name)?'NULL':"'".$this->db->escape($this->app_name)."'").",";
@@ -150,15 +144,13 @@ class ExtDirect
         $sql.= " '".$this->db->idate(dol_now())."',";
         $sql.= " ".(! isset($this->dev_platform)?'NULL':"'".$this->db->escape($this->dev_platform)."'").",";
         $sql.= " ".(! isset($this->dev_type)?'NULL':"'".$this->db->escape($this->dev_type)."'")."";
-
-        
         $sql.= ")";
 
         $this->db->begin();
 
         $resql=$this->db->query($sql);
-        if (! $resql) { 
-            $error++; $this->errors[]="Error ".$this->db->lasterror(); 
+        if (! $resql) {
+            $error++; $this->errors[]="Error ".$this->db->lasterror();
         }
 
         if (! $error) {
@@ -198,13 +190,13 @@ class ExtDirect
      *  @param  string      $orderBy    order by string
      *  @return int             <0 if KO, >0 if OK
      */
-    public function fetchList($filter = '',$orderBy = '')
+    public function fetchList($filter = '', $orderBy = '')
     {
         global $langs;
-        
+
         $sql = "SELECT";
         $sql.= " t.rowid,";
-    
+
         $sql.= " t.fk_user,";
         $sql.= " t.app_id,";
         $sql.= " t.app_name,";
@@ -214,8 +206,7 @@ class ExtDirect
         $sql.= " t.date_last_connect,";
         $sql.= " t.dev_platform,";
         $sql.= " t.dev_type";
-    
-    
+
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
         if (!empty($filter)) {
             $sql.= " WHERE ".$filter;
@@ -223,7 +214,7 @@ class ExtDirect
         if (!empty($orderBy)) {
             $sql.= " ORDER BY ".$orderBy;
         }
-        
+
         $resql=$this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
@@ -244,7 +235,7 @@ class ExtDirect
                 $i++;
             }
             $this->db->free($resql);
-    
+
             return 1;
         } else {
             $this->error="Error ".$this->db->lasterror();
@@ -252,7 +243,6 @@ class ExtDirect
             return -1;
         }
     }
-    
 
     /**
      *  Load object in memory from database
@@ -262,12 +252,11 @@ class ExtDirect
      *  @param  string  $ack_id    acknowledge id
      *  @return int             <0 if KO, >0 if OK
      */
-    public function fetch($id=0, $app_id='', $ack_id='')
+    public function fetch($id = 0, $app_id = '', $ack_id = '')
     {
         global $langs;
         $sql = "SELECT";
         $sql.= " t.rowid,";
-        
         $sql.= " t.fk_user,";
         $sql.= " t.app_id,";
         $sql.= " t.app_name,";
@@ -278,9 +267,7 @@ class ExtDirect
         $sql.= " t.dev_platform,";
         $sql.= " t.dev_type";
 
-        
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
-        
         if ($id) {
             $sql.= " WHERE t.rowid = ".$id;
         } elseif (!empty($app_id)) {
@@ -292,14 +279,13 @@ class ExtDirect
         } else {
             return PARAMETERERROR;
         }
-        
+
         $resql=$this->db->query($sql);
         if ($resql) {
             if ($this->db->num_rows($resql)) {
                 $obj = $this->db->fetch_object($resql);
 
                 $this->id    = $obj->rowid;
-                
                 $this->fk_user = $obj->fk_user;
                 $this->app_id = $obj->app_id;
                 $this->app_name = $obj->app_name;
@@ -316,15 +302,12 @@ class ExtDirect
             }
 
             $this->db->free($resql);
-
-           
         } else {
             $this->error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::fetch ".$this->error, LOG_ERR);
             return -1;
         }
     }
-
 
     /**
      *  Update object into database
@@ -333,13 +316,12 @@ class ExtDirect
      *  @param  int     $notrigger   0=launch triggers after, 1=disable triggers
      *  @return int                  <0 if KO, >0 if OK
      */
-    public function update($user=0, $notrigger=0)
+    public function update($user = 0, $notrigger = 0)
     {
         global $conf, $langs;
         $error=0;
 
         // Clean parameters
-        
         if (isset($this->fk_user)) $this->fk_user=trim($this->fk_user);
         if (isset($this->app_id)) $this->app_id=trim($this->app_id);
         if (isset($this->app_name)) $this->app_name=trim($this->app_name);
@@ -348,14 +330,11 @@ class ExtDirect
         if (isset($this->dev_platform)) $this->dev_platform=trim($this->dev_platform);
         if (isset($this->dev_type)) $this->dev_type=trim($this->dev_type);
 
-        
-
         // Check parameters
         // Put here code to add control on parameters values
 
         // Update request
         $sql = "UPDATE ".MAIN_DB_PREFIX."extdirect_user SET";
-        
         $sql.= " fk_user=".(isset($this->fk_user)?$this->fk_user:"null").",";
         $sql.= " app_id=".(isset($this->app_id)?"'".$this->db->escape($this->app_id)."'":"null").",";
         $sql.= " app_name=".(isset($this->app_name)?"'".$this->db->escape($this->app_name)."'":"null").",";
@@ -366,13 +345,12 @@ class ExtDirect
         $sql.= " dev_platform=".(isset($this->dev_platform)?"'".$this->db->escape($this->dev_platform)."'":"null").",";
         $sql.= " dev_type=".(isset($this->dev_type)?"'".$this->db->escape($this->dev_type)."'":"null")."";
 
-        
         $sql.= " WHERE rowid=".$this->id;
 
         $this->db->begin();
 
         $resql = $this->db->query($sql);
-        if (! $resql) { 
+        if (! $resql) {
             $error++; $this->errors[]="Error ".$this->db->lasterror();
         }
 
@@ -412,7 +390,7 @@ class ExtDirect
      *  @param  int     $notrigger   0=launch triggers after, 1=disable triggers
      *  @return int                  <0 if KO, >0 if OK
      */
-    public function delete($user, $notrigger=0)
+    public function delete($user, $notrigger = 0)
     {
         global $conf, $langs;
         $error=0;
@@ -454,16 +432,16 @@ class ExtDirect
             return 1;
         }
     }
-    
+
     /**
      * method to convert extdirect parameters to array of stdclass
      *
      * @param unknown_type $params can be array of stdclass or stdclass
-     * 
+     *
      * @return return array of stdClass
      */
-     public static function toArray($params) 
-     {
+    public static function toArray($params)
+    {
 
         if (is_object($params)) {
             $paramArray[0]=$params;
@@ -471,8 +449,8 @@ class ExtDirect
             $paramArray=$params;
         }
         return $paramArray;
-     }
-    
+    }
+
     /**
      * method to check dolibarr compatibility
      *
@@ -487,7 +465,7 @@ class ExtDirect
         $dolVersion = versiondolibarrarray();
         $dolMajorMinorVersion = $dolVersion[0].'.'.$dolVersion[1];
 
-        if($validate)
+        if ($validate)
         {
             $minVersion = '3.4';
             $maxVersion = '12.0'; // tested version
@@ -497,17 +475,14 @@ class ExtDirect
         } else {
             if (empty($minVersion)) $minVersion = '3.4';
             if (empty($maxVersion)) $maxVersion = '13.0'; // debugging version
-            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>='))
-            {
+            if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
             	return 1;
-            }
-            else
-            {
+            } else {
                 return 0;
             }
         }
     }
-    
+
     /**
      * method to get dolibarr error detail info
      *
@@ -517,12 +492,11 @@ class ExtDirect
      *
      * @return return String translated errorstring
      */
-    
     public static function getDolError($errorCode, $errors = null, $error = null)
     {
         global $langs;
         $errorText = '';
-        
+
         $langs->load("errors");
         $langs->load("main");
         $langs->load("orders");
@@ -536,38 +510,39 @@ class ExtDirect
         $langs->load("categories");
         $langs->load("productbatch");
         $langs->load("sendings");
-        
+
         if (is_array($errors) && (count($errors) > 0)) {
             foreach ($errors as $error) {
                 $transError = $langs->trans($error);
                 $errorText = $errorText . ' ' . $transError ? $transError : $error;
             }
-        } else if (is_string($error)) {
+        } elseif (is_string($error)) {
             $transError = $langs->trans($error);
             $errorText = $transError ? $transError : $error;
         } else {
             $errorText = strval($errorCode);
         }
-        
+
         return $errorText;
     }
-    
+
     /**
      * static method to convert timestamp containing date and time to timestamp containing date only
      *
      * @param int $timestamp timestamp with time
-     * 
+     *
      * @return return int timestamp without time
      */
-    public static function dateTimeToDate($timestamp) {
+    public static function dateTimeToDate($timestamp)
+    {
     	if ($timestamp > 0) {
     		$getDate = dol_getdate($timestamp);
 			return dol_mktime(0, 0, 0, $getDate['mon'], $getDate['mday'], $getDate['year']);
     	} else {
     		return $timestamp;
-    	}    	
+    	}
     }
-    
+
 	/**
      * static method to copy field into dolibarr object element and check if changed
      *
@@ -579,7 +554,7 @@ class ExtDirect
      * @param unknown_type $default default value
      * @param unknown_type $paramIndex array index if paramName is array
      * @param unknown_type $propertyIndex array index if propertyName is array
-     * 
+     *
      * @return boolean true if param $diff true or true on param element change
      */
     public static function prepareField($diff, $param, $object, $paramName = null, $propertyName = null, $default = null, $paramIndex = null, $propertyIndex = null)
@@ -590,13 +565,13 @@ class ExtDirect
         } else {
             $propertyValue = $object;
         }
-       
+
         if (!empty($paramName)) {
             $paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
         } else {
             $paramValue = $param;
         }
-        
+
         $propertySet = isset($propertyValue);
         if (is_numeric($paramValue) && (is_numeric($propertyValue) || (!isset($propertyValue)))) {
             $equal = (abs($propertyValue - $paramValue) < $epsilon);
@@ -607,7 +582,7 @@ class ExtDirect
         }
         if (!$paramSet && !$propertySet && isset($default)) {
             $propertyIndex ? $object->{$propertyName}[$propertyIndex] = $default : $object->$propertyName = $default;
-        } else if ($paramSet && (!$equal || !$propertySet)) {
+        } elseif ($paramSet && (!$equal || !$propertySet)) {
             $propertyIndex ? $object->{$propertyName}[$propertyIndex] = $paramValue : $object->$propertyName = $paramValue;
             return true;
         }
@@ -617,13 +592,13 @@ class ExtDirect
             return false;
         }
     }
-    
+
     /**
      *	Load Dolibarr constants
-     * 
+     *
      *	@param			DoliDb		$db					Database handle
      *	@param			stdClass	$params				filter with elements
-     *		constant	name of specific constant
+     *		                                            constant	name of specific constant
      *  @param			user		$user				user
      *  @param			array		$moduleConstants 	default module constants
      *
@@ -638,7 +613,7 @@ class ExtDirect
         if (!empty($moduleConstants)) {
             $constants += $moduleConstants;
         }
-        
+
         if (isset($filter)) {
             if ($filter->property == 'constant') {
                 $row = new stdClass;
@@ -660,12 +635,14 @@ class ExtDirect
     /**
      * Load available object Optionals (extra fields)
      *
+     * @param   Object  $object to read model from
+     *
      * @return stdClass array result data
      */
-    public static function readOptionalModel($object) 
+    public static function readOptionalModel($object)
     {
         $results = array();
-        
+
         $extraFields = new ExtraFields($object->db);
         $optionalLabel = $extraFields->fetch_name_optionals_label($object->table_element);
         if (count($optionalLabel) > 0) {
@@ -683,16 +660,16 @@ class ExtDirect
 
     /**
      * Upload file to ECM
-     * 
+     *
      * @param Array     $param ExtDirect uploaded item
-     * @param String    Object dir
-     * 
+     * @param String    $dir   destination folder
+     *
      * @return Array    ExtDirect response message
      */
     public static function fileUpload($param, $dir)
     {
         global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
-        
+
         $response = array(
             'success' => false,
             'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
@@ -702,22 +679,19 @@ class ExtDirect
             // block upload
             return $response;
         }
-        
+
         if (is_array($param['file']) && is_uploaded_file($param['file']['tmp_name']))
         {
             dol_mkdir($dir);
             if (@is_dir($dir))
             {
                 $newfile=$dir.'/'.dol_sanitizeFileName($param['file']['name']);
-                $result = dol_move_uploaded_file($param['file']['tmp_name'], $newfile,0,0,$param['file']['error']);
+                $result = dol_move_uploaded_file($param['file']['tmp_name'], $newfile, 0, 0, $param['file']['error']);
 
-                if (is_string($result))
-                {
+                if (is_string($result)) {
                     $errors[] = $result;
                     $response = ExtDirect::getDolError($result, $errors, $result);
-                }
-                else
-                {
+                } else {
                     if (image_format_supported($newfile) > 0) {
                         // Create thumbs
                         $file_osencoded=dol_osencode($newfile);

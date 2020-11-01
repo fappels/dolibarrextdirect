@@ -1,5 +1,5 @@
 <?php
-/* 
+/*
  * Copyright (C) 2012-2014  Francis Appels       <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -28,7 +28,7 @@ $res=0;
 if (! $res && ! empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) $res=@include($_SERVER["CONTEXT_DOCUMENT_ROOT"]."/main.inc.php");
 // Try main.inc.php into web root detected using web root calculated from SCRIPT_FILENAME
 $tmp=empty($_SERVER['SCRIPT_FILENAME'])?'':$_SERVER['SCRIPT_FILENAME'];$tmp2=realpath(__FILE__); $i=strlen($tmp)-1; $j=strlen($tmp2)-1;
-while($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i]==$tmp2[$j]) { $i--; $j--; }
+while ($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i]==$tmp2[$j]) { $i--; $j--; }
 if (! $res && $i > 0 && file_exists(substr($tmp, 0, ($i+1))."/main.inc.php")) $res=@include(substr($tmp, 0, ($i+1))."/main.inc.php");
 if (! $res && $i > 0 && file_exists(dirname(substr($tmp, 0, ($i+1)))."/main.inc.php")) $res=@include(dirname(substr($tmp, 0, ($i+1)))."/main.inc.php");
 // Try main.inc.php using relative path
@@ -36,7 +36,7 @@ if (! $res && file_exists("../../main.inc.php")) $res=@include("../../main.inc.p
 if (! $res && file_exists("../../../main.inc.php")) $res=@include("../../../main.inc.php");
 if (! $res) die("Include of main fails");
 
-require_once(DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php");
+require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 dol_include_once("/extdirect/class/extdirect.class.php");
 dol_include_once("/extdirect/class/extdirectactivity.class.php");
 
@@ -80,19 +80,19 @@ if ($mode == $activities->mode) {
  */
 if (!$error) {
     if ($action == 'autoasign') {
-        $autoAsign = GETPOST('auto_asign', 'alpha'); 
+        $autoAsign = GETPOST('auto_asign', 'alpha');
         $res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_ASIGN", $autoAsign, 'yesno', 0, '', $conf->entity);
-    } else if ($action == 'autouser') {
-        $userId = GETPOST('userid', 'alpha');    
+    } elseif ($action == 'autouser') {
+        $userId = GETPOST('userid', 'alpha');
         $res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_USER", $userId, 'chaine', 0, '', $conf->entity);
-    } else if ($action == "save" && empty($refresh)) {
+    } elseif ($action == "save" && empty($refresh)) {
         $i=0;
-        
+
         if (! empty($extDirect->dataset)) {
             $db->begin();
             foreach ($extDirect->dataset as $user_app) {
-                $extDirect->id=$user_app['rowid'];  
-                    
+                $extDirect->id=$user_app['rowid'];
+
                 $param='REMOVE_'.$user_app['app_id'].$i;
                 //print "param=".$param." - ".$_POST[$param];
                 if (GETPOST($param, 'alpha')) {
@@ -115,7 +115,7 @@ if (!$error) {
                 if (! $res > 0) $error++;
             }
         }
-        $extDirect->fetchList('', 'date_last_connect ASC');  
+        $extDirect->fetchList('', 'date_last_connect ASC');
     } elseif ($action == 'clear' && empty($refresh)) {
         if (! empty($extDirect->dataset)) {
             $db->begin();
@@ -144,7 +144,7 @@ if ($action && !$refresh && !(($action == 'selectall') || ($action == 'selectnon
     if (! $res > 0) $error++;
 
     if (! $error) {
-        $db->commit();  
+        $db->commit();
         setEventMessage($langs->trans("SetupSaved"));
     } else {
         $db->rollback();
@@ -160,24 +160,23 @@ if ($action && !$refresh && !(($action == 'selectall') || ($action == 'selectnon
 $title = $langs->trans('DirectConnectSetup');
 $tabsTitle = $langs->trans('DirectConnect');
 $tabs = array('tab1' => $authentication,'tab2' => $activities);
-$head = extdirect_admin_prepare_head($tabs, $langs);
+$head = extdirect_admin_prepare_head($tabs, $langs, $extDirect);
 
 llxHeader('', $title);
 $linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
-print_fiche_titre($title, $linkback, 'setup');
+print load_fiche_titre($title, $linkback, 'setup');
 $form=new Form($db);
 if ($mode == $tabs['tab1']->mode) {
     //tab1
-    dol_fiche_head($head, 'tab1', $tabsTitle, 0);
-    
+    print dol_get_fiche_head($head, 'tab1', $tabsTitle, 0);
+
     $var=true;
     print '<table class="noborder" width="100%">';
     print '<tr class="liste_titre">';
     print '<td>'.$langs->trans("Parameters").'</td>'."\n";
     print '<td align="right" width="60">'.$langs->trans("Value").'</td>'."\n";
     print '<td width="80">&nbsp;</td></tr>'."\n";
-    
-    
+
     // autoasign activation/desactivation
     $var=!$var;
     print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
@@ -192,12 +191,12 @@ if ($mode == $tabs['tab1']->mode) {
     print '</td>';
     print '</tr>';
     print '</form>';
-    
+
     $userExclude[0]=0; //exclude admin
-    
+
     if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
         // select auto asigned user
-    
+
         $var=!$var;
         print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
         print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
@@ -205,17 +204,17 @@ if ($mode == $tabs['tab1']->mode) {
         print '<tr '.$bc[$var].'>';
         print '<td>'.$langs->trans("AutoUser").'</td>';
         print '<td align="right">';
-        print $form->select_users($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
+        print $form->select_dolusers($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
         print '</td><td align="right"><input type="submit" class="button" value="'.$langs->trans("Modify").'"></td>';
         print '</tr>';
         print '</form>';
     }
     // asign users to app uuid
-    
+
     print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">';
     print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
     print '<input type="hidden" name="action" value="save">';
-    
+
     $var=true;
     print '<table class="noborder" width="100%">';
     print '<tr class="liste_titre">';
@@ -243,7 +242,7 @@ if ($mode == $tabs['tab1']->mode) {
             print '<td>'.$user_app['dev_platform'].'</td>';
             print '<td>'.$user_app['dev_type'].'</td>';
             print '<td align="right" width="60">';
-            print $form->select_users($userId, 'userid'.$i, 1, $userExclude, 0, '', '');
+            print $form->select_dolusers($userId, 'userid'.$i, 1, $userExclude, 0, '', '');
             print '</td>';
             print '<td align="right" width="40">';
             print '<input '.$bc[$var].' type="checkbox" name="ACK" value="1"';
@@ -258,17 +257,17 @@ if ($mode == $tabs['tab1']->mode) {
         }
     }
     print '</table>';
-    
+
     print '<br><center>';
     print '<input type="submit" name="save" class="button" value="'.$langs->trans("Save").'">';
     print ' &nbsp; &nbsp; ';
     print '<input type="submit" name="refresh" class="button" value="'.$langs->trans("Refresh").'">';
     print "</center>";
-    
+
     print "</form>\n";
-} else if ($mode == $tabs['tab2']->mode) {
+} elseif ($mode == $tabs['tab2']->mode) {
     //tab1
-    dol_fiche_head($head, 'tab2', $tabsTitle, 0);
+    print dol_get_fiche_head($head, 'tab2', $tabsTitle, 0);
     print '<form action="'.$_SERVER['PHP_SELF'].'?mode=activities" method="POST">';
     print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
     print '<input type="hidden" name="action" value="clear">';
@@ -284,7 +283,7 @@ if ($mode == $tabs['tab1']->mode) {
     print '<tr '.$bc[$var].'>';
     print '<td>'.$langs->trans("ActivitiesFromUser").'</td>';
     print '<td>';
-    print $form->select_users($userId, 'userid', 1, $userExclude, 0, '', '');
+    print $form->select_dolusers($userId, 'userid', 1, $userExclude, 0, '', '');
     print '</td><td></td><td></td><td></td><td></td><td>';
     print '<input type="submit" name="refresh" class="button" value="'.$langs->trans("Refresh").'">';
     print '</td>';
@@ -305,13 +304,12 @@ if ($mode == $tabs['tab1']->mode) {
     if (!empty($activityFilter)) {
         print '<td>'.$langs->trans("Origin").'</td>';
     }
-    
+
     print '</tr>'."\n";
     if (! empty($extDirect->dataset)) {
         $i=0;
         foreach ($extDirect->dataset as $data) {
             $var=!$var;
-            
             print '<tr '.$bc[$var].'>';
             print '<td>'.$data['requestid'].'</td>';
             print '<td>'.$data['app_name'].'</td>';
@@ -321,7 +319,7 @@ if ($mode == $tabs['tab1']->mode) {
             print '<td>'.$data['status'].'</td>';
             print '<td>'.$data['duration'].'</td>';
             print '<td>'.$data['firstname'].$data['lastname'].'</td>';
-            if (!empty($activityFilter)) {     
+            if (!empty($activityFilter)) {
                 $originId = $data['activity_id'];
                 $originType = $data['activity_name'];
                 $origin = $extDirect->getActivityOrigin($originId, $originType);
@@ -343,18 +341,19 @@ $db->close();
  *  Return array head with list of tabs to view object informations.
  *
  *  @param  Array   $tabs       tab names
+ *  @param  Object  $langs      localize object
+ *  @param  Object  $object     class object
  *  @return array               head array with tabs
  */
-function extdirect_admin_prepare_head($tabs, $langs)
+function extdirect_admin_prepare_head($tabs, $langs, $object)
 {
     global $conf;
 
     $h = 0;
     $head = array();
-    
+
     foreach ($tabs as $key => $value) {
         $head[$h][0] = dol_buildpath("/extdirect/admin/extdirect.php?mode=".$value->mode, 1);
-        
         $head[$h][1] = $value->title;
         $head[$h][2] = $key;
         $h++;

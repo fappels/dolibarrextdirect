@@ -27,9 +27,9 @@ require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /** ExtDirectCategorie class
- * 
+ *
  * Class to access categories with CRUD(L) methods to connect to Extjs or sencha touch using Ext.direct connector
- * 
+ *
  * @category External_Module
  * @package  Extdirect
  * @author   Francis Appels <francis.appels@z-application.com>
@@ -39,17 +39,16 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectCategorie extends Categorie
 {
-    
     private $_user;
-    
+
     /** Constructor
      *
      * @param string $login user name
      */
-    public function __construct($login) 
+    public function __construct($login)
     {
         global $langs,$db,$user;
-        
+
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
@@ -62,14 +61,13 @@ class ExtDirectCategorie extends Categorie
             }
         }
     }
-    
-    
+
     /**
      *    Load categories from database into memory
      *
      *    @param    stdClass    $param  filter with elements:
-     *      id                  Id of product to load
-     *      label               Reference of product, name
+     *                                  id      Id of product to load
+     *                                  label   Reference of product, name
      *
      *    @return     stdClass result data or -1
      */
@@ -87,7 +85,7 @@ class ExtDirectCategorie extends Categorie
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
-                else if ($filter->property == 'label') $label=$filter->value;
+                elseif ($filter->property == 'label') $label=$filter->value;
             }
         }
 
@@ -114,24 +112,23 @@ class ExtDirectCategorie extends Categorie
 
     /**
      * Ext.direct method to Create categorie
-     * 
+     *
      * @param unknown_type $params object or object array with categorie model(s)
-     * @return Ambigous <multitype:, unknown_type>|unknown 
+     * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function createCategorie($params) 
+    public function createCategorie($params)
     {
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->categorie->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($params);
-        
+
         foreach ($paramArray as &$param) {
             // prepare fields
             $this->prepareFields($param);
             if (($result = $this->create($this->_user)) < 0) return $result;
-            
-           
+
             $param->id=$this->id;
         }
 
@@ -144,11 +141,11 @@ class ExtDirectCategorie extends Categorie
 
     /**
      * Ext.direct method to update categorie
-     * 
+     *
      * @param unknown_type $params object or object array with categorie model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function updateCategorie($params) 
+    public function updateCategorie($params)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->categorie->creer)) return PERMISSIONERROR;
@@ -177,11 +174,11 @@ class ExtDirectCategorie extends Categorie
 
     /**
      * Ext.direct method to destroy categorie
-     * 
+     *
      * @param unknown_type $params object or object array with categorie model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function destroyCategorie($params) 
+    public function destroyCategorie($params)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->categorie->supprimer)) return PERMISSIONERROR;
@@ -206,15 +203,15 @@ class ExtDirectCategorie extends Categorie
             return $param;
         }
     }
-    
+
     /**
      * public method to read a list of categories
      *
      * @param stdClass $param to    filter on type
-     *                              
+     *
      * @return     stdClass result data or -1
      */
-    public function readCategorieList(stdClass $param) 
+    public function readCategorieList(stdClass $param)
     {
         global $conf, $langs;
         if (!isset($this->db)) return CONNECTERROR;
@@ -223,13 +220,13 @@ class ExtDirectCategorie extends Categorie
         $cats = array();
         $row = new stdClass;
         $type = 0;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'type') $type=$filter->value;
             }
-        }       
-        
+        }
+
         if (($cats = $this->get_all_categories($type, false)) < 0) return $cats;
         // id 0 is not categorised
         $row->id = 0;
@@ -244,14 +241,14 @@ class ExtDirectCategorie extends Categorie
         }
         return $results;
     }
-        
+
     /**
      * private method to copy fields into dolibarr object
-     * 
+     *
      * @param stdclass $param object with fields
      * @return null
      */
-    private function prepareFields($param) 
+    private function prepareFields($param)
     {
         isset($param->id) ? ( $this->id = $param->id ) : null;
         isset($param->label) ? ( $this->label = $param->label) : null;
@@ -261,5 +258,5 @@ class ExtDirectCategorie extends Categorie
         isset($param->type) ? ( $this->type = $param->type) : null;
         isset($param->company_id) ? ( $this->socid = $param->company_id) : null;
         isset($param->entity) ? ( $this->entity = $param->entity ) : null;
-    } 
+    }
 }

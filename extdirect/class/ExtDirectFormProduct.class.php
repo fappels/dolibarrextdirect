@@ -32,21 +32,21 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectFormProduct extends FormProduct
 {
     private $_user;
-    
+
     const ALLWAREHOUSE_ID = 0;
     const ALLWAREHOUSE_LABEL = 'AllLocationsLabel';
     const ALLWAREHOUSE_DESCRIPTION = 'AllLocationsDesc';
-    
+
     /** Constructor
      *
      * @param string $login user name
      * @return number
      *
      */
-    public function __construct($login) 
+    public function __construct($login)
     {
         global $langs,$user,$db;
-        
+
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
@@ -60,14 +60,14 @@ class ExtDirectFormProduct extends FormProduct
             }
         }
     }
-    
-    
+
+
     /**
      *    Load Warehouses from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
-     *      productid           load warehouses of one product
-     *    
+     *                                      productid load warehouses of one product
+     *
      *    @return     stdClass result data or -1
      */
     public function readWarehouses(stdClass $params)
@@ -75,10 +75,10 @@ class ExtDirectFormProduct extends FormProduct
         global $conf,$langs;
 
         if (!isset($this->db)) return CONNECTERROR;
-        
+
         $result = new stdClass;
         $data = array();
-        
+
         $fkProduct = 0;
         $fkBatch = 0;
         $batch = '';
@@ -86,14 +86,14 @@ class ExtDirectFormProduct extends FormProduct
         $limit = 0;
         $start = 0;
         $contentValue = '';
-        if (ExtDirect::checkDolVersion(0,'5.0')) {
+        if (ExtDirect::checkDolVersion(0, '5.0')) {
             $statusFilter = 'warehouseopen, warehouseinternal';
         } else {
             $statusFilter = '';
         }
-        
+
         $includeTotal = false;
-        
+
         if (isset($params->limit)) {
             $limit = $params->limit;
             $start = $params->start;
@@ -106,7 +106,7 @@ class ExtDirectFormProduct extends FormProduct
         } else {
             $limit = 0;
         }
-                
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'product_id') $fkProduct=$filter->value;
@@ -137,7 +137,7 @@ class ExtDirectFormProduct extends FormProduct
                 $product = new Product($this->db);
                 $product->fetch($fkProduct);
                 $product->load_stock();
-                $row->stock = price2num($product->stock_theorique,5);
+                $row->stock = price2num($product->stock_theorique, 5);
                 array_push($data, $row);
             } else {
                 $sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
@@ -147,13 +147,11 @@ class ExtDirectFormProduct extends FormProduct
                 {
                     $obj = $this->db->fetch_object($resql);
                     if ($obj) {
-                        $row->stock = price2num($obj->stock,5);
+                        $row->stock = price2num($obj->stock, 5);
                     }
                     array_push($data, $row);
                     $this->db->free($resql);
-                }
-                else
-                {
+                } else {
                     $res = SQLERROR;
                 }
             }
@@ -174,7 +172,7 @@ class ExtDirectFormProduct extends FormProduct
                 }
                 $recordNbr++;
             }
-        } else if ($res < 0) {
+        } elseif ($res < 0) {
             return ExtDirect::getDolError($res, $this->errors, $this->error);
         }
 
@@ -186,18 +184,18 @@ class ExtDirectFormProduct extends FormProduct
             return $data;
         }
     }
-    
+
     /**
      *    Load available priceindexes from database into memory
      *
      *    @param    stdClass    $params     not used
-     *      
-     *    @return     stdClass result data 
+     *
+     *    @return     stdClass result data
      */
     public function readPriceIndex(stdClass $params)
     {
         global $conf,$langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
@@ -214,22 +212,22 @@ class ExtDirectFormProduct extends FormProduct
             array_push($results, clone $row);
         }
         return $results;
-    }    
+    }
 
     /**
      *    Load available producttypes
      *
      *    @param    stdClass    $params     not used
-     *      
-     *    @return     stdClass result data 
+     *
+     *    @return     stdClass result data
      */
     public function readProductType(stdClass $params)
     {
         global $conf,$langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        
+
         if (! empty($conf->product->enabled)) {
             $row = new stdClass;
             $row->id = 0;
@@ -242,21 +240,21 @@ class ExtDirectFormProduct extends FormProduct
             $row->label = $langs->trans("Service") ? $langs->transnoentities("Service") : "Service";
             array_push($results, $row);
         }
-        
+
         return $results;
     }
-    
+
     /**
      *    Load available price_base_types
      *
      *    @param    stdClass    $params     not used
-     *      
-     *    @return     stdClass result data 
+     *
+     *    @return     stdClass result data
      */
     public function readPriceBaseType(stdClass $params)
     {
         global $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
@@ -272,10 +270,10 @@ class ExtDirectFormProduct extends FormProduct
         $row->code = 'TTC';
         $row->label = '';
         array_push($results, $row);
-        
+
         return $results;
     }
-    
+
     /**
      *    Load available barcodetypes
      *
@@ -286,7 +284,7 @@ class ExtDirectFormProduct extends FormProduct
     public function readBarcodeType(stdClass $params)
     {
         global $conf;
-    
+
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $row = new stdClass;
@@ -295,7 +293,7 @@ class ExtDirectFormProduct extends FormProduct
             $sql.= " FROM ".MAIN_DB_PREFIX."c_barcode_type";
             dol_syslog(get_class($this).'::readBarcodeType', LOG_DEBUG);
             $resql=$this->db->query($sql);
-        
+
             if ($resql) {
                 $num=$this->db->num_rows($resql);
                 $row->id    = 0;
@@ -316,7 +314,7 @@ class ExtDirectFormProduct extends FormProduct
                         $row->company_default = false;
                         if ($row->id == $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE) {
                             $row->product_default = true;
-                        } else if ($row->id == $conf->global->GENBARCODE_BARCODETYPE_THIRDPARTY) {
+                        } elseif ($row->id == $conf->global->GENBARCODE_BARCODETYPE_THIRDPARTY) {
                             $row->company_default = true;
                         }
                         array_push($results, clone $row);
@@ -330,11 +328,11 @@ class ExtDirectFormProduct extends FormProduct
         }
         return $results;
     }
-    
+
     /**
      * OVERRIDE from dolibarr loadWarehouses, can be removed when patched in Dolibarr
      * TODO add units
-     * 
+     *
      * Load in cache array list of warehouses
      * If fk_product is not 0, we do not use cache
      *
@@ -342,30 +340,30 @@ class ExtDirectFormProduct extends FormProduct
      * @param	int		$fk_batch		Add quantity of batch stock in label for product with batch id fk_batch. Nothing if 0.
      * @param   int     $batch          Add quantity of batch stock in label for product with batch name batch. Nothing if '' batch name precedes batch_id.
      * @param   string  $statusFilter   warehouse status filter, following comma separated filter options can be used
-     *										'warehouseopen' = select products from open warehouses,
-     *										'warehouseclosed' = select products from closed warehouses, 
-     *										'warehouseinternal' = select products from warehouses for internal correct/transfer only
+     *									'warehouseopen' = select products from open warehouses,
+     *									'warehouseclosed' = select products from closed warehouses,
+     *									'warehouseinternal' = select products from warehouses for internal correct/transfer only
      * @param   string  $contentValue   content search string
      * @param	boolean	$sumStock		sum total stock of a warehouse, default true
      * @param   int     $limit          paging limit
      * @param   int     $start          paging start
      * @return  int  		    		Nb of loaded lines, 0 if already loaded, <0 if KO
      */
-    private function _loadWarehouses($fk_product=0, $fk_batch=0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
+    private function _loadWarehouses($fk_product = 0, $fk_batch = 0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
     {
         dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
 
         $warehouseStatus = array();
 
-        if (preg_match('/warehouseclosed/', $statusFilter)) 
+        if (preg_match('/warehouseclosed/', $statusFilter))
         {
             $warehouseStatus[] = Entrepot::STATUS_CLOSED;
         }
-        if (preg_match('/warehouseopen/', $statusFilter)) 
+        if (preg_match('/warehouseopen/', $statusFilter))
         {
             $warehouseStatus[] = Entrepot::STATUS_OPEN_ALL;
         }
-        if (preg_match('/warehouseinternal/', $statusFilter)) 
+        if (preg_match('/warehouseinternal/', $statusFilter))
         {
             $warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
         }
@@ -374,18 +372,15 @@ class ExtDirectFormProduct extends FormProduct
         } else {
             $sql = "SELECT e.rowid, e.label, e.description, e.statut";
         }
-        if (!empty($fk_product)) 
+        if (!empty($fk_product))
         {
-            if (!empty($fk_batch) || !empty($batch)) 
+            if (!empty($fk_batch) || !empty($batch))
             {
                 $sql.= ", pb.qty as stock";
-            }
-            else
-            {
+            } else {
                 $sql.= ", ps.reel as stock";
             }
-        }
-        else if ($sumStock)
+        } elseif ($sumStock)
         {
             $sql.= ", sum(ps.reel) as stock";
         }
@@ -394,11 +389,11 @@ class ExtDirectFormProduct extends FormProduct
         if (!empty($fk_product))
         {
             $sql.= " AND ps.fk_product = '".$fk_product."'";
-            if (!empty($batch)) 
+            if (!empty($batch))
             {
                 $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_batch as pb on pb.fk_product_stock = ps.rowid";
                 $sql.= " AND pb.batch = '".$batch."'";
-            } else if (!empty($fk_batch))
+            } elseif (!empty($fk_batch))
             {
                 $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_batch as pb on pb.fk_product_stock = ps.rowid";
                 $sql.= " AND pb.rowid = ".$fk_batch;
@@ -406,12 +401,9 @@ class ExtDirectFormProduct extends FormProduct
         }
 
         $sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
-        if (count($warehouseStatus))
-        {
-            $sql.= " AND e.statut IN (".implode(',',$warehouseStatus).")";
-        }
-        else
-        {
+        if (count($warehouseStatus)) {
+            $sql.= " AND e.statut IN (".implode(',', $warehouseStatus).")";
+        } else {
             $sql.= " AND e.statut > 0";
         }
         if (!empty($contentValue)) {
@@ -444,7 +436,7 @@ class ExtDirectFormProduct extends FormProduct
             while ($i < $num)
             {
                 $obj = $this->db->fetch_object($resql);
-                if ($sumStock) $obj->stock = price2num($obj->stock,5);
+                if ($sumStock) $obj->stock = price2num($obj->stock, 5);
                 $this->cache_warehouses[$obj->rowid]['id'] = $obj->rowid;
                 $this->cache_warehouses[$obj->rowid]['label'] = $obj->label;
                 $this->cache_warehouses[$obj->rowid]['description'] = $obj->description;
@@ -454,14 +446,17 @@ class ExtDirectFormProduct extends FormProduct
                 $i++;
             }
             return $num;
-        }
-        else
-        {
+        } else {
             dol_print_error($this->db);
             return -1;
         }
     }
 
+    /**
+     * _makeNumericLabelSortable
+     *
+     * @return void
+     */
     private function _makeNumericLabelSortable()
     {
         $numericLabel = array();
@@ -510,7 +505,7 @@ class ExtDirectFormProduct extends FormProduct
                 $results[]= $row;
             }
         }
-        
+
         return $results;
     }
 
@@ -522,10 +517,10 @@ class ExtDirectFormProduct extends FormProduct
     public function readProductUnits()
     {
         global $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
-    
+
         $results = array();
         if (ExtDirect::checkDolVersion(0, '3.8', '')) {
             if (ExtDirect::checkDolVersion(0, '10.0', '')) {
