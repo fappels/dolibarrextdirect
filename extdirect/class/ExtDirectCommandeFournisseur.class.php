@@ -1309,6 +1309,30 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     }
 
     /**
+     * private method to copy order fields into reception object
+     *
+     * @param Object $reception reception object
+     * @param stdclass $params object with app fields
+     *
+     * @return null
+     */
+    private function prepareReceptionFields(&$reception, $params)
+    {
+        isset($reception->ref_supplier) ? null : ($reception->ref_supplier = $this->ref_supplier);
+        isset($reception->socid) ? null : ($reception->socid = $this->socid);
+        isset($reception->note_private) ? null : ($reception->note_private = $this->note_private);
+        isset($reception->note_public) ? null : ($reception->note_public = $this->note_public);
+        isset($reception->date_reception) ? null : ($reception->date_reception = dol_now());
+        isset($reception->date_delivery) ? null : ($reception->date_delivery = $this->date_delivery);
+        isset($reception->shipping_method_id) ? null : ($reception->shipping_method_id = $this->shipping_method_id);
+        isset($reception->tracking_number) ? null : ($reception->tracking_number = $params->tracking_number);
+        isset($reception->weight) ? null : $reception->weight = 0;
+        isset($reception->sizeS) ? null : $reception->sizeS = 0;
+        isset($reception->sizeW) ? null : $reception->sizeW = 0;
+        isset($reception->sizeH) ? null : $reception->sizeH = 0;
+    }
+
+    /**
      * Ext.direct method to update orderlines
      *
      * @param unknown_type $param object or object array with order model(s)
@@ -1415,18 +1439,58 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             }
                             // dispatch
                             if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
-                                if (($result = $this->DispatchProduct(
-                                                $this->_user,
-                                                $orderLine->fk_product,
-                                                $params->qty_shipped,
-                                                $params->warehouse_id,
-                                                $params->price, // must be ordered unitprice with discount
-                                                $params->comment,
-                                                ExtDirect::dateTimeToDate($params->eatby),
-                                                ExtDirect::dateTimeToDate($params->sellby),
-                                                $params->batch,
-                                                $orderLine->id
-                                )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                                if (!empty($conf->reception->enabled)) {
+                                    // use reception mode
+                                    require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
+                                    require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.dispatch.class.php';
+
+                                    $reception = null;
+                                    // check if draft reception exist for order
+                                    $this->fetchObjectLinked(null, 'order_supplier');
+                                    if (!empty($this->linkedObjects)) {
+                                        foreach ($this->linkedObjects['reception'] as $element) {
+                                            if ($element->statut == Reception::STATUS_DRAFT) $reception = $element;
+                                        }
+                                    }
+                                    if (!isset($reception)) {
+                                        // create reception
+                                        $reception = new Reception($this->db);
+                                        $this->prepareReceptionFields($reception, $params);
+                                        if ($result = $reception->create($this->_user) < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
+                                        $reception->add_object_linked('order_supplier', $this->id);
+                                    } else {
+                                        // update reception
+                                        $this->prepareReceptionFields($reception, $params);
+                                        if ($result = $reception->update($this->_user) < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
+                                    }
+                                    // reception addline
+                                    if ($lineIndex = $reception->addline(
+                                        $params->warehouse_id,
+                                        $orderLine->id,
+                                        $params->qty_shipped,
+                                        $orderLine->array_options,
+                                        $params->comment,
+                                        ExtDirect::dateTimeToDate($params->eatby),
+                                        ExtDirect::dateTimeToDate($params->sellby),
+                                        $params->batch
+                                    ) < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
+                                    // create dispatch from line created by addline
+                                    if ($result = $reception->lines[$lineIndex]->create($this->_user) < 0) ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+                                } else {
+                                    // use dispatch mode
+                                    if (($result = $this->DispatchProduct(
+                                        $this->_user,
+                                        $orderLine->fk_product,
+                                        $params->qty_shipped,
+                                        $params->warehouse_id,
+                                        $params->price, // must be ordered unitprice with discount
+                                        $params->comment,
+                                        ExtDirect::dateTimeToDate($params->eatby),
+                                        ExtDirect::dateTimeToDate($params->sellby),
+                                        $params->batch,
+                                        $orderLine->id
+                                    )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
+                                }
                             }
                         }
                     }
