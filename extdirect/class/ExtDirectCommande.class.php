@@ -558,7 +558,8 @@ class ExtDirectCommande extends Commande
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode) {
         	$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON c.rowid = cd.fk_commande";
-        	$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
+            $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
+            if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product";
         }
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -589,7 +590,9 @@ class ExtDirectCommande extends Commande
             $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
     	if ($barcode) {
-            $sqlWhere .= " AND (p.barcode LIKE '".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."')";
+            $sqlWhere .= " AND (p.barcode LIKE '".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."'";
+            if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
+            $sqlWhere .= ")";
         }
 
         $sqlOrder = " ORDER BY c.date_commande DESC";
@@ -973,7 +976,7 @@ class ExtDirectCommande extends Commande
                             $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
                             $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
+                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
@@ -1050,7 +1053,7 @@ class ExtDirectCommande extends Commande
                             $row->product_type = $line->product_type;
                             $row->barcode= $myprod->barcode?$myprod->barcode:'';
                             $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
+                            $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                             $row->qty_asked = $line->qty;
                             $row->tax_tx = $line->tva_tx;
                             $row->localtax1_tx = $line->localtax1_tx;
@@ -1122,7 +1125,7 @@ class ExtDirectCommande extends Commande
                                 $row->product_desc = $line->product_desc;
                                 $row->barcode= $myprod->barcode?$myprod->barcode:'';
                                 $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
-                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum():'';
+                                $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                                 $row->product_type = $line->product_type;
                                 $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
