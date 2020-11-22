@@ -96,6 +96,7 @@ class ExtDirectProduct extends Product
         $results = array();
         $row = new stdClass;
         $id = 0;
+        $idArray = array();
         $ref = '';
         $ref_ext = '';
         $batch = '';
@@ -112,7 +113,15 @@ class ExtDirectProduct extends Product
                 elseif ($filter->property == 'ref') $ref=$filter->value;
                 elseif ($filter->property == 'warehouse_id') $warehouse=$filter->value;
                 elseif ($filter->property == 'multiprices_index' ) $multiprices_index=$filter->value;
-                elseif ($filter->property == 'barcode' ) $id = $this->fetchIdFromBarcode($filter->value);
+                elseif ($filter->property == 'barcode' ) {
+                    $idArray = $this->fetchIdFromBarcode($filter->value);
+                    if ($idArray['product'] > 0) {
+                        $id = $idArray['product'];
+                    } elseif (ExtDirect::checkDolVersion(0, '13.0', '')) {
+                        $idArray = $this->fetchIdFromBarcode($filter->value, 'product_fournisseur_price');
+                        $id = $idArray['product'];
+                    }
+                }
                 elseif ($filter->property == 'batch') $batch = $filter->value;
                 elseif ($filter->property == 'batch_id') $batchId = $filter->value;
                 elseif ($filter->property == 'ref_supplier') $refSupplier = $filter->value;
@@ -120,6 +129,10 @@ class ExtDirectProduct extends Product
                 elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
                 elseif ($filter->property == 'customer_id' && !empty($filter->value)) $socid = $filter->value;
             }
+        }
+
+        if (!$refSupplierId) {
+            $refSupplierId = $idArray['supplier_product'];
         }
 
         if (($id > 0) || ($ref != '')) {
@@ -310,7 +323,7 @@ class ExtDirectProduct extends Product
                     $row->barcode_type= (int) $this->barcode_type;
                 }
                 // get barcode with checksum included, same when scanned
-                $row->barcode_with_checksum = $this->fetchBarcodeWithChecksum();
+                $row->barcode_with_checksum = $this->fetchBarcodeWithChecksum($this);
                 // no links to offers in this version
                 // no multilangs in this version
                 //! Canevas a utiliser si le produit n'est pas un produit generique
@@ -359,6 +372,17 @@ class ExtDirectProduct extends Product
                 }
                 $row->price_base_type_supplier = 'HT';
                 $row->supplier_reputation = $supplierProduct->supplier_reputation;
+                if (($refSupplierId > 0 || $refSupplier) && !empty($supplierProduct->supplier_barcode)) {
+                    //! barcode is supplier barcode
+                    $row->barcode = $supplierProduct->supplier_barcode;
+                    if (empty($supplierProduct->supplier_fk_barcode_type) && ! empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
+                        $row->barcode_type= (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
+                    } else {
+                        $row->barcode_type= (int) $supplierProduct->supplier_fk_barcode_type;
+                    }
+                    // get barcode with checksum included, same when scanned
+                    $row->barcode_with_checksum = $this->fetchBarcodeWithChecksum($supplierProduct);
+                }
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize);
@@ -722,10 +746,10 @@ class ExtDirectProduct extends Product
             } else {
             	$newSellPrice = $this->price;
             }
-            if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            if (!empty($newSellPrice) && ($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 
             // supplier fields
-            if (!empty($this->fourn_price)) {
+            if (!empty($this->fourn_price) && !empty($this->fourn_id)) {
                 $supplierProduct = new ProductFournisseur($this->db);
                 $supplier = new Societe($this->db);
                 if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
@@ -746,7 +770,16 @@ class ExtDirectProduct extends Product
                                 0,
                                 0,
                                 0,
-                                $this->supplier_reputation
+                                $this->supplier_reputation,
+                                array(),
+                                '',
+                                0,
+                                'HT',
+                                1,
+                                '',
+                                '',
+                                $this->barcode,
+                                $this->barcode_type
                 )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
             }
             // add photo
@@ -1051,7 +1084,16 @@ class ExtDirectProduct extends Product
                                         0,
                                         0,
                                         0,
-                                        $this->supplier_reputation
+                                        $this->supplier_reputation,
+                                        array(),
+                                        '',
+                                        0,
+                                        'HT',
+                                        1,
+                                        '',
+                                        '',
+                                        $this->barcode,
+                                        $this->barcode_type
                         )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
                     }
                 }
@@ -1165,6 +1207,7 @@ class ExtDirectProduct extends Product
         if ($supplierFilter) {
             $sqlFields .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
             if (ExtDirect::checkDolVersion(0, '5.0', '')) $sqlFields .= ', sp.supplier_reputation';
+            if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlFields .= ', sp.barcode as supplier_barcode';
             $sqlFields .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
             $sqlFields .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
         } else {
@@ -1238,7 +1281,9 @@ class ExtDirectProduct extends Product
                     } elseif ($filter->property == 'content') {
                         $contentValue = strtolower($value);
                         $sqlWhere.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
-                        $sqlWhere.= " OR LOWER(p.barcode) like '%".$contentValue."%')" ;
+                        $sqlWhere.= " OR LOWER(p.barcode) like '%".$contentValue."%'";
+                        if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $sqlWhere .= " OR LOWER(sp.barcode) like '%".$contentValue."%'";
+                        $sqlWhere.= ")";
                     } elseif ($filter->property == 'photo_size' && !empty($value)) {
                         $sqlWhere .= '1';
                         $photoSize = $value;
@@ -1326,6 +1371,7 @@ class ExtDirectProduct extends Product
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
                     $row->price     = $obj->price_supplier;
                     if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
+                    if (ExtDirect::checkDolVersion(0, '13.0', '') && !empty($obj->supplier_barcode)) $row->barcode = $obj->supplier_barcode;
                 } else {
                     $row->id        = $obj->id.'_'.$obj->fk_entrepot;
                     $row->price_ttc = $obj->price_ttc;
@@ -1531,12 +1577,18 @@ class ExtDirectProduct extends Product
      * private method to fetch id from given barcode, search in barcode and ref field
      *
      * @param string $barcode barcode to fetch id from
-     * @return integer $id rowid of product
+     * @param string $table table to search 'product' or 'product_fournisseur_price'
+     * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 10+)
      */
-    private function fetchIdFromBarcode($barcode)
+    private function fetchIdFromBarcode($barcode, $table = 'product')
     {
-        $id =0;
-        dol_syslog(get_class($this)."::fetch id from barcode=".$barcode);
+        $id = array('product'=>0, 'supplier_product'=>0);
+        dol_syslog(get_class($this)."::fetch ".$table." id from barcode=".$barcode);
+        if ($table == 'product_fournisseur_price') {
+            $fkProductField = ', fk_product';
+        } else {
+            $fkProductField = '';
+        }
         $couldBeEAN = false;
         if (strlen($barcode) == 13) {
             $this->barcode_type = 2;
@@ -1550,7 +1602,7 @@ class ExtDirectProduct extends Product
         }
         if ($couldBeEAN) {
             $this->barcode = substr($barcode, 0, -1);
-            if ($this->fetchBarcodeWithChecksum() == $barcode) {
+            if ($this->fetchBarcodeWithChecksum($this) == $barcode) {
                 $couldBeEAN = true;
             } else {
                 $couldBeEAN = false;
@@ -1558,24 +1610,34 @@ class ExtDirectProduct extends Product
         }
 
         if ($couldBeEAN) {
-            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."' OR ref = '".$barcode."'";
+            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."' OR ref = '".$barcode."'";
         } else {
-            $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."' OR ref = '".$barcode."'";
+            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."' OR ref = '".$barcode."'";
         }
         $resql = $this->db->query($sql);
         if ( $resql ) {
             if ($this->db->num_rows($resql) > 0) {
                 $obj = $this->db->fetch_object($resql);
                 if (($obj->fk_barcode_type == 2) || ($obj->fk_barcode_type == 1) || !$couldBeEAN) { // EAN13 || EAN8 || for shure not EAN
-                    $id = (int) $obj->rowid;
+                    if ($fkProductField) {
+                        $id['product'] = (int) $obj->fk_product;
+                        $id['supplier_product'] = (int) $obj->rowid;
+                    } else {
+                        $id['product'] = (int) $obj->rowid;
+                    }
                 } elseif ($couldBeEAN) {
                     // re-search if len of EAN but not EAN
-                    $sql = "SELECT rowid, fk_barcode_type FROM ".MAIN_DB_PREFIX."product WHERE barcode ='".$barcode."'";
+                    $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."'";
                     $resql2 = $this->db->query($sql);
                     if ( $resql2 ) {
                         if ($this->db->num_rows($resql2) > 0) {
                         	$obj = $this->db->fetch_object($resql2);
-                            $id = (int) $obj->rowid;
+                            if ($fkProductField) {
+                                $id['product'] = (int) $obj->fk_product;
+                                $id['supplier_product'] = (int) $obj->rowid;
+                            } else {
+                                $id['product'] = (int) $obj->rowid;
+                            }
                         }
                         $this->db->free($resql2);
                     }
@@ -1825,26 +1887,36 @@ class ExtDirectProduct extends Product
     /**
      * public method to fetch barcode with checksum from dolibarr generated barcodes, which are stored without checksum
      *
+     * @param Object $object object containing barcode values
+     *
      * @return string barcode with checksum
      */
-    public function fetchBarcodeWithChecksum()
+    public function fetchBarcodeWithChecksum($object)
     {
         $barcodeType = '';
-        if ($this->barcode_type == '1') { // EAN8
+        $barcode = '';
+
+        if ($object->barcode_type == '1' || $object->supplier_fk_barcode_type == '1') { // EAN8
             $barcodeType = 'EAN8';
-        } elseif ($this->barcode_type == '2') { // EAN13
+        } elseif ($object->barcode_type == '2' || $object->supplier_fk_barcode_type == '2') { // EAN13
             $barcodeType = 'EAN13';
-        } elseif ($this->barcode_type == '3') { // UPC
+        } elseif ($object->barcode_type == '3' || $object->supplier_fk_barcode_type == '3') { // UPC
             $barcodeType = 'UPCA';
         }
 
-        if (!empty($barcodeType) && !empty($this->barcode)) {
+        if (!empty($object->supplier_barcode)) {
+            $barcode = $object->supplier_barcode;
+        } else {
+            $barcode = $object->barcode;
+        }
+
+        if (!empty($barcodeType) && !empty($barcode)) {
             include_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
-            $barcodeObj = new TCPDFBarcode($this->barcode, $barcodeType);
+            $barcodeObj = new TCPDFBarcode($barcode, $barcodeType);
             $barcode = $barcodeObj->getBarcodeArray();
             return $barcode['code'];
         } else {
-            return $this->barcode;
+            return $barcode;
         }
     }
 
