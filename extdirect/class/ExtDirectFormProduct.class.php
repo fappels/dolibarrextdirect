@@ -133,10 +133,12 @@ class ExtDirectFormProduct extends FormProduct
             $row->id = self::ALLWAREHOUSE_ID;
             $row->label= $langs->trans(self::ALLWAREHOUSE_LABEL);
             $row->description= $langs->trans(self::ALLWAREHOUSE_DESCRIPTION);
+            $row->is_virtual_stock = false;
             if (!empty($fkProduct) && !empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                 $product = new Product($this->db);
                 $product->fetch($fkProduct);
                 $product->load_stock();
+                $row->is_virtual_stock = true;
                 $row->stock = price2num($product->stock_theorique, 5);
                 array_push($data, $row);
             } else {
@@ -163,6 +165,7 @@ class ExtDirectFormProduct extends FormProduct
                 if ($limit == 0 || ($recordNbr > $start && $recordNbr <= $start + $limit)) {
                     $row = new stdClass;
                     $row->id = $warehouseId;
+                    $row->is_virtual_stock = false;
                     isset($warehouse['label']) ? $row->label = $warehouse['label'] : $row->label='';
                     isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
                     isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;

@@ -139,6 +139,7 @@ class ExtDirectProduct extends Product
             if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if ($this->id > 0) {
                 $row->id = $this->id ;
+                $row->is_virtual_stock = false;
                 //! Ref
                 $row->ref= $this->ref;
                 $row->label= $this->label;
@@ -267,6 +268,7 @@ class ExtDirectProduct extends Product
                     } else {
                         if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                             $this->load_stock();
+                            $row->is_virtual_stock = true;
                             $row->stock_reel = (float) $this->stock_theorique;
                         } else {
                             $row->stock_reel = (float) $this->stock_reel;
