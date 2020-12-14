@@ -1459,7 +1459,14 @@ class ExtDirectProduct extends Product
                     $row->product_id = $id;
                     $row->batch_id = 0;
                     $row->batch = $langs->transnoentities('BatchDefaultNumber');
-                    $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
+                    if (!empty($this->stock_warehouse[$warehouseId]->real)) {
+                        $defaultStock = (float) $this->stock_warehouse[$warehouseId]->real;
+                    } elseif (empty($warehouse['parent_id'])) {
+                        $defaultStock = 1; // only allow add first batch to parent warehouse to avoid too many choises
+                    } else {
+                        $defaultStock = 0;
+                    }
+                    $row->stock_reel =$defaultStock;
                     $row->warehouse_id = $warehouseId;
                 }
                 if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
@@ -1470,7 +1477,7 @@ class ExtDirectProduct extends Product
                 $row->product_id = $id;
                 $row->batch_id = 0;
                 $row->batch = $langs->transnoentities('BatchDefaultNumber');
-                $row->stock_reel = (float) $this->stock_warehouse[$warehouseId]->real;
+                $row->stock_reel = !empty($this->stock_warehouse[$warehouseId]->real) ? (float) $this->stock_warehouse[$warehouseId]->real : 1;
                 $row->warehouse_id = $warehouseId;
             }
             if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
