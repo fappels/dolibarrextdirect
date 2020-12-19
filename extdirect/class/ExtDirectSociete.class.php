@@ -451,6 +451,7 @@ class ExtDirectSociete extends Societe
             $sorterSize = count($params->sort);
             foreach ($params->sort as $key => $sort) {
                 if (!empty($sort->property)) {
+                    if ($sort->property == 'code_supplier') $sort->property = 'code_fournisseur';
                     $sqlOrder .= $sort->property. ' '.$sort->direction;
                     if ($key < ($sorterSize-1)) {
                         $sqlOrder .= ",";
