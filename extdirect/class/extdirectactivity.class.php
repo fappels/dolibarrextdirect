@@ -219,7 +219,7 @@ class ExtDirectActivity extends CommonObject
         $stopTime = array();
         $activityId = array();
 
-        if (count($this->dataset) > 0) {
+        if (is_array($this->dataset) && count($this->dataset) > 0) {
             // get available activity names and init start-stop time
             $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
             $resql=$this->db->query($sql);
