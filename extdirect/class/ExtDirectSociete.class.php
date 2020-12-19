@@ -1175,7 +1175,7 @@ class ExtDirectSociete extends Societe
     }
 
     /**
-     * private method to fetch id from given barcode
+     * private method to fetch id from given barcode, also search in code_client and code_fournisseur
      *
      * @param string $barcode barcode to fetch id from
      * @return integer $id rowid of element
@@ -1184,7 +1184,7 @@ class ExtDirectSociete extends Societe
     {
         $id =0;
         dol_syslog(__METHOD__.' : '.$barcode);
-        $sql = "SELECT rowid FROM ".MAIN_DB_PREFIX.$this->table_element." WHERE barcode ='".$barcode."'";
+        $sql = "SELECT rowid FROM ".MAIN_DB_PREFIX.$this->table_element." WHERE barcode ='".$this->db->escape($barcode)."' OR code_client = '".$this->db->escape($barcode)."' OR code_fournisseur = '".$this->db->escape($barcode)."'";
         $resql = $this->db->query($sql);
         if ( $resql ) {
             if ($this->db->num_rows($resql) > 0) {

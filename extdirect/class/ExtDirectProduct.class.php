@@ -1619,9 +1619,9 @@ class ExtDirectProduct extends Product
         }
 
         if ($couldBeEAN) {
-            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."' OR barcode ='".substr($barcode, 0, -1)."' OR ref = '".$barcode."'";
+            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR ref = '".$this->db->escape($barcode)."'";
         } else {
-            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."' OR ref = '".$barcode."'";
+            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR ref = '".$this->db->escape($barcode)."'";
         }
         $resql = $this->db->query($sql);
         if ( $resql ) {
