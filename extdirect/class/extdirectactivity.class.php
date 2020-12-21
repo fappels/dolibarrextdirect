@@ -181,7 +181,7 @@ class ExtDirectActivity extends CommonObject
         if ($resql) {
             $num = $this->db->num_rows($resql);
             $i = 0;
-            $this->dataset=null;
+            $this->dataset=array();
             while ($i < $num) {
                 $obj = $this->db->fetch_object($resql);
                 $this->dataset[$i]['rowid']     = $obj->rowid;

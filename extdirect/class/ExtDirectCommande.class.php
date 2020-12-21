@@ -590,7 +590,7 @@ class ExtDirectCommande extends Commande
             $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
     	if ($barcode) {
-            $sqlWhere .= " AND (p.barcode LIKE '".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."'";
+            $sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."'";
             if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
             $sqlWhere .= ")";
         }

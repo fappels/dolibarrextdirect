@@ -92,7 +92,10 @@ class ExtDirectProduct extends Product
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
-        if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
+        if (! empty($conf->productbatch->enabled)) {
+            require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
+            if (ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+        }
         $results = array();
         $row = new stdClass;
         $id = 0;
@@ -215,6 +218,15 @@ class ExtDirectProduct extends Product
                         } else {
                             if (!empty($batch) && !empty($this->stock_warehouse[$warehouse]->id)) {
                                 $productBatch->find($this->stock_warehouse[$warehouse]->id, '', '', $batch);
+                                $productLotId = 0;
+                                if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+                                    // fetch lot data
+                                    $productLot = new Productlot($this->db);
+                                    if (($result = $productLot->fetch(0, $this->id, $productBatch->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+                                    if ($productLot->id > 0) {
+                                        $productLotId = $productLot->id;
+                                    }
+                                }
                             }
                         }
                         if (!isset($productBatch->id)) {
@@ -226,8 +238,13 @@ class ExtDirectProduct extends Product
                             $row->stock_reel = price2num($stockQty - $batchesQty, 5);
                         } else {
                             $row->batch_id = $productBatch->id;
-                            $row->sellby = $productBatch->sellby;
-                            $row->eatby = $productBatch->eatby;
+                            if ($productLotId) {
+                                $row->sellby = $productLot->sellby;
+                                $row->eatby = $productLot->eatby;
+                            } else {
+                                $row->sellby = $productBatch->sellby;
+                                $row->eatby = $productBatch->eatby;
+                            }
                             $row->batch = $productBatch->batch;
                             $row->batch_info = $productBatch->import_key;
                             $row->stock_reel = (float) $productBatch->qty;
@@ -255,8 +272,22 @@ class ExtDirectProduct extends Product
                                 $productBatch->find($this->stock_warehouse[$warehouseId]->id, '', '', $batch);
                                 if (isset($productBatch->id)) {
                                     $row->batch_id = $productBatch->id;
-                                    $row->sellby = $productBatch->sellby;
-                                    $row->eatby = $productBatch->eatby;
+                                    $productLotId = 0;
+                                    if (ExtDirect::checkDolVersion(0, '4.0', '')) {
+                                        // fetch lot data
+                                        $productLot = new Productlot($this->db);
+                                        if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+                                        if ($productLot->id > 0) {
+                                            $productLotId = $productLot->id;
+                                        }
+                                    }
+                                    if ($productLotId) {
+                                        $row->sellby = $productLot->sellby;
+                                        $row->eatby = $productLot->eatby;
+                                    } else {
+                                        $row->sellby = $productBatch->sellby;
+                                        $row->eatby = $productBatch->eatby;
+                                    }
                                     $row->batch = $productBatch->batch;
                                     $row->batch_info = $productBatch->import_key;
                                     $row->warehouse_id = $warehouseId;
@@ -478,7 +509,7 @@ class ExtDirectProduct extends Product
                         }
                     }
                 }
-            } else {
+            } elseif (ExtDirect::checkDolVersion(0, '4.0', '')) {
                 $productLot = new Productlot($this->db);
                 if (($result = $productLot->fetch(0, $id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
                 if (! $productLot->error) {
@@ -1591,14 +1622,23 @@ class ExtDirectProduct extends Product
      */
     private function fetchIdFromBarcode($barcode, $table = 'product')
     {
+        global $conf;
+
         $id = array('product'=>0, 'supplier_product'=>0);
         dol_syslog(get_class($this)."::fetch ".$table." id from barcode=".$barcode);
         if ($table == 'product_fournisseur_price') {
             $fkProductField = ', fk_product';
+            $refField = 'ref_fourn';
         } else {
             $fkProductField = '';
+            $refField = 'ref';
         }
         $couldBeEAN = false;
+        if (!empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
+            $fk_barcode_type = $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
+        } else {
+            $fk_barcode_type = null;
+        }
         if (strlen($barcode) == 13) {
             $this->barcode_type = 2;
             $couldBeEAN = true;
@@ -1619,15 +1659,18 @@ class ExtDirectProduct extends Product
         }
 
         if ($couldBeEAN) {
-            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR ref = '".$this->db->escape($barcode)."'";
+            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
         } else {
-            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR ref = '".$this->db->escape($barcode)."'";
+            $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
         }
         $resql = $this->db->query($sql);
         if ( $resql ) {
             if ($this->db->num_rows($resql) > 0) {
                 $obj = $this->db->fetch_object($resql);
-                if (($obj->fk_barcode_type == 2) || ($obj->fk_barcode_type == 1) || !$couldBeEAN) { // EAN13 || EAN8 || for shure not EAN
+                if ($obj->fk_barcode_type) {
+                    $fk_barcode_type = $obj->fk_barcode_type;
+                }
+                if (($fk_barcode_type == 2) || ($fk_barcode_type == 1) || !$couldBeEAN) { // EAN13 || EAN8 || for shure not EAN
                     if ($fkProductField) {
                         $id['product'] = (int) $obj->fk_product;
                         $id['supplier_product'] = (int) $obj->rowid;
@@ -1636,7 +1679,7 @@ class ExtDirectProduct extends Product
                     }
                 } elseif ($couldBeEAN) {
                     // re-search if len of EAN but not EAN
-                    $sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."'";
+                    $sql = "SELECT rowid".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."'";
                     $resql2 = $this->db->query($sql);
                     if ( $resql2 ) {
                         if ($this->db->num_rows($resql2) > 0) {

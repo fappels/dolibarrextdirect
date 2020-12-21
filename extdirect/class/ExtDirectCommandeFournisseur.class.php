@@ -613,8 +613,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
         if ($barcode) {
-            $sqlWhere .= " AND (p.barcode = '".$this->db->escape($barcode)."' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_supplier = '".$this->db->escape($barcode)."'";
-            if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlWhere .= " OR pfp.barcode = '".$this->db->escape($barcode)."'";
+            $sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_supplier = '".$this->db->escape($barcode)."'";
+            if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlWhere .= " OR pfp.barcode LIKE '%".$this->db->escape($barcode)."%'";
+            if ($supplierId) {
+                if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlWhere .= " AND pfp.fk_soc = ".$supplierId;
+            }
             $sqlWhere .= ")";
         }
         if ($productId) {
@@ -622,7 +625,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         }
         if ($supplierId) {
             $sqlWhere .= " AND c.fk_soc = ".$supplierId;
-            if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlWhere .= " AND pfp.fk_soc = ".$supplierId;
         }
 
         $sqlOrder = " ORDER BY c.date_commande DESC";
@@ -1329,7 +1331,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $localtax2_tx,
                 $orderLine->fk_product,
                 $params->ref_supplier_id,
-                $orderLine->ref_fourn,
+                $orderLine->ref_supplier,
                 $orderLine->remise_percent,
                 $params->price_base_type,
                 0,
@@ -1425,7 +1427,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $orderLine->date_start,
                                         $orderLine->date_end,
                                         0,
-                                        $orderLine->fk_unit
+                                        $orderLine->fk_unit,
+                                        $orderLine->multicurrency_subprice,
+                                        $orderLine->ref_supplier
                                     )) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
                                 }
                             }
@@ -1701,6 +1705,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_start', 'date_start');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'date_end', 'date_end');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'ref_supplier', 'ref_fourn');
+        $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'ref_supplier', 'ref_supplier');
         $diff = ExtDirect::prepareField($diff, $params, $orderLine, 'unit_id', 'fk_unit');
         return $diff;
     }
