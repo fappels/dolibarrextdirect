@@ -18,11 +18,11 @@
 
 /**
  *  \defgroup   Module Dolibarr ExtDirect
- *  \brief      Module description and activation of DirectConnect module, 
- *              a module wich enable external connections to applications using Ext.direct proxy 
+ *  \brief      Module description and activation of DirectConnect module,
+ *              a module wich enable external connections to applications using Ext.direct proxy
  *  \file       htdocs/extdirect/core/modules/modExtDirect.class.php
  */
-include_once(DOL_DOCUMENT_ROOT ."/core/modules/DolibarrModules.class.php");
+include_once DOL_DOCUMENT_ROOT ."/core/modules/DolibarrModules.class.php";
 dol_include_once("/extdirect/class/extdirect.class.php");
 
 /**
@@ -35,7 +35,7 @@ class modExtDirect extends DolibarrModules
      *
      *   @param      DoliDB     $db      Database handler
      */
-    function __construct($db)
+    public function __construct($db)
     {
         global $langs,$conf;
 
@@ -43,26 +43,26 @@ class modExtDirect extends DolibarrModules
 
         // Id for module (must be unique).
         // Use here a free id (See in Home -> System information -> Dolibarr for list of used modules id).
-        if (ExtDirect::checkDolVersion(0,'','3.8')) {
+        if (ExtDirect::checkDolVersion(0, '', '3.8')) {
             $this->numero = 605002;
         } else {
             $this->numero = 202002;
-        }        
+        }
         // Key text used to identify module (for permissions, menus, etc...)
         $this->rights_class = 'extdirect';
 
         // Family can be 'crm','financial','hr','projects','products','ecm','technic','other'
         // It is used to group modules in module setup page
         $this->family = "technic";
-        // Module label (no space allowed), used if translation string 'ModuleXXXName' 
+        // Module label (no space allowed), used if translation string 'ModuleXXXName'
         // not found (where XXX is value of numeric property 'numero' of module)
         $this->name = preg_replace('/^mod/i', '', get_class($this));
-        // Module description, used if translation string 'ModuleXXXDesc' 
+        // Module description, used if translation string 'ModuleXXXDesc'
         // not found (where XXX is value of numeric property 'numero' of module)
         $this->description = "Connect to external applications which use Sencha Ext.direct";
         // Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-        $this->version = '1.0.56';
-        // Key used in llx_const table to save module status enabled/disabled 
+        $this->version = '1.0.59';
+        // Key used in llx_const table to save module status enabled/disabled
         // (where MYMODULE is value of property name of module in uppercase)
         $this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
         // Where to store the module in setup page (0=common,1=interface,2=others,3=very specific)
@@ -107,7 +107,7 @@ class modExtDirect extends DolibarrModules
         );
 
         // Array to add new pages in new tabs
-        
+
         $this->tabs = array();
 
         // Dictionnaries
@@ -145,7 +145,7 @@ class modExtDirect extends DolibarrModules
      *      @param      string  $options    Options when enabling module ('', 'noboxes')
      *      @return     int                 1 if OK, 0 if KO
      */
-    function init($options='')
+    public function init($options = '')
     {
         $sql = array();
 
@@ -162,7 +162,7 @@ class modExtDirect extends DolibarrModules
      *      @param      string  $options    Options when enabling module ('', 'noboxes')
      *      @return     int                 1 if OK, 0 if KO
      */
-    function remove($options='')
+    public function remove($options = '')
     {
         $sql = array();
 

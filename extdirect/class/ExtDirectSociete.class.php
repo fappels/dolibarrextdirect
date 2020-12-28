@@ -27,24 +27,24 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 
 
 /** ExtDirectSociete class
- * 
+ *
  * Class to access third parties with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectSociete extends Societe
 {
     private $_user;
     private $_constants = array('SOCIETE_CODECLIENT_ADDON');
-        
+
     /** Constructor
      *
      * @param string $login user name
      * @return number
      *
      */
-    function __construct($login) 
+    public function __construct($login)
     {
         global $langs,$user,$db;
-        
+
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
@@ -62,9 +62,9 @@ class ExtDirectSociete extends Societe
 
     /**
      *	Load order related constants
-     * 
+     *
      *  @param          stdClass    $params     filter with elements
-     *      constant	name of specific constant
+     *                                          constant	name of specific constant
      *
      *	@return         stdClass result data with specific constant value
      */
@@ -72,22 +72,21 @@ class ExtDirectSociete extends Societe
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
-        
+
         $results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_constants);
-        
+
         return $results;
     }
-    
 
     /**
      *    Load third parties Status constants
      *
      *    @return   stdClass                result data or -1
      */
-    public function readStComm() 
+    public function readStComm()
     {
         global $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
@@ -97,7 +96,7 @@ class ExtDirectSociete extends Societe
         $sql .= ' WHERE st.active = 1';
 
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
@@ -119,7 +118,7 @@ class ExtDirectSociete extends Societe
             return -1;
         }
     }
-    
+
     /**
      *    Load country constants
      *
@@ -128,10 +127,10 @@ class ExtDirectSociete extends Societe
     public function readCountryConstants()
     {
         global $langs;
-    
+
         if (!isset($this->db)) return CONNECTERROR;
-        $results = array();        
-    
+        $results = array();
+
         $sql = "SELECT rowid, code, libelle as label";
         if (ExtDirect::checkDolVersion(0, '3.7')) {
             $sql = "SELECT rowid, code, label";
@@ -141,9 +140,9 @@ class ExtDirectSociete extends Societe
             $sql.= " FROM ".MAIN_DB_PREFIX."c_pays";
         }
         $sql.= " WHERE active = 1";
-    
+
         $resql=$this->db->query($sql);
-    
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
@@ -162,7 +161,7 @@ class ExtDirectSociete extends Societe
             return -1;
         }
     }
-    
+
     /**
      *    Load state constants
      *
@@ -175,7 +174,7 @@ class ExtDirectSociete extends Societe
 
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'country_id') $country_id=$filter->value;
@@ -194,14 +193,14 @@ class ExtDirectSociete extends Societe
             $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_country as p";
         } else {
             $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_pays as p";
-        }		
+        }
         $sql .= " WHERE d.fk_region=r.code_region and r.fk_pays=p.rowid";
         $sql .= " AND d.active = 1 AND r.active = 1 AND p.active = 1";
         if ($country_id) $sql .= " AND p.rowid = ".$country_id;
         $sql .= " ORDER BY p.code, d.code_departement";
 
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
@@ -234,14 +233,14 @@ class ExtDirectSociete extends Societe
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
-        
+
         $sql = 'SELECT cp.code , cp.label';
         $sql .= ' FROM '.MAIN_DB_PREFIX.'c_prospectlevel as cp';
         $sql .= ' WHERE cp.active = 1';
         $sql .= ' ORDER BY cp.sortorder';
-        
+
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
 
@@ -264,7 +263,7 @@ class ExtDirectSociete extends Societe
             return -1;
         }
     }
-    
+
     /**
      *    Load the available paiment condition constants
      *
@@ -273,12 +272,12 @@ class ExtDirectSociete extends Societe
     public function readPaymentConditions()
     {
         global $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
 
         $results = array();
-        
+
         $sql = "SELECT rowid, code, libelle";
         $sql.= " FROM ".MAIN_DB_PREFIX.'c_payment_term';
         $sql.= " WHERE active=1";
@@ -304,7 +303,7 @@ class ExtDirectSociete extends Societe
             return -1;
         }
     }
-    
+
     /**
      *    Load the available paiment type constants
      *
@@ -313,12 +312,12 @@ class ExtDirectSociete extends Societe
     public function readPaymentTypes()
     {
         global $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
-    
+
         $results = array();
-        
+
         $sql = "SELECT id, code, libelle, type";
         $sql.= " FROM ".MAIN_DB_PREFIX."c_paiement";
         $sql.= " WHERE active > 0";
@@ -345,27 +344,27 @@ class ExtDirectSociete extends Societe
             return -1;
         }
     }
-    
+
     /**
      *    Load third parties list from database into memory, keep properties of same kind together
      *
      *    @param    stdClass    $params     property filter with properties and values:
-     *                                          id              Id of third party to load
-     *                                          ref             Reference of third party, name
-     *                                          client          company type 0 = none, 1 = customer, 2 = prospect, 3 = both
-     *                                          stcomm_id       commercial status of third party
-     *                                          town            Town of third party
-     *                                          categorie_id    Categorie id of third party
-     *                                          content         filter on part of name, category or town value
+     *                                      id              Id of third party to load
+     *                                      ref             Reference of third party, name
+     *                                      client          company type 0 = none, 1 = customer, 2 = prospect, 3 = both
+     *                                      stcomm_id       commercial status of third party
+     *                                      town            Town of third party
+     *                                      categorie_id    Categorie id of third party
+     *                                      content         filter on part of name, category or town value
      *                                      property sort with properties field names and directions:
      *                                      property limit for paging with sql LIMIT and START values
-     *                                          
+     *
      *    @return     stdClass result data or -1
      */
     public function readSocieteList(stdClass $params)
     {
         global $conf,$langs;
-    
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $result = new stdClass;
@@ -374,7 +373,7 @@ class ExtDirectSociete extends Societe
         $limit=null;
         $start=0;
         $includeTotal = false;
-        
+
         if (isset($params->limit)) {
             $limit = $params->limit;
             $start = $params->start;
@@ -395,7 +394,7 @@ class ExtDirectSociete extends Societe
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
         } else {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
-        }        
+        }
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
         if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
         	$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe_commerciaux as sc ON s.rowid = sc.fk_soc';
@@ -410,38 +409,38 @@ class ExtDirectSociete extends Societe
             foreach ($params->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value)) {
-                    $sqlWhere .= '1';                    
+                    $sqlWhere .= '1';
                 } else {
-                    if ($filter->property == 'id') 
+                    if ($filter->property == 'id')
                         $sqlWhere .= 's.rowid = '.$value;
-                    else if ($filter->property == 'ref') 
+                    elseif ($filter->property == 'ref')
                         $sqlWhere .= "s.nom = '".$this->db->escape($value)."'";
-                    else if ($filter->property == 'client') 
+                    elseif ($filter->property == 'client')
                         $sqlWhere .= "s.client = ".$value;
-                    else if ($filter->property == 'supplier') 
+                    elseif ($filter->property == 'supplier')
                         $sqlWhere .= "s.fournisseur = ".$value;
-                    else if ($filter->property == 'town') 
+                    elseif ($filter->property == 'town')
                         $sqlWhere .= "s.town = '".$this->db->escape($value)."'";
-                    else if ($filter->property == 'stcomm_id') 
+                    elseif ($filter->property == 'stcomm_id')
                         $sqlWhere .= "s.fk_stcomm = ".$value;
-                    else if ($filter->property == 'categorie_id') {
+                    elseif ($filter->property == 'categorie_id') {
                         //allow filtering on non categorized societe
                         if ($value == 0) {
                             $sqlWhere .= "c.rowid IS NULL";
                         } else {
                             $sqlWhere .= "c.rowid = ".$value;
                         }
-                    } else if ($filter->property == 'content') {
+                    } elseif ($filter->property == 'content') {
                         $contentValue = strtolower($value);
                         $sqlWhere.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
                         $sqlWhere.= " OR LOWER(s.code_client) like '%".$contentValue."%' OR LOWER(s.code_fournisseur) like '%".$contentValue."%'" ;
                         $sqlWhere.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')";
                     } else {
-                       $sqlWhere .= '1';
+                        $sqlWhere .= '1';
                     }
                 }
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
+                    if ($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
                     else $sqlWhere .= ') AND (';
                 }
             }
@@ -450,8 +449,9 @@ class ExtDirectSociete extends Societe
         $sqlOrder = " ORDER BY ";
         if (isset($params->sort)) {
             $sorterSize = count($params->sort);
-            foreach($params->sort as $key => $sort) {
+            foreach ($params->sort as $key => $sort) {
                 if (!empty($sort->property)) {
+                    if ($sort->property == 'code_supplier') $sort->property = 'code_fournisseur';
                     $sqlOrder .= $sort->property. ' '.$sort->direction;
                     if ($key < ($sorterSize-1)) {
                         $sqlOrder .= ",";
@@ -461,7 +461,7 @@ class ExtDirectSociete extends Societe
         } else {
              $sqlOrder .= "name ASC";
         }
-       
+
         if ($limit) {
             $sqlLimit = $this->db->plimit($limit, $start);
         }
@@ -469,7 +469,7 @@ class ExtDirectSociete extends Societe
         if ($includeTotal) {
             $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
             $resql=$this->db->query($sqlTotal);
-            
+
             if ($resql) {
                 $obj = $this->db->fetch_object($resql);
                 $total = $obj->total;
@@ -480,17 +480,17 @@ class ExtDirectSociete extends Societe
                 return SQLERROR;
             }
         }
-        
+
         $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
-    
+
         $resql=$this->db->query($sql);
-    
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
-    
+
             for ($i = 0;$i < $num; $i++) {
                 $obj = $this->db->fetch_object($resql);
-        
+
                 $row = new stdClass;
                 $row->id            = $obj->rowid.'_'.$obj->categorie_id;
                 $row->company_id    = (int) $obj->rowid;
@@ -534,31 +534,31 @@ class ExtDirectSociete extends Societe
             return -1;
         }
     }
-    
+
     /**
      *    Load third parties from database into memory
      *
      *    @param    stdClass    $param  filter with elements:
-     *      rowid       Id of third party to load
-     *      ref         Reference of third party, name
-     *      ref_ext     External reference of third party 
-     *                  (Warning, this information is a free field not provided by Dolibarr)
-     *      ref_int
-     *      idprof1     Prof id 1 of third party
-     *      idprof2     Prof id 2 of third party
-     *      idprof3     Prof id 3 of third party
-     *      idprof4     Prof id 4 of third party
-     *      
+     *                                  rowid       Id of third party to load
+     *                                  ref         Reference of third party, name
+     *                                  ref_ext     External reference of third party
+     *                                  (Warning, this information is a free field not provided by Dolibarr)
+     *                                  ref_int
+     *                                  idprof1     Prof id 1 of third party
+     *                                  idprof2     Prof id 2 of third party
+     *                                  idprof3     Prof id 3 of third party
+     *                                  idprof4     Prof id 4 of third party
+     *
      *    @return     stdClass result data or -1
      */
     public function readSociete(stdClass $param)
     {
         global $conf;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
-        
+
         $id=null;
         $ref=null;
         $ref_ext=null;
@@ -568,18 +568,18 @@ class ExtDirectSociete extends Societe
         $idprof3=null;
         $idprof4=null;
         $barcode=null;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
-                else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'ref_ext') $ref_ext=$filter->value;
-                else if ($filter->property == 'ref_int') $ref_int=$filter->value;
-                else if ($filter->property == 'idprof1') $idprof1=$filter->value;
-                else if ($filter->property == 'idprof2') $idprof2=$filter->value;
-                else if ($filter->property == 'idprof3') $idprof3=$filter->value;
-                else if ($filter->property == 'idprof4') $idprof4=$filter->value;
-                else if ($filter->property == 'barcode') $id = $this->fetchIdFromBarcode($filter->value);
+                elseif ($filter->property == 'ref') $ref=$filter->value;
+                elseif ($filter->property == 'ref_ext') $ref_ext=$filter->value;
+                elseif ($filter->property == 'ref_int') $ref_int=$filter->value;
+                elseif ($filter->property == 'idprof1') $idprof1=$filter->value;
+                elseif ($filter->property == 'idprof2') $idprof2=$filter->value;
+                elseif ($filter->property == 'idprof3') $idprof3=$filter->value;
+                elseif ($filter->property == 'idprof4') $idprof4=$filter->value;
+                elseif ($filter->property == 'barcode') $id = $this->fetchIdFromBarcode($filter->value);
             }
         }
         if (!empty($id) || !empty($ref) || !empty($ref_ext) || !empty($ref_int)) {
@@ -590,101 +590,77 @@ class ExtDirectSociete extends Societe
                     return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
             }
-            
+
             if (!$this->error) {
                 $row = new stdClass;
                 $row->id            = (int) $this->id;
                 $row->entity        = (int) $this->entity;
-            
+
                 $row->ref           = $this->ref;
                 $row->name          = $this->name;
                 $row->ref_ext       = $this->ref_ext;
-            
-                if (ExtDirect::checkDolVersion(0,'3.6','')) {
+
+                if (ExtDirect::checkDolVersion(0, '3.6', '')) {
                     $row->date_create   = $this->date_creation;
                     $row->date_update   = $this->date_modification;
                 } else {
                     $row->date_create   = $this->datec;
                     $row->date_update   = $this->date_update;
                 }
-                
-            
                 $row->address       = $this->address;
                 $row->zip           = $this->zip;
                 $row->town          = $this->town;
-            
                 $row->country_id    = $this->country_id;
                 $row->country_code  = $this->country_code;
                 $row->country       = $this->country;
-            
                 $row->state_id      = $this->state_id;
                 $row->state_code    = $this->state_code;
                 $row->state         = $this->state;
-            
                 $row->stcomm_id     = (int) $this->stcomm_id;     // id statut commercial
-                if (ExtDirect::checkDolVersion(0,'11.0')) {
+                if (ExtDirect::checkDolVersion(0, '11.0')) {
                     $row->commercial_status = $this->status_prospect_label;
                 } else {
                     $row->commercial_status = $this->statut_commercial;
                 }
-            
                 $row->email         = $this->email;
                 $row->url           = $this->url;
                 $row->phone         = $this->phone;
                 $row->fax           = $this->fax;
                 $row->skype         = $this->skype;
-            
                 $row->parent        = $this->parent;
-            
                 $row->idprof1       = $this->idprof1;
                 $row->idprof2       = $this->idprof2;
                 $row->idprof3       = $this->idprof3;
                 $row->idprof4       = $this->idprof4;
                 $row->idprof5       = $this->idprof5;
                 $row->idprof6       = $this->idprof6;
-            
                 $row->capital       = $this->capital;
-            
                 $row->code_client   = $this->code_client;
                 $row->code_supplier = $this->code_fournisseur;
-            
                 $row->code_compta   = $this->code_compta;
                 $row->code_compta_supplier = $this->code_compta_fournisseur;
-            
                 $row->barcode       = $this->barcode;
-            
                 $row->tva_assuj     = $this->tva_assuj;
                 $row->tva_intra     = $this->tva_intra;
-            
                 $row->status = $this->status;
-            
                 // Local Taxes
                 $row->localtax1_assuj= $this->localtax1_assuj;
                 $row->localtax2_assuj= $this->localtax2_assuj;
-            
-            
                 $row->typent_id      = $this->typent_id;
                 $row->typent_code    = $this->typent_code;
-            
                 $row->effectif_id    = $this->effectif_id;
                 $row->effectif       = $this->effectif_id?$this->effectif:'';
-            
                 $row->legal_form_code= $this->forme_juridique_code;
                 $row->legal_form= $this->forme_juridique;
-            
                 $row->fk_prospectlevel= $this->fk_prospectlevel;
-            
                 $row->prefix_comm    = $this->prefix_comm;
-            
                 $row->reduction_percent = $this->remise_percent;
                 $row->payment_condition_id = $this->cond_reglement_id;
                 $row->payment_type_id = $this->mode_reglement_id;
-            
                 $row->client         = (int) $this->client;
                 $row->supplier    = (int) $this->fournisseur;
                 $row->note_private   = $this->note_private;
                 $row->note_public    = $this->note_public;
-            
                 $row->default_lang   = $this->default_lang;
                 if (!empty($this->logo)) {
                     $dir = $conf->societe->multidir_output[(int) $this->entity]."/".$this->id."/logos/thumbs";
@@ -697,12 +673,10 @@ class ExtDirectSociete extends Societe
                         $row->logo = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
                     }
                 }
-            
                 // multiprix
                 $row->price_level    = $this->price_level;
-            
                 $row->import_key     = $this->import_key;
-                
+
                 array_push($results, $row);
             } else {
                 return SQLERROR;
@@ -712,14 +686,14 @@ class ExtDirectSociete extends Societe
     }
 
     /**
-    * public method to read available company optionals (extra fields)
-    *
-    * @return stdClass result data or ERROR
-    */
-    public function readOptionalModel(stdClass $param) 
+     * public method to read available company optionals (extra fields)
+     *
+     * @return stdClass result data or ERROR
+     */
+    public function readOptionalModel()
     {
         if (!isset($this->db)) return CONNECTERROR;
-        
+
         return ExtDirect::readOptionalModel($this);
     }
 
@@ -727,8 +701,7 @@ class ExtDirectSociete extends Societe
      * public method to read company (extra fields) from database
      *
      *    @param    stdClass    $param  filter with elements:
-     *      id                  Id of product to load
-     *      batch               batch code of product for lot attributes
+     *                                  id Id of company to load
      *
      *    @return     stdClass result data or -1
      */
@@ -738,13 +711,13 @@ class ExtDirectSociete extends Societe
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
         $id = 0;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
             }
         }
-        
+
         if ($id > 0) {
             $extraFields = new ExtraFields($this->db);
             if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -769,10 +742,10 @@ class ExtDirectSociete extends Societe
                 } else {
                     foreach ($this->array_options as $key => $value) {
                         $row = new stdClass;
-                        $name = substr($key,8); // strip options_
+                        $name = substr($key, 8); // strip options_
                         $row->id = $index++; // ExtJs needs id to be able to destroy records
                         $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
+                        $row->value = $extraFields->showOutputField($name, $value);
                         $row->object_id = $this->id;
                         $row->object_element = $this->element;
                         $row->raw_value = $value;
@@ -812,7 +785,7 @@ class ExtDirectSociete extends Societe
     /**
      * public method to add optionals (extra fields) into database
      *
-     *    @param    unknown_type    $param  optionals
+     *    @param    unknown_type    $params  optionals
      *
      *
      *    @return     Ambigous <multitype:, unknown_type>|unknown
@@ -850,33 +823,33 @@ class ExtDirectSociete extends Societe
      *    Load used towns from available societes
      *
      *    @param    stdClass    $params     filter with elements:
-     *      rowid       Id of third party to load
-     *      ref         Reference of third party, name
-     *      ref_ext     External reference of third party 
-     *                  (Warning, this information is a free field not provided by Dolibarr)
-     *      idprof1     Prof id 1 of third party
-     *      idprof2     Prof id 2 of third party
-     *      idprof3     Prof id 3 of third party
-     *      idprof4     Prof id 4 of third party
+     *                                      rowid       Id of third party to load
+     *                                      ref         Reference of third party, name
+     *                                      ref_ext     External reference of third party
+     *                                      (Warning, this information is a free field not provided by Dolibarr)
+     *                                      idprof1     Prof id 1 of third party
+     *                                      idprof2     Prof id 2 of third party
+     *                                      idprof3     Prof id 3 of third party
+     *                                      idprof4     Prof id 4 of third party
      *    @return     stdClass result data or error string
      */
-    function getTowns(stdClass $params)
+    public function getTowns(stdClass $params)
     {
         global $conf;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $error=0;
         $results = array();
         $sql = 'SELECT distinct s.town, s.zip';
-        
+
         $sql .= ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_effectif as e ON s.fk_effectif = e.id';
         if (ExtDirect::checkDolVersion(0, '3.7')) {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_country as p ON s.fk_pays = p.rowid';
         } else {
             $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_pays as p ON s.fk_pays = p.rowid';
-        }        
+        }
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_forme_juridique as fj ON s.fk_forme_juridique = fj.code';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_departements as d ON s.fk_departement = d.rowid';
@@ -885,28 +858,28 @@ class ExtDirectSociete extends Societe
             $sql .= ' WHERE (';
             $filterSize = count($params->filter);
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'rowid') 
+                if ($filter->property == 'rowid')
                     $sql .= 's.rowid = '.$filter->value;
-                else if ($filter->property == 'ref') 
+                elseif ($filter->property == 'ref')
                     $sql .= "(s.nom = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'ref_ext') 
+                elseif ($filter->property == 'ref_ext')
                     $sql .= "(s.ref_ext = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof1') 
+                elseif ($filter->property == 'idprof1')
                     $sql .= "(s.siren = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof2') 
+                elseif ($filter->property == 'idprof2')
                     $sql .= "(s.siret = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof3') 
+                elseif ($filter->property == 'idprof3')
                     $sql .= "(s.ape = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof4') 
+                elseif ($filter->property == 'idprof4')
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'content') {
+                elseif ($filter->property == 'content') {
                     $contentValue = strtolower($this->db->escape($filter->value));
                     $sql.= " (LOWER(s.zip) like '%".$contentValue."%'";
                     $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
                 }
                 else break;
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
+                    if ($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
                     else $sql .= ') AND (';
                 }
             }
@@ -915,7 +888,7 @@ class ExtDirectSociete extends Societe
         $sql .= ' ORDER BY town';
 
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
 
@@ -936,7 +909,7 @@ class ExtDirectSociete extends Societe
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::getTowns ".$error, LOG_ERR);
             return -1;
-        }   
+        }
     }
 
     /**
@@ -944,26 +917,24 @@ class ExtDirectSociete extends Societe
      *    DEPRECATED use getCategorieList form categorie class
      *
      *    @param    stdClass    $params     filter with elements:
-     *      rowid       Id of third party to load
-     *      ref         Reference of third party, name
-     *      ref_ext     External reference of third party 
-     *                  (Warning, this information is a free field not provided by Dolibarr)
-     *      idprof1     Prof id 1 of third party
-     *      idprof2     Prof id 2 of third party
-     *      idprof3     Prof id 3 of third party
-     *      idprof4     Prof id 4 of third party
-     *      town        town of third party
+     *                                      rowid       Id of third party to load
+     *                                      ref         Reference of third party, name
+     *                                      idprof1     Prof id 1 of third party
+     *                                      idprof2     Prof id 2 of third party
+     *                                      idprof3     Prof id 3 of third party
+     *                                      idprof4     Prof id 4 of third party
+     *                                      town        town of third party
      *    @return     stdClass result data or error string
      */
-    function getCategories(stdClass $params)
+    public function getCategories(stdClass $params)
     {
-        global $langs;
+        global $conf, $langs;
 
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
         $results = array();
         $row = new stdClass;
-            
+
         $sql = 'SELECT distinct c.rowid, c.label as categorie';
         $sql .= ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_effectif as e ON s.fk_effectif = e.id';
@@ -978,27 +949,27 @@ class ExtDirectSociete extends Societe
             $sql .= ' WHERE (';
             $filterSize = count($params->filter);
             foreach ($params->filter as $key => $filter) {
-                if ($filter->property == 'rowid') 
+                if ($filter->property == 'rowid')
                     $sql .= 's.rowid = '.$filter->value;
-                else if ($filter->property == 'ref') 
+                elseif ($filter->property == 'ref')
                     $sql .= "(s.nom = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'ref_ext') 
+                elseif ($filter->property == 'ref_ext')
                     $sql .= "(s.ref_ext = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof1') 
+                elseif ($filter->property == 'idprof1')
                     $sql .= "(s.siren = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof2') 
+                elseif ($filter->property == 'idprof2')
                     $sql .= "(s.siret = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof3') 
+                elseif ($filter->property == 'idprof3')
                     $sql .= "(s.ape = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'idprof4') 
+                elseif ($filter->property == 'idprof4')
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
-                else if ($filter->property == 'town') {
+                elseif ($filter->property == 'town') {
                     $sql .= "(s.town = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 }
 
                 else break;
                 if ($key < ($filterSize-1)) {
-                    if($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
+                    if ($filter->property == $params->filter[$key+1]->property) $sql .= ' OR ';
                     else $sql .= ') AND (';
                 }
             }
@@ -1034,23 +1005,23 @@ class ExtDirectSociete extends Societe
 
     /**
      * Ext.direct method to Create societe
-     * 
+     *
      * @param unknown_type $params object or object array with societe model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    function createSociete($params) 
+    public function createSociete($params)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
-        
+
         foreach ($paramArray as &$param) {
             // prepare fields
             $this->prepareFields($param);
             // create
-                
+
             if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                
+
             $param->id=$this->id;
         }
 
@@ -1063,15 +1034,16 @@ class ExtDirectSociete extends Societe
 
     /**
      * Ext.direct method to update societe
-     * 
+     *
      * @param unknown_type $params object or object array with societe model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    function updateSociete($params) 
-    {   
+    public function updateSociete($params)
+    {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
+        $result = 0;
         // dolibarr update settings
         $allowmodcodeclient=1;
         $call_trigger=1;
@@ -1082,9 +1054,9 @@ class ExtDirectSociete extends Societe
                 $id = $param->id;
                 $this->id = $id;
                 if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                
+
                 $this->prepareFields($param);
-                
+
                 // update
                 if (($result = $this->update($id, $this->_user, $call_trigger, $allowmodcodeclient, $allowmodcodefournisseur)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if ($param->stcomm_id || $param->fk_prospectlevel) {
@@ -1099,7 +1071,6 @@ class ExtDirectSociete extends Societe
                 if (isset($param->payment_type_id)) {
                     $this->setPaymentMethods($param->payment_type_id);
                 }
-                
             } else {
                 return PARAMETERERROR;
             }
@@ -1114,16 +1085,15 @@ class ExtDirectSociete extends Societe
 
     /**
      * Ext.direct method to detroy societe
-     * 
+     *
      * @param unknown_type $params object or object array with societe model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    function destroySociete($params) 
+    public function destroySociete($params)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->supprimer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
-        
 
         foreach ($paramArray as &$param) {
             // prepare fields
@@ -1146,50 +1116,46 @@ class ExtDirectSociete extends Societe
 
     /**
      * Ext.direct method to upload image file for societe object
-     * 
+     *
      * @param unknown_type $params object or object array with uploaded file(s)
      * @return Array    ExtDirect response message
      */
-    public function fileUpload($params) 
+    public function fileUpload($params)
     {
         global $conf;
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
         $dir = null;
-        
+
         foreach ($paramArray as &$param) {
-            if (isset($param['extTID'])) 
-            {
+            if (isset($param['extTID'])) {
                 $id = $param['extTID'];
-                if ($id)
-                {
+                if ($id) {
                     $dir = $conf->societe->multidir_output[$conf->entity]."/".$id."/";
-                }
-                else
-                {
+                } else {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
     }
-    
+
     /**
      * private method to update stcomm_id and fk_prospectlevel field in societe table
-     * 
+     *
      * @param number $id            societe id
      * @param number $stcomm_id     statut commercial id
      * @param string $prospectlevel prospectlevel foreign key
      * @return number
      */
-    private function updateProspectStatLevel($id,$stcomm_id,$prospectlevel) 
+    private function updateProspectStatLevel($id, $stcomm_id, $prospectlevel)
     {
         $this->db->begin();
         $sql = "UPDATE ".MAIN_DB_PREFIX."societe";
@@ -1203,15 +1169,14 @@ class ExtDirectSociete extends Societe
             $this->db->commit();
             return 1;
         } else {
-            $this->db->error = $langs->trans("Error sql=".$sql);
-            dol_syslog(get_class($this)."::Update fails update sql=".$sql, LOG_ERR);
+            dol_syslog(get_class($this)."::Update fails", LOG_ERR);
             $this->db->rollback();
             return -1;
         }
     }
-    
+
     /**
-     * private method to fetch id from given barcode
+     * private method to fetch id from given barcode, also search in code_client and code_fournisseur
      *
      * @param string $barcode barcode to fetch id from
      * @return integer $id rowid of element
@@ -1220,7 +1185,7 @@ class ExtDirectSociete extends Societe
     {
         $id =0;
         dol_syslog(__METHOD__.' : '.$barcode);
-        $sql = "SELECT rowid FROM ".MAIN_DB_PREFIX.$this->table_element." WHERE barcode ='".$barcode."'";
+        $sql = "SELECT rowid FROM ".MAIN_DB_PREFIX.$this->table_element." WHERE barcode ='".$this->db->escape($barcode)."' OR code_client = '".$this->db->escape($barcode)."' OR code_fournisseur = '".$this->db->escape($barcode)."'";
         $resql = $this->db->query($sql);
         if ( $resql ) {
             if ($this->db->num_rows($resql) > 0) {
@@ -1230,14 +1195,14 @@ class ExtDirectSociete extends Societe
         }
         return $id;
     }
-    
+
     /**
      * private method to copy fields into dolibarr object
      *
      * @param stdclass $params object with fields
      * @return null
      */
-    private function prepareFields($params) 
+    private function prepareFields($params)
     {
         isset($params->name) ? ($this->name = $params->name) : null;
         isset($params->client) ? ($this->client = $params->client) : null;
@@ -1287,4 +1252,3 @@ class ExtDirectSociete extends Societe
             $data = base64_decode($img);*/
     }
 }
-

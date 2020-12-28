@@ -8,7 +8,7 @@ if (!defined('NOCSRFCHECK'))        define('NOCSRFCHECK', '1');
 if (!defined('NOREQUIREMENU'))      define('NOREQUIREMENU', '1');    // If there is no menu to show
 if (!defined('NOREQUIREHTML'))      define('NOREQUIREHTML', '1');    // If we don't need to load the html.form.class.php
 if (!defined('NOREQUIREAJAX'))      define('NOREQUIREAJAX', '1');
-if (!defined("NOLOGIN"))            define("NOLOGIN", '1');      
+if (!defined("NOLOGIN"))            define("NOLOGIN", '1');
 // If this page is public (can be called outside logged session)
 
 // Change this following line to use the correct relative path (../, ../../, etc)
@@ -17,8 +17,8 @@ if (! $res && file_exists("../main.inc.php")) $res=@include("../main.inc.php");
 if (! $res && file_exists("../../main.inc.php")) $res=@include("../../main.inc.php");
 if (! $res && file_exists("../../../main.inc.php")) $res=@include("../../../main.inc.php");
 if (! $res) die("Include of main fails");
-require('class/extdirect.class.php');
-require('config.php');
+dol_include_once("/extdirect/class/extdirect.class.php");
+require 'config.php';
 $debugData = '[]';
 
 /** Action class
@@ -49,18 +49,24 @@ if (empty($rawData) || empty($data)) {
         $data->method = $_POST['extMethod'];
         $data->tid = isset($_POST['extTID']) ? $_POST['extTID'] : null; // not set for upload
         $data->data = array($_POST, $_FILES);
-    } else if (isset($debugData)) {
+    } elseif (isset($debugData)) {
         $data = json_decode($debugData);
-    } else { 
+    } else {
         echo json_encode('Invalid request.');
     }
 }
 
-
+/**
+ * doRpc execute remote call
+ *
+ * @param Object $cdata remote call and it's data
+ *
+ * @return Array result array
+ */
 function doRpc($cdata)
 {
     global $API;
-    
+
     try {
         if (!isset($API[$cdata->action])) {
             throw new Exception('Call to undefined action: ' . $cdata->action);
@@ -102,8 +108,8 @@ function doRpc($cdata)
                 $result = call_user_func_array(array($o, $method), $params);
             }
         }
+        $error = new stdClass;
         if (is_int($result) && ($result < 0)) {
-            $error = new stdClass;
             if ($result > CONNECTERROR) {
                 $error->message = "Error $result from dolibarr: $method on action $action";
             } else {
@@ -136,7 +142,7 @@ function doRpc($cdata)
             }
             $r['result'] = $result;
             throw new Exception($error->message);
-        } else if (is_string($result)) {
+        } elseif (is_string($result)) {
             $error->message = "Dolibarr: $result";
             $r['result'] = $result;
             throw new Exception($error->message);
@@ -147,7 +153,7 @@ function doRpc($cdata)
         doAroundCalls($mdef['after'], $cdata, $r);
         doAroundCalls($a['after'], $cdata, $r);
     }
-    catch(Exception $e){
+    catch (Exception $e){
         $r['type'] = 'exception';
         $r['message'] = $e->getMessage();
         $r['where'] = $e->getTraceAsString();
@@ -156,13 +162,13 @@ function doRpc($cdata)
 }
 /**
  * loop through methods
- * 
- * @param pointer &$fns method(s)
- * @param pointer &$cdata parameters
- * @param pointer &$returnData return parameter
- * @return nothing 
+ *
+ * @param pointer $fns method(s)
+ * @param pointer $cdata parameters
+ * @param pointer $returnData return parameter
+ * @return void
  */
-function doAroundCalls(&$fns, &$cdata, &$returnData=null)
+function doAroundCalls(&$fns, &$cdata, &$returnData = null)
 {
     if (!$fns) {
         return;

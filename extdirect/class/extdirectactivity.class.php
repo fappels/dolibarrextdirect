@@ -24,7 +24,7 @@
  */
 
 // Put here all includes required by your class file
-require_once(DOL_DOCUMENT_ROOT."/core/class/commonobject.class.php");
+require_once DOL_DOCUMENT_ROOT."/core/class/commonobject.class.php";
 dol_include_once('/extdirect/class/extdirect.class.php');
 
 /**
@@ -39,7 +39,7 @@ class ExtDirectActivity extends CommonObject
     //var $table_element='extdirectactivity';       //!< Name of table without prefix where object is stored
 
     public $id;
-    
+
     public $tms='';
     public $fk_user;
     public $app_id;
@@ -58,7 +58,7 @@ class ExtDirectActivity extends CommonObject
      *
      *  @param  DoliDb      $db      Database handler
      */
-    function __construct($db)
+    public function __construct($db)
     {
         $this->db = $db;
         return 1;
@@ -72,14 +72,13 @@ class ExtDirectActivity extends CommonObject
      *  @param  int     $notrigger   0=launch triggers after, 1=disable triggers
      *  @return int                  <0 if KO, Id of created object if OK
      */
-    function create($user, $notrigger=0)
+    public function create($user, $notrigger = 0)
     {
         global $conf, $langs;
         $error=0;
         $this->fk_user = $user->id;
         // Clean parameters
-        
-        
+
         if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
         if (isset($this->app_id)) $this->app_id=$this->app_id;
         if (isset($this->app_version)) $this->app_version=trim($this->app_version);
@@ -87,14 +86,11 @@ class ExtDirectActivity extends CommonObject
         if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);
         if (isset($this->status)) $this->status=trim($this->status);
 
-        
-
         // Check parameters
         // Put here code to add control on parameters values
 
         // Insert request
         $sql = "INSERT INTO ".MAIN_DB_PREFIX."extdirect_activity(";
-        
         $sql.= "fk_user,";
         $sql.= "app_id,";
         $sql.= "app_version,";
@@ -102,10 +98,7 @@ class ExtDirectActivity extends CommonObject
         $sql.= "activity_id,";
         $sql.= "datec,";
         $sql.= "status";
-
-        
         $sql.= ") VALUES (";
-        
         $sql.= " ".(! isset($this->fk_user)?'NULL':"'".$this->fk_user."'").",";
         $sql.= " ".(! isset($this->app_id)?'NULL':"'".$this->app_id."'").",";
         $sql.= " ".(! isset($this->app_version)?'NULL':"'".$this->db->escape($this->app_version)."'").",";
@@ -116,8 +109,8 @@ class ExtDirectActivity extends CommonObject
         $sql.= ")";
         $this->db->begin();
         $resql=$this->db->query($sql);
-        if (! $resql) { 
-            $error++; $this->errors[]="Error ".$this->db->lasterror(); 
+        if (! $resql) {
+            $error++; $this->errors[]="Error ".$this->db->lasterror();
         }
 
         if (! $error) {
@@ -157,12 +150,11 @@ class ExtDirectActivity extends CommonObject
      *  @param  string      $orderBy    order by string
      *  @return int             <0 if KO, >0 if OK
      */
-    function fetchList($filter = '',$orderBy = '')
+    public function fetchList($filter = '', $orderBy = '')
     {
         global $langs;
         $sql = "SELECT";
         $sql.= " ea.rowid,";
-    
         $sql.= " ea.tms,";
         $sql.= " ea.fk_user,";
         $sql.= " ea.app_id,";
@@ -175,7 +167,6 @@ class ExtDirectActivity extends CommonObject
         $sql.= " eu.app_name,";
         $sql.= " u.firstname,";
         $sql.= " u.lastname";
-
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_activity as ea, ";
         $sql.= MAIN_DB_PREFIX."extdirect_user as eu, ".MAIN_DB_PREFIX."user as u";
         $sql.= " WHERE ea.app_id = eu.app_id AND ea.fk_user = u.rowid";
@@ -185,12 +176,12 @@ class ExtDirectActivity extends CommonObject
         if (!empty($orderBy)) {
             $sql.= " ORDER BY ".$orderBy;
         }
-    
+
         $resql=$this->db->query($sql);
         if ($resql) {
             $num = $this->db->num_rows($resql);
             $i = 0;
-            $this->dataset=null;
+            $this->dataset=array();
             while ($i < $num) {
                 $obj = $this->db->fetch_object($resql);
                 $this->dataset[$i]['rowid']     = $obj->rowid;
@@ -208,7 +199,7 @@ class ExtDirectActivity extends CommonObject
                 $this->dataset[$i++]['lastname'] = $obj->lastname;
             }
             $this->db->free($resql);
-    
+
             return 1;
         } else {
             $this->error="Error ".$this->db->lasterror();
@@ -216,19 +207,19 @@ class ExtDirectActivity extends CommonObject
             return -1;
         }
     }
-    
+
     /**
      *  get duration of activity and add to dataset
-     *  
+     *
      *  @return int             <0 if KO, >0 if OK
-     */    
-    function getDurations()
+     */
+    public function getDurations()
     {
         $startTime = array();
         $stopTime = array();
         $activityId = array();
-        
-        if (count($this->dataset) > 0) {
+
+        if (is_array($this->dataset) && count($this->dataset) > 0) {
             // get available activity names and init start-stop time
             $sql = "SELECT DISTINCT activity_name FROM ".MAIN_DB_PREFIX."extdirect_activity";
             $resql=$this->db->query($sql);
@@ -248,27 +239,27 @@ class ExtDirectActivity extends CommonObject
                 dol_syslog(get_class($this)."::getDurations ".$this->error, LOG_ERR);
                 return -1;
             }
-            
+
             // calculate activity durations
             foreach ($this->dataset as &$data) {
                 $data['duration'] = '';
-                
+
                 if ($data['status'] === 'START') {
                     $startTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                     $stopTime[$data['activity_name']] = 0;
                     $activityId[$data['activity_name']] = $data['activity_id'];
                 }
-                if (($data['status'] === 'VALIDATE' || $data['status'] === 'ERROR' || $data['status'] === 'CANCEL' || $data['status'] === 'DONE' || $data['status'] === 'DRAFT') 
+                if (($data['status'] === 'VALIDATE' || $data['status'] === 'ERROR' || $data['status'] === 'CANCEL' || $data['status'] === 'DONE' || $data['status'] === 'DRAFT')
                                 && $stopTime[$data['activity_name']] === 0 && $activityId[$data['activity_name']] === $data['activity_id']) {
                     $stopTime[$data['activity_name']] = $this->db->jdate($data['datec']);
                     $data['duration'] = $stopTime[$data['activity_name']] - $startTime[$data['activity_name']] . ' s';
                     $startTime[$data['activity_name']] = 0;
                     $activityId[$data['activity_name']] = 0;
-                }            
+                }
             }
         }
         return 1;
-    }    
+    }
 
     /**
      *  Load object in memory from the database
@@ -276,12 +267,12 @@ class ExtDirectActivity extends CommonObject
      *  @param  int     $id    Id object
      *  @return int             <0 if KO, >0 if OK
      */
-    function fetch($id)
+    public function fetch($id)
     {
         global $langs;
+
         $sql = "SELECT";
         $sql.= " t.rowid,";
-        
         $sql.= " t.tms,";
         $sql.= " t.fk_user,";
         $sql.= " t.app_id,";
@@ -290,8 +281,6 @@ class ExtDirectActivity extends CommonObject
         $sql.= " t.activity_id,";
         $sql.= " t.datec,";
         $sql.= " t.status";
-
-        
         $sql.= " FROM ".MAIN_DB_PREFIX."extdirect_activity as t";
         $sql.= " WHERE t.rowid = ".$id;
 
@@ -301,7 +290,6 @@ class ExtDirectActivity extends CommonObject
                 $obj = $this->db->fetch_object($resql);
 
                 $this->id    = $obj->rowid;
-                
                 $this->tms = $this->db->jdate($obj->tms);
                 $this->fk_user = $obj->fk_user;
                 $this->app_id = $obj->app_id;
@@ -321,7 +309,6 @@ class ExtDirectActivity extends CommonObject
         }
     }
 
-
     /**
      *  Update object into database
      *
@@ -329,13 +316,13 @@ class ExtDirectActivity extends CommonObject
      *  @param  int     $notrigger   0=launch triggers after, 1=disable triggers
      *  @return int                  <0 if KO, >0 if OK
      */
-    function update($user=0, $notrigger=0)
+    public function update($user = 0, $notrigger = 0)
     {
         global $conf, $langs;
         $error=0;
         $this->fk_user = $user->id;
         // Clean parameters
-        
+
         if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
         if (isset($this->app_id)) $this->app_id=$this->app_id;
         if (isset($this->app_version)) $this->app_name=trim($this->app_version);
@@ -348,7 +335,6 @@ class ExtDirectActivity extends CommonObject
 
         // Update request
         $sql = "UPDATE ".MAIN_DB_PREFIX."extdirect_activity SET";
-        
         $sql.= " tms=".(dol_strlen($this->tms)!=0 ? "'".$this->db->idate($this->tms)."'" : 'null').",";
         $sql.= " fk_user=".(isset($this->fk_user)?$this->fk_user:"null").",";
         $sql.= " app_id=".(isset($this->app_id)?$this->app_id:"null").",";
@@ -357,15 +343,13 @@ class ExtDirectActivity extends CommonObject
         $sql.= " activity_id=".(isset($this->activity_id)?$this->activity_id:"null").",";
         $sql.= " datec=".(dol_strlen($this->datec)!=0 ? "'".$this->db->idate($this->datec)."'" : 'null').",";
         $sql.= " status=".(isset($this->status)?"'".$this->db->escape($this->status)."'":"null")."";
-
-        
         $sql.= " WHERE rowid=".$this->id;
 
         $this->db->begin();
 
         $resql = $this->db->query($sql);
-        if (! $resql) { 
-            $error++; $this->errors[]="Error ".$this->db->lasterror(); 
+        if (! $resql) {
+            $error++; $this->errors[]="Error ".$this->db->lasterror();
         }
 
         if (! $error) {
@@ -396,7 +380,6 @@ class ExtDirectActivity extends CommonObject
         }
     }
 
-
     /**
      *  Delete object in database
      *
@@ -404,7 +387,7 @@ class ExtDirectActivity extends CommonObject
      *  @param  int     $notrigger   0=launch triggers after, 1=disable triggers
      *  @return int                  <0 if KO, >0 if OK
      */
-    function delete($user, $notrigger=0)
+    public function delete($user, $notrigger = 0)
     {
         global $conf, $langs;
         $error=0;
@@ -431,8 +414,8 @@ class ExtDirectActivity extends CommonObject
 
             dol_syslog(get_class($this)."::delete sql=".$sql);
             $resql = $this->db->query($sql);
-            if (! $resql) { 
-                $error++; $this->errors[]="Error ".$this->db->lasterror(); 
+            if (! $resql) {
+                $error++; $this->errors[]="Error ".$this->db->lasterror();
             }
         }
 
@@ -452,13 +435,13 @@ class ExtDirectActivity extends CommonObject
 
     /**
     * Return Url link of activity origin object
-    * 
+    *
     * @param int $fk_origin  Id origin
     * @param int $origintype Type origin
     *
     * @return string
     */
-    public function getActivityOrigin($fk_origin, $origintype) 
+    public function getActivityOrigin($fk_origin, $origintype)
     {
         $origin='';
         switch ($origintype) {
@@ -503,10 +486,10 @@ class ExtDirectActivity extends CommonObject
             	break;
         }
 
-    	if (empty($origin) || ! is_object($origin)) return '';
-        
-    	if ($origin->fetch($fk_origin) > 0) {
-        	return $origin->getNomUrl(1);
+        if (empty($origin) || ! is_object($origin)) return '';
+
+        if ($origin->fetch($fk_origin) > 0) {
+            return $origin->getNomUrl(1);
         }
 
     	return '';

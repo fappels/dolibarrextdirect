@@ -25,28 +25,28 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/translate.class.php';
 
-/** 
+/**
  * ExtDirectTranslate class
- * 
- * Class to load .lang files into Extjs or sencha touch data models 
+ *
+ * Class to load .lang files into Extjs or sencha touch data models
  * using Ext.direct connector
  */
 class ExtDirectTranslate
 {
     private $_translate;
     private $_user;
-    
-    /** 
+
+    /**
      * Constructor
      *
      * @param string $login user name
      *
      * @return number
      */
-    function __construct($login) 
+    public function __construct($login)
     {
         global $user;
-        
+
         if (!empty($login)) {
             if ($user->fetch('', $login, '', 1)>0) {
                 $this->_user = $user;
@@ -54,7 +54,7 @@ class ExtDirectTranslate
             }
         }
     }
-    
+
     /**
      *    Load language file
      *
@@ -62,33 +62,33 @@ class ExtDirectTranslate
      *
      *    @return stdClass result data or <0 if KO, 0 if already loaded, >0 if OK
      */
-    function load(stdClass $param) 
+    public function load(stdClass $param)
     {
         global $conf,$langs;
-        
+
         if (!isset($this->_translate)) return CONNECTERROR;
-        
+
         $results = array();
-        
+
         $domain = '';
         $dir = '';
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'domain') {
                     $domain=$filter->value;
-                } else if ($filter->property == 'dir') {
+                } elseif ($filter->property == 'dir') {
                     $dir=$filter->value;
                 }
             }
         }
-        
+
         if (($dir != '') && ($domain != '')) {
             if (! is_dir($conf->file->dol_document_root['main'].'/'.$dir)) {
                 $dir = 'custom/'.$dir;
             }
             $this->_translate = new Translate($conf->file->dol_document_root['main'].'/'.$dir, $conf);
-            if (isset($this->_user->conf->MAIN_LANG_DEFAULT) 
+            if (isset($this->_user->conf->MAIN_LANG_DEFAULT)
                 && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')
             ) {
                 $this->_translate->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -98,7 +98,7 @@ class ExtDirectTranslate
         } else {
             return PARAMETERERROR;
         }
-        
+
         if (($result = $this->_translate->load($domain)) < 0) {
             $error="Error loading language file, error nr: " .$result;
             dol_syslog(get_class($this)."::load ".$error, LOG_ERR);

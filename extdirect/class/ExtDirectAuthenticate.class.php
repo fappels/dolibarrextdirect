@@ -29,7 +29,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/core/modules/modExtDirect.class.php');
 
 /** ExtDirectConnect class
- * 
+ *
  * Class to with methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectAuthenticate extends ExtDirect
@@ -40,7 +40,7 @@ class ExtDirectAuthenticate extends ExtDirect
      *
      * @param string $login user name
      */
-    public function __construct($login) 
+    public function __construct($login)
     {
         global $db, $conf, $mysoc;
         // clear session
@@ -57,14 +57,14 @@ class ExtDirectAuthenticate extends ExtDirect
      * will have to asign user and acknowledge id (access key) to the application, which can be read afterwards
      *
      * @param unknown_type $params object or object array with with 'requestid' connection requestor identifcation
-     *                              'app_id' app uuid
-     *                              'app_name' app name
-     *                              'dev_platform' device platform
-     *                              'dev_type' device version
-     * 
+     *                             'app_id' app uuid
+     *                             'app_name' app name
+     *                             'dev_platform' device platform
+     *                             'dev_type' device version
+     *
      * @return return mixed stdClass  or int <0 if error
      */
-    public function createAuthentication($params) 
+    public function createAuthentication($params)
     {
         $paramArray = ExtDirect::toArray($params);
         foreach ($paramArray as &$param) {
@@ -81,38 +81,38 @@ class ExtDirectAuthenticate extends ExtDirect
                 $param->id= (int) $this->id;
             }
         }
-                
+
         if (is_array($params)) {
             return $paramArray;
         } else {
             return $param;
-        }   
+        }
     }
-    
+
     /**
      * Ext.direct method to get application uuid and name to dolibarr system with user asigned.
      *
      * @param   stdClass    $param  filter with elements:
-     *      app_id                  app_id of application to get authentication info from
-     *      ack_id                  access key to get authentication info and start a login session
+     *                              app_id  app_id of application to get authentication info from
+     *                              ack_id  access key to get authentication info and start a login session
      * @return return mixed stdClass if success or int <0 if error
      */
-    public function readAuthentication(stdClass $param) 
+    public function readAuthentication(stdClass $param)
     {
         global $conf, $mysoc;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
-        
+
         $result = new stdClass;
         $ack_id = '';
         $app_id = '';
-        
+
         $moduleInfo = new modExtDirect($this->db);
-                
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'ack_id') $ack_id=$filter->value;
-                else if ($filter->property == 'app_id') $app_id=$filter->value;
+                elseif ($filter->property == 'app_id') $app_id=$filter->value;
             }
         }
         // check if server user is set, if not return empty result
@@ -137,7 +137,7 @@ class ExtDirectAuthenticate extends ExtDirect
             }
             if (isset($this->_user->entity) && ($this->_user->entity > 0)) {
                 $_SESSION['dol_entity'] = $this->_user->entity;
-                $conf->entity = $this->_user->entity;           
+                $conf->entity = $this->_user->entity;
             } else {
                 $_SESSION['dol_entity'] = 1;
                 $conf->entity = 1;
@@ -163,20 +163,20 @@ class ExtDirectAuthenticate extends ExtDirect
             $result->home_name = $mysoc->name;
             $result->home_localtax1_assuj = $mysoc->localtax1_assuj;
             $result->home_localtax2_assuj = $mysoc->localtax2_assuj;
-            $result->timezone_offset = getServerTimeZoneInt('now');   
-            $result->timezone = getServerTimeZoneString();        
+            $result->timezone_offset = getServerTimeZoneInt('now');
+            $result->timezone = getServerTimeZoneString();
             return $result;
         }
     }
-    
+
     /**
      * Ext.direct method to update authorisation details.
      *
      * @param unknown_type $param parameter
-     * 
+     *
      * @return return  int PARAMETERERROR
      */
-    public function updateAuthentication($param) 
+    public function updateAuthentication($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
         // dolibarr update settings
@@ -197,21 +197,20 @@ class ExtDirectAuthenticate extends ExtDirect
                 return PARAMETERERROR;
             }
         }
-        if (is_array($params)) {
+        if (is_array($param)) {
             return $paramArray;
         } else {
             return $param;
         }
     }
-    
+
     /**
      * Ext.direct method to delete application uuid entry.
      *
      * @param unknown_type $params with app id
      * @return return mixed stdClass or int <0 if error
      */
-    
-    public function destroyAuthentication($params) 
+    public function destroyAuthentication($params)
     {
         $paramArray = ExtDirect::toArray($params);
         foreach ($paramArray as &$param) {
@@ -224,21 +223,21 @@ class ExtDirectAuthenticate extends ExtDirect
                 if (($resql = $this->delete($this->_user)) < 0) return $resql;
             }
         }
-        
+
         if (is_array($params)) {
             return $paramArray;
         } else {
             return $param;
         }
     }
-    
+
     /**
      * private method to copy order fields into dolibarr object
      *
-     * @param stdclass $params object with fields
+     * @param stdclass $param object with fields
      * @return boolean true if there is an update
      */
-    private function prepareAuthenticationFields($param) 
+    private function prepareAuthenticationFields($param)
     {
         $diff = false; // difference flag, set to true if a param element diff detected
         $diff = self::prepareField($diff, $param, $this, 'requestid', 'requestid');
@@ -246,7 +245,7 @@ class ExtDirectAuthenticate extends ExtDirect
         $diff = self::prepareField($diff, $param, $this, 'app_name', 'app_name');
         $diff = self::prepareField($diff, $param, $this, 'dev_platform', 'dev_platform');
         $diff = self::prepareField($diff, $param, $this, 'dev_type', 'dev_type');
-        
+
         return $diff;
     }
 }

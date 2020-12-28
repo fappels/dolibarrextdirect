@@ -31,7 +31,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 
 /**
  * ExtDirectFichinter class
- * 
+ *
  * Interventions Class to with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectFichinter extends Fichinter
@@ -43,16 +43,16 @@ class ExtDirectFichinter extends Fichinter
         'FICHINTER_WITHOUT_DURATION',
         'FICHINTER_DATE_WITHOUT_HOUR'
     );
-    
-    /** 
+
+    /**
      * Constructor
      *
      * @param string $login user name
      */
-    public function __construct($login) 
+    public function __construct($login)
     {
         global $langs, $db, $user, $conf, $mysoc;
-        
+
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
@@ -68,12 +68,12 @@ class ExtDirectFichinter extends Fichinter
             }
         }
     }
-    
+
     /**
      *	Load intervention related constants
-     * 
+     *
      *	@param			stdClass	$params		filter with elements
-     *		constant	name of specific constant
+     *		                                    constant	name of specific constant
      *
      *	@return			stdClass result data with specific constant value
      */
@@ -81,19 +81,19 @@ class ExtDirectFichinter extends Fichinter
     {
     	if (!isset($this->db)) return CONNECTERROR;
     	if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
-    	
+
     	$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_constants);
-    	
+
     	return $results;
     }
-    
+
     /**
      *    Load intervention from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
-     *      id                  Id of order to load
-     *      ref                 ref, ref_int
-     *      
+     *                                      id  Id of intervention to load
+     *                                      ref ref, ref_int
+     *
      *    @return     stdClass result data or error number
      */
     public function readIntervention(stdClass $params)
@@ -114,21 +114,21 @@ class ExtDirectFichinter extends Fichinter
             require_once DOL_DOCUMENT_ROOT."/contrat/class/contrat.class.php";
             $contrat = new Contrat($this->db);
         }
-        
+
         $results = array();
         $row = new stdClass;
         $id = 0;
         $ref = '';
         $status_ids = array();
-        
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
-                else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'status_id') array_push($status_ids,$filter->value);
+                elseif ($filter->property == 'ref') $ref=$filter->value;
+                elseif ($filter->property == 'status_id') array_push($status_ids, $filter->value);
             }
         }
-        
+
         if (($id > 0) || ($ref != '')) {
             if (($result = $this->fetch($id, $ref)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             if ($this->id) {
@@ -162,14 +162,13 @@ class ExtDirectFichinter extends Fichinter
                     $row->contract_id = $this->fk_contrat;
                     $row->contract_ref = $contrat->ref;
                 }
-                
-                
+
                 $row->duration = $this->duration;
                 $row->has_signature = 0;
                 if (empty($status_ids)) {
                     array_push($results, $row);
                 } else {
-                    foreach($status_ids as $status_id) {
+                    foreach ($status_ids as $status_id) {
                         if ($status_id == $row->status_id) {
                             array_push($results, $row);
                         }
@@ -177,19 +176,19 @@ class ExtDirectFichinter extends Fichinter
                 }
             }
         }
-        
+
         return $results;
     }
 
     /**
-    * public method to read available optionals (extra fields)
-    *
-    * @return stdClass result data or ERROR
-    */
-    public function readOptionalModel(stdClass $param) 
+     * public method to read available optionals (extra fields)
+     *
+     * @return stdClass result data or ERROR
+     */
+    public function readOptionalModel()
     {
         if (!isset($this->db)) return CONNECTERROR;
-        
+
         return ExtDirect::readOptionalModel($this);
     }
 
@@ -197,7 +196,7 @@ class ExtDirectFichinter extends Fichinter
      * public method to read intervention optionals (extra fields) from database
      *
      *    @param    stdClass    $param  filter with elements:
-     *      id                  Id of order to load
+     *                                  id Id of intervention to load
      *
      *    @return     stdClass result data or -1
      */
@@ -207,13 +206,13 @@ class ExtDirectFichinter extends Fichinter
         if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
         $results = array();
         $id = 0;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
             }
         }
-        
+
         if ($id > 0) {
             $extraFields = new ExtraFields($this->db);
             if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -238,10 +237,10 @@ class ExtDirectFichinter extends Fichinter
                 } else {
                     foreach ($this->array_options as $key => $value) {
                         $row = new stdClass;
-                        $name = substr($key,8); // strip options_
+                        $name = substr($key, 8); // strip options_
                         $row->id = $index++; // ExtJs needs id to be able to destroy records
                         $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
+                        $row->value = $extraFields->showOutputField($name, $value);
                         $row->object_id = $this->id;
                         $row->object_element = $this->element;
                         $row->raw_value = $value;
@@ -317,22 +316,22 @@ class ExtDirectFichinter extends Fichinter
 
     /**
      * Ext.direct method to Create intervention
-     * 
+     *
      * @param unknown_type $param object or object array with intervention model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function createIntervention($param) 
+    public function createIntervention($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
-        
+
         foreach ($paramArray as &$params) {
             // prepare fields
             $this->prepareInterventionFields($params);
             if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            
+
             $params->id=$this->id;
         }
 
@@ -345,14 +344,14 @@ class ExtDirectFichinter extends Fichinter
 
     /**
      * Ext.direct method to update intervention
-     * 
+     *
      * @param unknown_type $param object or object array with intervention model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function updateIntervention($param) 
+    public function updateIntervention($param)
     {
         global $conf, $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
@@ -382,7 +381,7 @@ class ExtDirectFichinter extends Fichinter
                                 $outputlangs = new Translate("", $conf);
                                 $outputlangs->setDefaultLang($newlang);
                             }
-                            if (ExtDirect::checkDolVersion(0,'3.7','')) {
+                            if (ExtDirect::checkDolVersion(0, '3.7', '')) {
                                 $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
                             } else {
                                 require_once DOL_DOCUMENT_ROOT.'/core/modules/fichinter/modules_fichinter.php';
@@ -397,11 +396,11 @@ class ExtDirectFichinter extends Fichinter
                         $result = $this->setStatut(self::STATUS_BILLED);;
                         break;
                     default:
-                        break;   
+                        break;
                 }
-                
+
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                if (ExtDirect::checkDolVersion(0,'3.5','') && $this->fk_contrat > 0) {
+                if (ExtDirect::checkDolVersion(0, '3.5', '') && $this->fk_contrat > 0) {
                     if (($result = $this->set_contrat($this->_user, $this->fk_contrat)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 if (($result = $this->update($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -418,11 +417,11 @@ class ExtDirectFichinter extends Fichinter
 
     /**
      * Ext.direct method to destroy intervention
-     * 
+     *
      * @param unknown_type $param object or object array with order model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function destroyIntervention($param) 
+    public function destroyIntervention($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->supprimer)) return PERMISSIONERROR;
@@ -433,7 +432,7 @@ class ExtDirectFichinter extends Fichinter
             // prepare fields
             if ($params->id) {
                 $this->id = $params->id;
-                // delete 
+                // delete
                 if (($result = $this->delete($this->_user, $notrigger)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
@@ -449,69 +448,66 @@ class ExtDirectFichinter extends Fichinter
 
     /**
      * Ext.direct method to upload file for intervention object
-     * 
+     *
      * @param unknown_type $params object or object array with uploaded file(s)
      * @return Array    ExtDirect response message
      */
-    public function fileUpload($params) 
+    public function fileUpload($params)
     {
         global $conf;
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
         $dir = null;
-        
+
         foreach ($paramArray as &$param) {
-            if (isset($param['extTID'])) 
+            if (isset($param['extTID']))
             {
                 $id = $param['extTID'];
-                if ($this->fetch($id)) 
-                {
+                if ($this->fetch($id)) {
                     $dir = $conf->ficheinter->dir_output.'/'.dol_sanitizeFileName($this->ref);
-                }
-                else
-                {
+                } else {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
     }
-    
+
     /**
      * private method to copy order fields into dolibarr object
-     * 
+     *
      * @param stdclass $params object with fields
      * @return null
      */
-    private function prepareInterventionFields($params) 
+    private function prepareInterventionFields($params)
     {
-        isset($params->ref) ? ( $this->ref = $params->ref ) : ( $this->ref = null);
-        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : ( $this->socid = null);
-        isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( $this->note_private= null);
-        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ($this->note_public = null);      
-        isset($params->description) ? ( $this->description =$params->description) : ($this->description = null);
-        isset($params->duration) ? ( $this->duration =$params->duration) : ($this->duration = null);
-        isset($params->project_id) ? ( $this->fk_projet =$params->project_id) : ($this->fk_projet = null);
-        isset($params->contract_id) ? ( $this->fk_contrat =$params->contract_id) : ($this->fk_contrat = null);
-    } 
-    
+        isset($params->ref) ? ( $this->ref = $params->ref ) : null;
+        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : null;
+        isset($params->note_private) ? ( $this->note_private =$params->note_private) : null;
+        isset($params->note_public) ? ( $this->note_public = $params->note_public ) : null;
+        isset($params->description) ? ( $this->description =$params->description) : null;
+        isset($params->duration) ? ( $this->duration =$params->duration) : null;
+        isset($params->project_id) ? ( $this->fk_projet =$params->project_id) : null;
+        isset($params->contract_id) ? ( $this->fk_contrat =$params->contract_id) :null;
+    }
+
     /**
      * public method to read a list of interventions
      *
      * @param stdClass $params to filter on order status and ref
      * @return     stdClass result data or error number
      */
-    public function readList(stdClass $params) 
+    public function readList(stdClass $params)
     {
         global $conf;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
         $result = new stdClass;
@@ -542,7 +538,7 @@ class ExtDirectFichinter extends Fichinter
                 if ($filter->property == 'barcode') $barcode = $filter->value;
             }
         }
-        
+
         $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."fichinter as i";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
@@ -557,7 +553,7 @@ class ExtDirectFichinter extends Fichinter
         $sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
         $sqlFrom .= " ) AS ea ON i.rowid = ea.activity_id";
         $sqlWhere = " WHERE i.entity IN (".getEntity('fichinter', 1).')';
-        
+
         if ($statusFilterCount>0) {
             $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
@@ -585,7 +581,7 @@ class ExtDirectFichinter extends Fichinter
         if ($includeTotal) {
             $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
             $resql=$this->db->query($sqlTotal);
-            
+
             if ($resql) {
                 $obj = $this->db->fetch_object($resql);
                 $total = $obj->total;
@@ -600,7 +596,7 @@ class ExtDirectFichinter extends Fichinter
         $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
 
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
@@ -634,7 +630,7 @@ class ExtDirectFichinter extends Fichinter
             return SQLERROR;
         }
     }
-    
+
     /**
      * public method to read a list of interventionstatusses
      *
@@ -645,6 +641,7 @@ class ExtDirectFichinter extends Fichinter
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = 0;
+        $row = new stdClass;
         while (($result = $this->LibStatut($statut, 1)) != '') {
             if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
@@ -654,7 +651,7 @@ class ExtDirectFichinter extends Fichinter
         }
         return $results;
     }
-    
+
     /**
      * public method to read a list of contac types
      *
@@ -666,6 +663,7 @@ class ExtDirectFichinter extends Fichinter
         $results = array();
         if (! is_array($result = $this->liste_type_contact())) return ExtDirect::getDolError($result, $this->errors, $this->error);
         // add empty type
+        $row = new stdClass;
         $row->id = 0;
         $row->label = '';
         array_push($results, $row);
@@ -682,17 +680,17 @@ class ExtDirectFichinter extends Fichinter
      *    Load intervention lines from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
-     *                              intervention_id Id of intervention to load lines
-     *                              
+     *                                      intervention_id Id of intervention to load lines
+     *
      *    @return     stdClass result data or error number
      */
     public function readInterventionLine(stdClass $params)
     {
         global $conf;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
-        
+
         $results = array();
         $intervention_id = 0;
 
@@ -728,11 +726,11 @@ class ExtDirectFichinter extends Fichinter
     }
 
     /**
-    * public method to read available line optionals (extra fields)
-    *
-    * @return stdClass result data or ERROR
-    */
-    public function readLineOptionalModel(stdClass $param) 
+     * public method to read available line optionals (extra fields)
+     *
+     * @return stdClass result data or ERROR
+     */
+    public function readLineOptionalModel()
     {
         if (!isset($this->db)) return CONNECTERROR;
 
@@ -745,7 +743,7 @@ class ExtDirectFichinter extends Fichinter
      * public method to read intervention line optionals (extra fields) from database
      *
      *    @param    stdClass    $param  filter with elements:
-     *      id                  Id of order to load
+     *                                  id Id of intervention line to load
      *
      *    @return     stdClass result data or -1
      */
@@ -755,13 +753,13 @@ class ExtDirectFichinter extends Fichinter
         if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
         $results = array();
         $line_id = 0;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'line_id') $line_id=$filter->value;
             }
         }
-        
+
         if ($line_id > 0) {
             $extraFields = new ExtraFields($this->db);
             $line = new FichinterLigne($this->db);
@@ -772,7 +770,7 @@ class ExtDirectFichinter extends Fichinter
                 $index = 1;
                 if (empty($line->array_options)) {
                     // create empty optionals to be able to add optionals
-                    $optionsArray = (!empty($extraFields->attributes[$line->table_element]['label']) ? $extraFields->attributes[$orderLine->table_element]['label'] : null);
+                    $optionsArray = (!empty($extraFields->attributes[$line->table_element]['label']) ? $extraFields->attributes[$line->table_element]['label'] : null);
                     if (is_array($optionsArray) && count($optionsArray) > 0) {
                         foreach ($optionsArray as $name => $label) {
                             $row = new stdClass;
@@ -789,10 +787,10 @@ class ExtDirectFichinter extends Fichinter
                     foreach ($line->array_options as $key => $value) {
                         if (!empty($value)) {
                             $row = new stdClass;
-                            $name = substr($key,8); // strip options_
+                            $name = substr($key, 8); // strip options_
                             $row->id = $index++; // ExtJs needs id to be able to destroy records
                             $row->name = $name;
-                            $row->value = $extraFields->showOutputField($name,$value);
+                            $row->value = $extraFields->showOutputField($name, $value);
                             $row->object_id = $line->id;
                             $row->object_element = $line->element;
                             $row->raw_value = $value;
@@ -881,14 +879,15 @@ class ExtDirectFichinter extends Fichinter
      * @param unknown_type $param object or object array with product model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function createInterventionLine($param) 
+    public function createInterventionLine($param)
     {
         global $conf, $mysoc;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $line = new FichinterLigne($this->db);
-        
+        $result = 0;
+
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
 
@@ -897,8 +896,8 @@ class ExtDirectFichinter extends Fichinter
                 // prepare fields
                 $this->prepareInterventionLineFields($params, $line);
                 if (($result = $this->fetch($line->fk_fichinter)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                
-                if (ExtDirect::checkDolVersion(0,'3.5','')) {
+
+                if (ExtDirect::checkDolVersion(0, '3.5', '')) {
                     if (($result = $this->addline(
                         $this->_user,
                         $line->fk_fichinter,
@@ -933,10 +932,10 @@ class ExtDirectFichinter extends Fichinter
      * @param unknown_type $param object or object array with order model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function updateInterventionLine($param) 
+    public function updateInterventionLine($param)
     {
         global $conf, $mysoc;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $line = new FichinterLigne($this->db);
@@ -962,14 +961,14 @@ class ExtDirectFichinter extends Fichinter
             return $params;
         }
     }
-    
+
     /**
      * Ext.direct method to destroy orderlines
      *
      * @param unknown_type $param object or object array with order model(s)
      * @return Ambigous <multitype:, unknown_type>|unknown
      */
-    public function destroyInterventionLine($param) 
+    public function destroyInterventionLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->ficheinter->supprimer)) return PERMISSIONERROR;
@@ -982,28 +981,28 @@ class ExtDirectFichinter extends Fichinter
                 // prepare fields
                 $line->fetch($params->id);
                 $this->id = $line->fk_fichinter;
-                // delete 
+                // delete
                 if (($result = $line->deleteline($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
             } else {
                 return PARAMETERERROR;
             }
         }
-    
+
         if (is_array($param)) {
             return $paramArray;
         } else {
             return $params;
         }
     }
-    
+
     /**
      * private method to copy intervention fields into dolibarr object
      *
-     * @param stdclass $params object with fields
-     * @param stdclass $orderLine object
+     * @param stdclass $params  object with fields
+     * @param stdclass $line    object
      * @return null
      */
-    private function prepareInterventionLineFields($params,&$line) 
+    private function prepareInterventionLineFields($params, &$line)
     {
         isset($params->line_id) ? ( $line->rowid= $params->line_id) : null;
         isset($params->line_id) ? ( $line->id= $params->line_id) : null;

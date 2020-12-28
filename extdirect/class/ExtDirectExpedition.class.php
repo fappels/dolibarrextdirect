@@ -37,19 +37,19 @@ class ExtDirectExpedition extends Expedition
 {
     private $_user;
     private $_shipmentConstants = array('STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT','STOCK_CALCULATE_ON_SHIPMENT');
-    
+
     const STATUS_DRAFT = 0;
     const STATUS_VALIDATED = 1;
     const STATUS_CLOSED = 2;
-    
+
     /** Constructor
      *
      * @param string $login user name
      */
-    public function __construct($login) 
+    public function __construct($login)
     {
         global $langs, $user, $db, $conf, $mysoc;
-        
+
         if (!empty($login)) {
             if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
                 $user->getrights();
@@ -68,12 +68,12 @@ class ExtDirectExpedition extends Expedition
             }
         }
     }
-    
-/**
+
+    /**
      *	Load shipping related constants
-     * 
+     *
      *	@param			stdClass	$params		filter with elements
-     *		constant	name of specific constant
+     *		                                    constant	name of specific constant
      *
      *	@return			stdClass result data with specific constant value
      */
@@ -81,17 +81,17 @@ class ExtDirectExpedition extends Expedition
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
-        
+
         $results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_shipmentConstants);
-        
+
         return $results;
     }
-    
+
     /**
      *    Load shipment from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
-     *      id                  Id of order to load
+     *                                      id Id of shipment to load
      *    @return     stdClass result data or -1
      */
     public function readShipment(stdClass $params)
@@ -105,15 +105,15 @@ class ExtDirectExpedition extends Expedition
         $id = 0;
         $ref = '';
         $ref_ext = '';
-        
+
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
-                else if ($filter->property == 'ref') $ref=$filter->value;
-                else if ($filter->property == 'ref_ext') $ref_ext=$filter->value;
+                elseif ($filter->property == 'ref') $ref=$filter->value;
+                elseif ($filter->property == 'ref_ext') $ref_ext=$filter->value;
             }
         }
-        
+
         if (($id > 0) || ($ref != '') || ($ref_ext != '')) {
             if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) {
                 if ($result = -2) {
@@ -140,7 +140,11 @@ class ExtDirectExpedition extends Expedition
                 if ($myUser->fetch($this->user_author_id)>0) {
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
-                $row->order_date = $this->date_expedition;
+                if (ExtDirect::checkDolVersion(0, '3.8', '')) {
+                    $row->order_date = $this->date_shipping;
+                } else {
+                    $row->order_date = $this->date_expedition;
+                }
                 $row->deliver_date= $this->date_delivery;
                 $row->origin_id = $this->origin_id;
                 $row->origin = $this->origin;
@@ -163,19 +167,19 @@ class ExtDirectExpedition extends Expedition
                 return 0;
             }
         }
-        
+
         return $results;
     }
 
     /**
-    * public method to read available optionals (extra fields)
-    *
-    * @return stdClass result data or ERROR
-    */
-    public function readOptionalModel(stdClass $param) 
+     * public method to read available optionals (extra fields)
+     *
+     * @return stdClass result data or ERROR
+     */
+    public function readOptionalModel()
     {
         if (!isset($this->db)) return CONNECTERROR;
-        
+
         return ExtDirect::readOptionalModel($this);
     }
 
@@ -183,7 +187,7 @@ class ExtDirectExpedition extends Expedition
      * public method to read shipment optionals (extra fields) from database
      *
      *    @param    stdClass    $param  filter with elements:
-     *      id                  Id of order to load
+     *                                  id Id of order to load
      *
      *    @return     stdClass result data or -1
      */
@@ -193,13 +197,13 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
         $id = 0;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'id') $id=$filter->value;
             }
         }
-        
+
         if ($id > 0) {
             $extraFields = new ExtraFields($this->db);
             if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -224,10 +228,10 @@ class ExtDirectExpedition extends Expedition
                 } else {
                     foreach ($this->array_options as $key => $value) {
                         $row = new stdClass;
-                        $name = substr($key,8); // strip options_
+                        $name = substr($key, 8); // strip options_
                         $row->id = $index++; // ExtJs needs id to be able to destroy records
                         $row->name = $name;
-                        $row->value = $extraFields->showOutputField($name,$value);
+                        $row->value = $extraFields->showOutputField($name, $value);
                         $row->object_id = $this->id;
                         $row->object_element = $this->element;
                         $row->raw_value = $value;
@@ -303,20 +307,20 @@ class ExtDirectExpedition extends Expedition
 
     /**
      * Ext.direct method to Create Shipment
-     * 
+     *
      * @param unknown_type $param object or object array with shipment record
      * @return result data or -1
      */
-    public function createShipment($param) 
+    public function createShipment($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
-        
+
         foreach ($paramArray as &$params) {
             // prepare fields
             $this->prepareFields($params);
-            
+
             if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             $params->id=$this->id;
         }
@@ -330,16 +334,16 @@ class ExtDirectExpedition extends Expedition
 
     /**
      * Ext.direct method to update shipment
-     * 
+     *
      * @param unknown_type $param object or object array with shipment record
      * @return result data or -1
      */
-    public function updateShipment($param) 
+    public function updateShipment($param)
     {
         global $conf, $langs;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
-        
+
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {
@@ -351,10 +355,8 @@ class ExtDirectExpedition extends Expedition
                 // update
                 switch ($params->orderstatus_id) {
                     case -1:
-                        
                         break;
                     case 0:
-                        
                         break;
                     case 1:
                         $result = $this->valid($this->_user);
@@ -370,7 +372,7 @@ class ExtDirectExpedition extends Expedition
                                 $outputlangs = new Translate("", $conf);
                                 $outputlangs->setDefaultLang($newlang);
                             }
-                            if (ExtDirect::checkDolVersion(0,'3.7','')) {
+                            if (ExtDirect::checkDolVersion(0, '3.7', '')) {
                                 $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
                             } else {
                                 require_once DOL_DOCUMENT_ROOT.'/core/modules/expedition/modules_expedition.php';
@@ -379,10 +381,9 @@ class ExtDirectExpedition extends Expedition
                         }
                         break;
                     case 2:
-                        
                         break;
                     default:
-                        break;   
+                        break;
                 }
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
@@ -398,22 +399,22 @@ class ExtDirectExpedition extends Expedition
 
     /**
      * Ext.direct method to destroy shipment
-     * 
+     *
      * @param unknown_type $param object or object array with shipment record
      * @return result data or -1
      */
-    public function destroyShipment($param) 
+    public function destroyShipment($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->supprimer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
-        
+
         foreach ($paramArray as &$params) {
             // prepare fields
             if ($params->id) {
                 $this->id = $params->id;
                 if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                // delete 
+                // delete
                 if (($result = $this->delete()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
@@ -429,87 +430,84 @@ class ExtDirectExpedition extends Expedition
 
     /**
      * Ext.direct method to upload file for shipment object
-     * 
+     *
      * @param unknown_type $params object or object array with uploaded file(s)
      * @return Array    ExtDirect response message
      */
-    public function fileUpload($params) 
+    public function fileUpload($params)
     {
         global $conf;
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($params);
         $dir = null;
-        
+
         foreach ($paramArray as &$param) {
-            if (isset($param['extTID'])) 
+            if (isset($param['extTID']))
             {
                 $id = $param['extTID'];
-                if ($this->fetch($id)) 
-                {
+                if ($this->fetch($id)) {
                     $this->fetch_thirdparty();
                     $dir = $conf->expedition->dir_output . "/sending/" . dol_sanitizeFileName($this->ref);
-                }
-                else
-                {
+                } else {
                     $response = PARAMETERERROR;
-                    $break;
+                    break;
                 }
             } elseif (isset($param['file']) && isset($dir)) {
                 $response = ExtDirect::fileUpload($param, $dir);
             } else {
                 $response = PARAMETERERROR;
-                $break;
+                break;
             }
         }
         return $response;
     }
-    
+
     /**
      * private method to copy fields into dolibarr object
-     * 
+     *
      * @param stdclass $params object with fields
      * @return null
      */
-    private function prepareFields($params) 
+    private function prepareFields($params)
     {
-        isset($params->origin_id) ? ( $this->origin_id = $params->origin_id) : isset($this->origin_id)?null:$this->origin_id=null;
-        isset($params->origin) ? ( $this->origin = $params->origin) : isset($this->origin)?null:( $this->origin = null);
-        isset($params->ref_ext) ? ( $this->ref_ext = $params->ref_ext) : isset($this->ref_ext)?null:( $this->ref_ext = null);
-        isset($params->ref_customer) ? ( $this->ref_customer = $params->ref_customer) : isset($this->ref_customer)?null:( $this->ref_customer = null);
-        isset($params->customer_id) ? ( $this->socid = $params->customer_id) : isset($this->socid)?null:( $this->socid = null);
-        isset($params->deliver_date) ? ( $this->date_delivery =$params->deliver_date) : isset($this->date_delivery)?null:($this->date_delivery = null);
-        isset($params->weight_units) ? ( $this->weight_units = $params->weight_units) : isset($this->weight_units)?null:($this->weight_units = 0); 
-        isset($params->weight) ? ( $this->weight = $params->weight) : isset($this->weight)?null:($this->weight = 0);
-        isset($params->size_units) ? ( $this->size_units = $params->size_units) : isset($this->size_units)?null:($this->size_units = 0);
+        isset($params->origin_id) ? $this->origin_id = $params->origin_id : ( isset($this->origin_id) ? null:$this->origin_id = null );
+        isset($params->origin) ? $this->origin = $params->origin : ( isset($this->origin) ? null :  $this->origin = null );
+        isset($params->ref_ext) ? $this->ref_ext = $params->ref_ext : ( isset($this->ref_ext) ? null : $this->ref_ext = null );
+        isset($params->ref_customer) ? $this->ref_customer = $params->ref_customer : ( isset($this->ref_customer) ? null : $this->ref_customer = null );
+        isset($params->customer_id) ? $this->socid = $params->customer_id : ( isset($this->socid) ? null : $this->socid = null );
+        isset($params->deliver_date) ? $this->date_delivery = $params->deliver_date : ( isset($this->date_delivery) ? null : $this->date_delivery = null );
+        isset($params->weight_units) ? $this->weight_units = $params->weight_units : ( isset($this->weight_units) ? null : $this->weight_units = 0 );
+        isset($params->weight) ? $this->weight = $params->weight : ( isset($this->weight) ? null : $this->weight = 0 );
+        isset($params->size_units) ? $this->size_units = $params->size_units : ( isset($this->size_units) ? null : $this->size_units = 0 );
         // sizes for create
-        isset($params->trueDepth) ? ( $this->sizeS = $params->trueDepth) : isset($this->sizeS)?null:($this->sizeS = 0);
-        isset($params->trueWidth) ? ( $this->sizeW = $params->trueWidth) : isset($this->sizeW)?null:($this->sizeW = 0);
-        isset($params->trueHeight) ? ( $this->sizeH = $params->trueHeight) : isset($this->sizeH)?null:($this->sizeH = 0);   
+        isset($params->trueDepth) ? $this->sizeS = $params->trueDepth : ( isset($this->sizeS) ? null : $this->sizeS = 0 );
+        isset($params->trueWidth) ? $this->sizeW = $params->trueWidth : ( isset($this->sizeW) ? null: $this->sizeW = 0 );
+        isset($params->trueHeight) ? $this->sizeH = $params->trueHeight : ( isset($this->sizeH) ? null: $this->sizeH = 0 );
         // sizes for update
-        isset($params->trueDepth) ? ( $this->trueDepth = $params->trueDepth) : isset($this->trueDepth)?null:($this->trueDepth = 0);
-        isset($params->trueWidth) ? ( $this->trueWidth = $params->trueWidth) : isset($this->trueWidth)?null:($this->trueWidth = 0);
-        isset($params->trueHeight) ? ( $this->trueHeight = $params->trueHeight) : isset($this->trueHeight)?null:($this->trueHeight = 0);   
-        isset($params->shipping_method_id) ? ($this->shipping_method_id = $params->shipping_method_id) : null;
-        isset($params->incoterms_id) ? ($this->fk_incoterms = $params->incoterms_id) : null;
-        isset($params->location_incoterms) ? ($this->location_incoterms = $params->location_incoterms) : null;    
+        isset($params->trueDepth) ? $this->trueDepth = $params->trueDepth : ( isset($this->trueDepth) ? null : $this->trueDepth = 0 );
+        isset($params->trueWidth) ? $this->trueWidth = $params->trueWidth : ( isset($this->trueWidth) ? null: $this->trueWidth = 0 );
+        isset($params->trueHeight) ? $this->trueHeight = $params->trueHeight : ( isset($this->trueHeight) ? null: $this->trueHeight = 0 );
+        isset($params->shipping_method_id) ? $this->shipping_method_id = $params->shipping_method_id : null;
+        isset($params->incoterms_id) ? $this->fk_incoterms = $params->incoterms_id : null;
+        isset($params->location_incoterms) ? $this->location_incoterms = $params->location_incoterms : null;
         isset($params->tracking_number) ? $this->tracking_number = $params->tracking_number : null;
 		isset($params->model_pdf) ? $this->model_pdf = $params->model_pdf : null;
 		isset($params->note_public) ? $this->note_public = $params->note_public : null;
 		isset($params->note_private) ? $this->note_private = $params->note_private : null;
 		isset($params->delivery_address_id) ? $this->fk_delivery_address = $params->delivery_address_id : null;
-    } 
-    
+    }
+
     /**
      * public method to read a list of shipments
      *
      * @param stdClass $params to filter on order status and ref
      * @return     stdClass result data or error number
      */
-    public function readShipmentList(stdClass $params) 
+    public function readShipmentList(stdClass $params)
     {
         global $conf;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $result = new stdClass;
@@ -539,7 +537,7 @@ class ExtDirectExpedition extends Expedition
                 if ($filter->property == 'origin_id') $originId = $filter->value;
             }
         }
-        
+
         $sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."societe as s, ".MAIN_DB_PREFIX."expedition as e";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON e.rowid = ec.element_id";
@@ -559,8 +557,7 @@ class ExtDirectExpedition extends Expedition
         $sqlFrom .= " ) AS ea ON e.rowid = ea.activity_id";
         $sqlWhere = " WHERE e.entity IN (".getEntity('shipping', 1).')';
         $sqlWhere .= " AND e.fk_soc = s.rowid";
-        
-        
+
         if ($statusFilterCount>0) {
             $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
@@ -577,7 +574,7 @@ class ExtDirectExpedition extends Expedition
             $sqlWhere .= " AND ec.fk_socpeople = ".$contactId;
         }
         $sqlOrder = " ORDER BY e.date_creation DESC";
-        
+
         if ($limit) {
             $sqlLimit = $this->db->plimit($limit, $start);
         }
@@ -585,7 +582,7 @@ class ExtDirectExpedition extends Expedition
         if ($includeTotal) {
             $sqlTotal = 'SELECT COUNT(*) as total'.$sqlFrom.$sqlWhere;
             $resql=$this->db->query($sqlTotal);
-            
+
             if ($resql) {
                 $obj = $this->db->fetch_object($resql);
                 $total = $obj->total;
@@ -600,7 +597,7 @@ class ExtDirectExpedition extends Expedition
         $sql = $sqlFields.$sqlFrom.$sqlWhere.$sqlOrder.$sqlLimit;
 
         $resql=$this->db->query($sql);
-        
+
         if ($resql) {
             $num=$this->db->num_rows($resql);
             for ($i = 0;$i < $num; $i++) {
@@ -629,9 +626,9 @@ class ExtDirectExpedition extends Expedition
             $error="Error ".$this->db->lasterror();
             dol_syslog(get_class($this)."::readShipmentList ".$error, LOG_ERR);
             return SQLERROR;
-        }   
+        }
     }
-    
+
 	/**
      * public method to read a list of shipment statusses
      *
@@ -642,6 +639,7 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
         $statut = 0;
+        $row = new stdClass;
         while (($result = $this->LibStatut($statut, 1)) !== null) {
             if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
             $row = new stdClass;
@@ -652,7 +650,7 @@ class ExtDirectExpedition extends Expedition
         }
         return $results;
     }
-    
+
     /**
      * public method to read a list of contac types
      *
@@ -676,18 +674,18 @@ class ExtDirectExpedition extends Expedition
         }
         return $results;
     }
-    
+
     /**
      *    Load shipmentline from database into memory
      *
      *    @param    stdClass    $params     filter with elements:
-     *                          origin_id   Id of shipment to load lines from
+     *                                      origin_id   Id of shipment to load lines from
      *    @return     stdClass result data or -1
      */
     public function readShipmentLine(stdClass $params)
     {
         global $conf;
-        
+
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
@@ -707,7 +705,7 @@ class ExtDirectExpedition extends Expedition
                 foreach ($this->lines as $key => $line) {
                     if (ExtDirect::checkDolVersion() < 3.6) {
                         $row->id = $key; // no line id available
-                        $row->line_id = $key; 
+                        $row->line_id = $key;
                     } else {
                         $row->id = $line->line_id;
                         $row->line_id = $line->line_id;
@@ -720,14 +718,13 @@ class ExtDirectExpedition extends Expedition
                     $row->product_label = $line->product_label;
                     $row->product_desc = '';
                     $row->origin_id = $origin_id;
-                    
                     $row->qty_asked = $line->qty_asked;
                     $row->qty_shipped = $line->qty_shipped;
                     $row->warehouse_id = $line->entrepot_id;
                     // read related batch info
                     if (empty($conf->productbatch->enabled)) {
                         array_push($results, clone $row);
-                    } else {                        
+                    } else {
                         if (($res = $this->fetchBatches($results, $row, $line->line_id)) < 0) return $res;
                     }
                 }
@@ -739,11 +736,11 @@ class ExtDirectExpedition extends Expedition
     }
 
     /**
-    * public method to read available line optionals (extra fields)
-    *
-    * @return stdClass result data or ERROR
-    */
-    public function readLineOptionalModel(stdClass $param) 
+     * public method to read available line optionals (extra fields)
+     *
+     * @return stdClass result data or ERROR
+     */
+    public function readLineOptionalModel()
     {
         if (!isset($this->db)) return CONNECTERROR;
 
@@ -760,7 +757,7 @@ class ExtDirectExpedition extends Expedition
      * public method to read shipment line optionals (extra fields) from database
      *
      *    @param    stdClass    $param  filter with elements:
-     *      id                  Id of order to load
+     *                                  id Id of shipment to load
      *
      *    @return     stdClass result data or -1
      */
@@ -770,13 +767,13 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
         $results = array();
         $line_id = 0;
-        
+
         if (isset($param->filter)) {
             foreach ($param->filter as $key => $filter) {
                 if ($filter->property == 'line_id') $line_id=$filter->value;
             }
         }
-        
+
         if ($line_id > 0) {
             $extraFields = new ExtraFields($this->db);
             if (ExtDirect::checkDolVersion(0, '9.0', '')) {
@@ -808,10 +805,10 @@ class ExtDirectExpedition extends Expedition
                     foreach ($line->array_options as $key => $value) {
                         if (!empty($value)) {
                             $row = new stdClass;
-                            $name = substr($key,8); // strip options_
+                            $name = substr($key, 8); // strip options_
                             $row->id = $index++; // ExtJs needs id to be able to destroy records
                             $row->name = $name;
-                            $row->value = $extraFields->showOutputField($name,$value);
+                            $row->value = $extraFields->showOutputField($name, $value);
                             $row->object_id = $line->id;
                             $row->object_element = $line->element;
                             $row->raw_value = $value;
@@ -901,16 +898,16 @@ class ExtDirectExpedition extends Expedition
             return $param;
         }
     }
-    
+
     /**
      * Ext.direct method to Create shipmentline
-     * 
+     *
      * !!deliver $param sorted by origin_line_id
      *
      * @param unknown_type $param object or object array with shipmentline record
      * @return result data or -1
      */
-    public function createShipmentLine($param) 
+    public function createShipmentLine($param)
     {
         global $conf;
 
@@ -918,6 +915,8 @@ class ExtDirectExpedition extends Expedition
         if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $notrigger=0;
         $paramArray = ExtDirect::toArray($param);
+        $res = 0;
+        $result = 0;
         $batches = array();
         $qtyShipped = 0;
         foreach ($paramArray as &$params) {
@@ -948,7 +947,7 @@ class ExtDirectExpedition extends Expedition
                     } else {
                         $qtyShipped = $params->qty_toship;
                         array_push($batches, $params);
-                    }                    
+                    }
                 } else {
                     // no batch
                     if (($result = $this->create_line($params->warehouse_id, $params->origin_line_id,  $params->qty_toship, 0)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -962,7 +961,7 @@ class ExtDirectExpedition extends Expedition
         if (!empty($conf->productbatch->enabled) && !empty($batches)) {
             if (($res = $this->finishBatches($batches)) < 0) return $res;
         }
-    
+
         if (is_array($param)) {
             return $paramArray;
         } else {
@@ -976,7 +975,7 @@ class ExtDirectExpedition extends Expedition
      * @param unknown_type $param object or object array with shipment record
      * @return result data or -1
      */
-    public function updateShipmentLine($param) 
+    public function updateShipmentLine($param)
     {
         if (ExtDirect::checkDolVersion() < 3.6) {
             return PARAMETERERROR;// no update possible, no line id available
@@ -1028,14 +1027,13 @@ class ExtDirectExpedition extends Expedition
      * @param array $batches array with batch objects
      *
      * @return line_id > 0 OK < 0 KO
-     * 
+     *
      */
-
     private function finishBatches($batches)
     {
         // write related batch info
         require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
-        
+
         $stockLocationQty = array(); // associated array with batch qty in stock location
         $stockLocationOriginLineId = array(); // associated array with OriginLineId's
         $shipmentLineId = 0;
@@ -1065,7 +1063,7 @@ class ExtDirectExpedition extends Expedition
                             $expeditionLineBatch = new ExpeditionLineBatch($this->db);
                         } else {
                             $expeditionLineBatch = new ExpeditionLigneBatch($this->db);
-                        }            
+                        }
                         $expeditionLineBatch->sellby = $batch->sellby;
                         $expeditionLineBatch->eatby = $batch->eatby;
                         $expeditionLineBatch->batch = $batch->batch;
@@ -1077,7 +1075,7 @@ class ExtDirectExpedition extends Expedition
                 }
             }
         }
-        return shipmentLineId;
+        return $shipmentLineId;
     }
 
     /**
@@ -1086,7 +1084,7 @@ class ExtDirectExpedition extends Expedition
      * @param unknown_type $param object or object array with shipment record
      * @return result data or -1
      */
-    public function destroyShipmentLine($param) 
+    public function destroyShipmentLine($param)
     {
         if (ExtDirect::checkDolVersion() < 3.6) {
             return PARAMETERERROR;// no destroy possible, no line id available
@@ -1136,23 +1134,24 @@ class ExtDirectExpedition extends Expedition
     /**
      * public method to fetch batch results
      *
-     * @param array &$results array to store batches
+     * @param array $results array to store batches
      * @param object $row object with line data to add to results
      * @param int $lineId expedition line id
      * @return int < 0 if error > 0 if OK
      */
-    private function fetchBatches(&$results,$row,$lineId) {
+    private function fetchBatches(&$results, $row, $lineId)
+    {
         require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
         $batches = array();
-        
+
         if (ExtDirect::checkDolVersion() >= 3.8) {
             if (($batches = ExpeditionLineBatch::FetchAll($this->db, $lineId)) < 0 ) return $batches;
         } else {
             if (($batches = ExpeditionLigneBatch::FetchAll($this->db, $lineId)) < 0 ) return $batches;
         }
-        
+
         if (!empty($batches)) {
-             foreach ($batches as $batch) {
+            foreach ($batches as $batch) {
                 $row->id = $lineId.'_'.$batch->id;
                 $row->line_id = $lineId;
                 $row->batch_id = $batch->fk_origin_stock;
@@ -1170,13 +1169,13 @@ class ExtDirectExpedition extends Expedition
             // no batch
             array_push($results, clone $row);
         }
-       
+
         return 1;
     }
 }
 /** ExtDirectExpeditionLine class
- * Class to access shipments lines with CRUD methods 
- * 
+ * Class to access shipments lines with CRUD methods
+ *
  * deprecated for 9.0
  */
 class ExtDirectExpeditionLine extends ExpeditionLigne
@@ -1185,20 +1184,21 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
      * Id of warehouse
      * @var int
      */
-    var $entrepot_id;
+    public $entrepot_id;
 
     /**
      * 	Delete shipment line.
-     *  
-     *  @param      int		$lineid		Id of line to delete
+     *
+     *  @param      Object	$user	    Id of line to delete
+     *  @param      int		$notrigger	no run trigger
      * 	@return	int		>0 if OK, <0 if KO
      */
-    function delete($user = null, $notrigger = 0)
+    public function delete($user = null, $notrigger = 0)
     {
         global $conf;
 
         $this->db->begin();
-                
+
         // delete batch expedition line
         if ($conf->productbatch->enabled)
         {
@@ -1212,7 +1212,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                 return -2;
             }
         }
-        
+
         $sql = "DELETE FROM ".MAIN_DB_PREFIX."expeditiondet";
         $sql.= " WHERE rowid = ".$this->id;
 
@@ -1222,26 +1222,19 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
             if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) // For avoid conflicts if trigger used
             {
                 $result=$this->deleteExtraFields();
-                if ($result < 0)
-                {
+                if ($result < 0) {
                     $this->errors[]=$this->error;
                     $this->db->rollback();
                     return -4;
-                }
-                else
-                {
+                } else {
                     $this->db->commit();
                     return 1;
                 }
-            } 
-            else 
-            {
+            } else {
                 $this->db->commit();
                 return 1;
             }
-        }
-        else
-        {
+        } else {
             $this->errors[]=$this->db->lasterror()." - sql=$sql";
             $this->db->rollback();
             return -3;
@@ -1251,9 +1244,12 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
     /**
      *  Update a line in database
      *
+     *  @param      Object	$user	    Id of line to delete
+     *  @param      int		$notrigger	no run trigger
+     *
      *  @return		int					< 0 if KO, > 0 if OK
      */
-    function update($user = null, $notrigger = 0)
+    public function update($user = null, $notrigger = 0)
     {
         global $conf;
 
@@ -1270,16 +1266,13 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
         $batch_id = null;
         $expedition_batch_id = null;
 
-        if (is_array($this->detail_batch)) 
+        if (is_array($this->detail_batch))
         {
-            if (count($this->detail_batch) > 1) 
-            {
+            if (count($this->detail_batch) > 1) {
                 dol_syslog(get_class($this).'::update only possible for one batch', LOG_ERR);
                 $this->errors[]='ErrorBadParameters';
                 return -7;
-            }
-            else
-            {
+            } else {
                 $batch = $this->detail_batch[0]->batch;
                 $batch_id = $this->detail_batch[0]->fk_origin_stock;
                 $expedition_batch_id = $this->detail_batch[0]->id;
@@ -1287,13 +1280,11 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                 {
                     dol_syslog(get_class($this).'::update only possible for batch of same warehouse', LOG_ERR);
                     $this->errors[]='ErrorBadParameters';
-                    $error++;
+                    return -10;
                 }
                 $qty = price2num($this->detail_batch[0]->dluo_qty);
             }
-        }
-        else
-        {
+        } else {
             $batch = $this->detail_batch->batch;
             $batch_id = $this->detail_batch->fk_origin_stock;
             $expedition_batch_id = $this->detail_batch->id;
@@ -1301,7 +1292,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
             {
                 dol_syslog(get_class($this).'::update only possible for batch of same warehouse', LOG_ERR);
                 $this->errors[]='ErrorBadParameters';
-                $error++;
+                return -9;
             }
             $qty = price2num($this->detail_batch->dluo_qty);
         }
@@ -1321,7 +1312,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                 $this->errors[]='ErrorBadParameters';
                 return -8;
             }
-            
+
             // fetch remaining lot qty
             require_once DOL_DOCUMENT_ROOT.'/expedition/class/expeditionbatch.class.php';
             if (($lotArray = ExpeditionLineBatch::fetchAll($this->db, $this->id)) < 0)
@@ -1329,34 +1320,32 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                 $this->errors[]=$this->db->lasterror()." - ExpeditionLineBatch::fetchAll";
                 $this->db->rollback();
                 return -4;
-            }	
-            foreach ($lotArray as $lot) 
+            }
+            foreach ($lotArray as $lot)
             {
-                if ($batch != $lot->batch) 
+                if ($batch != $lot->batch)
                 {
                     $remainingQty += $lot->dluo_qty;
                 }
             }
             $qty += $remainingQty;
             //fetch lot details
-            
-            if (ExtDirect::checkDolVersion() >= 4.0) 
+
+            if (ExtDirect::checkDolVersion() >= 4.0)
             {
                 // fetch from product_lot
                 require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
                 $lot = new Productlot($this->db);
-                if ($lot->fetch(0,$this->fk_product,$batch) < 0) 
+                if ($lot->fetch(0, $this->fk_product, $batch) < 0)
                 {
                     $this->errors[] = $lot->errors;
                     return -3;
                 }
-            } 
-            else 
-            {
+            } else {
                 // fetch from product batch
                 require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
                 $lot = new Productbatch($this->db);
-                if ($lot->fetch($batch_id) < 0) 
+                if ($lot->fetch($batch_id) < 0)
                 {
                     $this->errors[] = $lot->error;
                     return -3;
@@ -1376,8 +1365,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                 }
             }
             if ($this->detail_batch->dluo_qty > 0) {
-                if (isset($lot->id)) 
-                {
+                if (isset($lot->id)) {
                     $shipmentLot = new ExpeditionLineBatch($this->db);
                     $shipmentLot->batch = $lot->batch;
                     $shipmentLot->eatby = $lot->eatby;
@@ -1385,8 +1373,7 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
                     $shipmentLot->entrepot_id = $this->entrepot_id;
                     $shipmentLot->dluo_qty = $this->detail_batch->dluo_qty;
                     $shipmentLot->fk_origin_stock = $batch_id;
-                    if ($shipmentLot->create($this->id) < 0) 
-                    {
+                    if ($shipmentLot->create($this->id) < 0) {
                         $this->errors[]=$shipmentLot->errors;
                         $this->db->rollback();
                         return -6;
@@ -1400,32 +1387,26 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
         $sql.= " fk_entrepot = ".$this->entrepot_id;
         $sql.= " , qty = ".$qty;
         $sql.= " WHERE rowid = ".$this->id;
-        
-        if (!$this->db->query($sql)) 
-        {
+
+        if (!$this->db->query($sql)) {
             $this->errors[]=$this->db->lasterror()." - sql=$sql";
             $this->db->rollback();
             return -5;
         }
-        
+
         if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) // For avoid conflicts if trigger used
         {
-            $this->id=$this->rowid;
             $result=$this->insertExtraFields();
             if ($result < 0)
             {
                 $this->errors[]=$this->error;
                 $this->db->rollback();
                 return -4;
-            }
-            else
-            {
+            } else {
                 $this->db->commit();
                 return 1;
             }
-        } 
-        else 
-        {
+        } else {
             $this->db->commit();
             return 1;
         }
