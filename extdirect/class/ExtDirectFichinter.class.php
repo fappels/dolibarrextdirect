@@ -539,10 +539,10 @@ class ExtDirectFichinter extends Fichinter
             }
         }
 
-        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."fichinter as i";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
-        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON i.rowid = ec.element_id";
+        if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON i.rowid = ec.element_id";
         $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
         $sqlFrom .= "   FROM (";

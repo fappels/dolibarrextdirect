@@ -573,7 +573,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
 
-        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
@@ -583,7 +583,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
             if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_fournisseur_price as pfp ON pfp.fk_product = cd.fk_product";
         }
-        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
+        if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."c_input_method as cim ON c.fk_input_method = cim.rowid";
         $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
