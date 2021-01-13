@@ -292,7 +292,7 @@ class ExtDirectContact extends Contact
         $result = new stdClass;
         $data = array();
         $filterSize = 0;
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($params->limit)) {
             $limit = $params->limit;

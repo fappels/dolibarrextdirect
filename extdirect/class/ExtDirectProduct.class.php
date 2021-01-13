@@ -1215,7 +1215,7 @@ class ExtDirectProduct extends Product
         $multiPriceLevel=1;
         $categorieFilter = false;
         $socid = null;
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($param->limit)) {
             $limit = $param->limit;

@@ -292,7 +292,7 @@ class ExtDirectActionComm extends ActionComm
         $data = array();
 
         $filterSize = 0;
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($params->limit)) {
             $limit = $params->limit;

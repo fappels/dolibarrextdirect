@@ -547,7 +547,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $productId = null;
         $supplierId = null;
 
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($params->limit)) {
             $limit = $params->limit;

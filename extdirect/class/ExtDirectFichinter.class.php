@@ -519,7 +519,7 @@ class ExtDirectFichinter extends Fichinter
         $contactTypeId = 0;
         $barcode = null;
 
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($params->limit)) {
             $limit = $params->limit;

@@ -92,7 +92,7 @@ class ExtDirectFormProduct extends FormProduct
             $statusFilter = '';
         }
 
-        $includeTotal = false;
+        $includeTotal = false; // keep default false for mobilid full warehouse list store 
 
         if (isset($params->limit)) {
             $limit = $params->limit;
