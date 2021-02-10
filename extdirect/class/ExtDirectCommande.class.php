@@ -438,6 +438,8 @@ class ExtDirectCommande extends Commande
                     ($result = $this->setShippingMethod($this->shipping_method_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->fk_incoterms) &&
                     ($result = $this->setIncoterms($this->fk_incoterms, $this->location_incoterms)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (isset($this->ref_client) &&
+                    ($result = $this->set_ref_client($this->_user, $this->ref_client)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }

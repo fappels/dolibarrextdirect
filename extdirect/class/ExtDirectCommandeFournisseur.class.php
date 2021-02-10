@@ -134,7 +134,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->id = $this->id ;
                 //! Ref
                 $row->ref= $this->ref;
-                $row->ref_supplier= $this->ref_client;
+                $row->ref_supplier= $this->ref_supplier;
                 $row->supplier_id = $this->socid;
                 if ($thirdparty->fetch($this->socid)>0) {
                     $row->supplier_name = $thirdparty->name;
@@ -423,6 +423,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->remise_percent) &&
                     ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (isset($this->ref_supplier) &&
+                    ($result = $this->setValueFrom('ref_supplier', $this->ref_supplier, '', null, 'text', '', $this->_user, 'ORDER_SUPPLIER_MODIFY')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
