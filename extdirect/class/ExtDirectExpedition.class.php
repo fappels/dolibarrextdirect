@@ -582,7 +582,34 @@ class ExtDirectExpedition extends Expedition
             $sqlWhere .= " AND ec.fk_c_type_contact = " . $contactTypeId;
             $sqlWhere .= " AND ec.fk_socpeople = " . $contactId;
         }
-        $sqlOrder = " ORDER BY e.date_creation DESC";
+
+        $sqlOrder = " ORDER BY ";
+        if (isset($params->sort)) {
+            $sorterSize = count($params->sort);
+            foreach ($params->sort as $key => $sort) {
+                if (!empty($sort->property)) {
+                    if ($sort->property == 'shipmentstatus_id') {
+                        $sortfield = 'e.fk_statut';
+                    } elseif ($sort->property == 'order_date') {
+                        $sortfield = 'e.date_creation';
+                    } elseif ($sort->property == 'ref') {
+                        $sortfield = 'e.ref';
+                    } elseif ($sort->property == 'deliver_date') {
+                        $sortfield = 'e.date_delivery';
+                    } elseif ($sort->property == 'customer') {
+                        $sortfield = 's.nom';
+                    } else {
+                        $sortfield = $sort->property;
+                    }
+                    $sqlOrder .= $sortfield. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sqlOrder .= ",";
+                    }
+                }
+            }
+        } else {
+            $sqlOrder .= "e.date_creation DESC";
+        }
 
         if ($limit) {
             $sqlLimit = $this->db->plimit($limit, $start);

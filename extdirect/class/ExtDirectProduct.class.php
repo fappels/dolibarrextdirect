@@ -1235,6 +1235,14 @@ class ExtDirectProduct extends Product
             elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
         }
 
+        if (isset($param->sort)) {
+            $sorterSize = count($param->sort);
+            foreach ($param->sort as $key => $sort) {
+                if ($sort->property == 'warehouse_id') $warehouseFilter=true;
+                if ($sort->property == 'categorie') $categorieFilter=true;
+            }
+        }
+
         $sqlFields = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
         if ($warehouseFilter) $sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
         if ($supplierFilter) {
@@ -1336,7 +1344,14 @@ class ExtDirectProduct extends Product
             $sorterSize = count($param->sort);
             foreach ($param->sort as $key => $sort) {
                 if (!empty($sort->property)) {
-                    $sqlOrder .= $sort->property. ' '.$sort->direction;
+                    if ($sort->property == 'warehouse_id') {
+                        $sortfield = 'ps.fk_entrepot';
+                    } elseif ($sort->property == 'categorie') {
+                        $sortfield = 'c.label';
+                    } else {
+                        $sortfield = $sort->property;
+                    }
+                    $sqlOrder .= $sortfield . ' ' . $sort->direction;
                     if ($key < ($sorterSize-1)) {
                         $sqlOrder .= ",";
                     }

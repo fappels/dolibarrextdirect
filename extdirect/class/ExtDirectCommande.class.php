@@ -597,7 +597,35 @@ class ExtDirectCommande extends Commande
             $sqlWhere .= ")";
         }
 
-        $sqlOrder = " ORDER BY c.date_commande DESC";
+        $sqlOrder = " ORDER BY ";
+        if (isset($params->sort)) {
+            $sorterSize = count($params->sort);
+            foreach ($params->sort as $key => $sort) {
+                if (!empty($sort->property)) {
+                    if ($sort->property == 'orderstatus_id') {
+                        $sortfield = 'c.fk_statut';
+                    } elseif ($sort->property == 'order_date') {
+                        $sortfield = 'c.date_commande';
+                    } elseif ($sort->property == 'ref') {
+                        $sortfield = 'c.ref';
+                    } elseif ($sort->property == 'deliver_date') {
+                        $sortfield = 'c.date_livraison';
+                    } elseif ($sort->property == 'ref_customer') {
+                        $sortfield = 'c.ref_client';
+                    } elseif ($sort->property == 'customer') {
+                        $sortfield = 's.nom';
+                    } else {
+                        $sortfield = $sort->property;
+                    }
+                    $sqlOrder .= $sortfield. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sqlOrder .= ",";
+                    }
+                }
+            }
+        } else {
+            $sqlOrder .= "c.date_commande DESC";
+        }
 
         if ($limit) {
             $sqlLimit = $this->db->plimit($limit, $start);
@@ -646,6 +674,7 @@ class ExtDirectCommande extends Commande
                 $row->user_name = $authorName[$row->user_id];
                 $row->total_inc		= $obj->total_ttc;
                 $row->deliver_date  = $this->db->jdate($obj->date_livraison);
+                $row->order_date  = $this->db->jdate($obj->date_commande);
                 array_push($data, $row);
             }
             $this->db->free($resql);
