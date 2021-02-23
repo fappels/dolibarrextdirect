@@ -180,8 +180,8 @@ class ExtDirectProduct extends Product
                     if (($result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid))) <= 0) ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
                     if ($result) {
                         if (count($prodcustprice->lines) > 0) {
-                            $row->price = price($prodcustprice->lines [0]->price);
-                            $row->price_ttc = price($prodcustprice->lines [0]->price_ttc);
+                            $row->price = $prodcustprice->lines [0]->price;
+                            $row->price_ttc = $prodcustprice->lines [0]->price_ttc;
                             $row->price_base_type = $prodcustprice->lines [0]->price_base_type;
                             $row->tva_tx = $prodcustprice->lines [0]->tva_tx;
                         }
