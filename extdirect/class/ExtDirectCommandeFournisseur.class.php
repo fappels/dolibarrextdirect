@@ -134,7 +134,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->id = $this->id ;
                 //! Ref
                 $row->ref= $this->ref;
-                $row->ref_supplier= $this->ref_client;
+                $row->ref_supplier= $this->ref_supplier;
                 $row->supplier_id = $this->socid;
                 if ($thirdparty->fetch($this->socid)>0) {
                     $row->supplier_name = $thirdparty->name;
@@ -423,6 +423,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     ($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (isset($this->remise_percent) &&
                     ($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                if (isset($this->ref_supplier) &&
+                    ($result = $this->setValueFrom('ref_supplier', $this->ref_supplier, '', null, 'text', '', $this->_user, 'ORDER_SUPPLIER_MODIFY')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
             } else {
                 return PARAMETERERROR;
             }
@@ -547,7 +549,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $productId = null;
         $supplierId = null;
 
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -573,7 +575,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
 
-        $sqlFields = "SELECT DISTINCT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
@@ -583,7 +585,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
             if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_fournisseur_price as pfp ON pfp.fk_product = cd.fk_product";
         }
-        $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
+        if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."c_input_method as cim ON c.fk_input_method = cim.rowid";
         $sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
         $sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
@@ -627,7 +629,31 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sqlWhere .= " AND c.fk_soc = ".$supplierId;
         }
 
-        $sqlOrder = " ORDER BY c.date_commande DESC";
+        $sqlOrder = " ORDER BY ";
+        if (isset($params->sort)) {
+            $sorterSize = count($params->sort);
+            foreach ($params->sort as $key => $sort) {
+                if (!empty($sort->property)) {
+                    if ($sort->property == 'orderstatus_id') {
+                        $sortfield = 'c.fk_statut';
+                    } elseif ($sort->property == 'order_date') {
+                        $sortfield = 'c.date_commande';
+                    } elseif ($sort->property == 'ref') {
+                        $sortfield = 'c.ref';
+                    } elseif ($sort->property == 'supplier') {
+                        $sortfield = 's.nom';
+                    } else {
+                        $sortfield = $sort->property;
+                    }
+                    $sqlOrder .= $sortfield. ' '.$sort->direction;
+                    if ($key < ($sorterSize-1)) {
+                        $sqlOrder .= ",";
+                    }
+                }
+            }
+        } else {
+            $sqlOrder .= "c.date_commande DESC";
+        }
 
         if ($limit) {
             $sqlLimit = $this->db->plimit($limit, $start);
@@ -675,6 +701,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
                 $row->total_inc		= $obj->total_ttc;
+                $row->order_date  = $this->db->jdate($obj->date_commande);
                 array_push($data, $row);
             }
             $this->db->free($resql);

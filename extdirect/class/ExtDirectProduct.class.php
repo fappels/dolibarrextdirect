@@ -180,8 +180,8 @@ class ExtDirectProduct extends Product
                     if (($result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid))) <= 0) ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
                     if ($result) {
                         if (count($prodcustprice->lines) > 0) {
-                            $row->price = price($prodcustprice->lines [0]->price);
-                            $row->price_ttc = price($prodcustprice->lines [0]->price_ttc);
+                            $row->price = $prodcustprice->lines [0]->price;
+                            $row->price_ttc = $prodcustprice->lines [0]->price_ttc;
                             $row->price_base_type = $prodcustprice->lines [0]->price_base_type;
                             $row->tva_tx = $prodcustprice->lines [0]->tva_tx;
                         }
@@ -1215,7 +1215,7 @@ class ExtDirectProduct extends Product
         $multiPriceLevel=1;
         $categorieFilter = false;
         $socid = null;
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -1233,6 +1233,14 @@ class ExtDirectProduct extends Product
             elseif (($filter->property == 'categorie_id')) $categorieFilter=true;
             elseif (($filter->property == 'supplier_id')) $supplierFilter=true;
             elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
+        }
+
+        if (isset($param->sort)) {
+            $sorterSize = count($param->sort);
+            foreach ($param->sort as $key => $sort) {
+                if ($sort->property == 'warehouse_id') $warehouseFilter=true;
+                if ($sort->property == 'categorie') $categorieFilter=true;
+            }
         }
 
         $sqlFields = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
@@ -1336,7 +1344,14 @@ class ExtDirectProduct extends Product
             $sorterSize = count($param->sort);
             foreach ($param->sort as $key => $sort) {
                 if (!empty($sort->property)) {
-                    $sqlOrder .= $sort->property. ' '.$sort->direction;
+                    if ($sort->property == 'warehouse_id') {
+                        $sortfield = 'ps.fk_entrepot';
+                    } elseif ($sort->property == 'categorie') {
+                        $sortfield = 'c.label';
+                    } else {
+                        $sortfield = $sort->property;
+                    }
+                    $sqlOrder .= $sortfield . ' ' . $sort->direction;
                     if ($key < ($sorterSize-1)) {
                         $sqlOrder .= ",";
                     }

@@ -372,7 +372,7 @@ class ExtDirectSociete extends Societe
         $filterSize = 0;
         $limit=null;
         $start=0;
-        $includeTotal = false;
+        $includeTotal = true;
 
         if (isset($params->limit)) {
             $limit = $params->limit;

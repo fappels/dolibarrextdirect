@@ -2150,7 +2150,7 @@ describe("shipment", function ()
                 tracking_number: 'connectortest tracking',
                 deliver_date: Ext.Date.format(new Date(), 'U')
             };
-            shipment = Ext.create('ConnectorTest.model.Order', shipmentData);
+            shipment = Ext.create('ConnectorTest.model.Shipment', shipmentData);
             if (dolibarrVersion >= 3.7)	{
             	shipment.set('shipping_method_id', 1);
 			}
@@ -2189,7 +2189,7 @@ describe("shipment", function ()
 		runs(function() {
 			flag = false;
 			Ext.getStore('ShipmentList').clearFilter();
-			Ext.getStore('ShipmentList').filter([Ext.create('Ext.util.Filter',{property:"orderstatus_id",value:orderstatusIds[0]}),
+			Ext.getStore('ShipmentList').filter([Ext.create('Ext.util.Filter',{property:"shipmentstatus_id",value:orderstatusIds[0]}),
 				Ext.create('Ext.util.Filter',{property:"origin_id",value:orderId})]);
 			Ext.getStore('ShipmentList').load({
 				callback: function(records) {
@@ -2442,19 +2442,22 @@ describe("shipment", function ()
 	
     it("update shipment", function ()
     {
-        var record = Ext.getStore('shipment').find('ref', shipmentRef);
+		var record = Ext.getStore('shipment').find('ref', shipmentRef),
+			shipment;
 
         runs(function ()
         {
-            flag = false;
-            Ext.getStore('shipment').getAt(record).set('orderstatus_id', orderstatusIds[1]);
+			flag = false;
+			
+			shipment = Ext.getStore('shipment').getAt(record);
+            shipment.set('shipmentstatus_id', orderstatusIds[1]);
             Ext.getStore('shipment').sync();
             Ext.getStore('shipment').load({
                 callback: function (records)
                 {
                     Ext.Array.each(records, function (record)
                     {
-                        testresult = record.get('orderstatus_id');
+                        testresult = record.get('shipmentstatus_id');
                         shipmentRef = record.get('ref');
                     });
                     flag = true;

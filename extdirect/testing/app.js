@@ -26063,7 +26063,7 @@ Ext.define('ConnectorTest.model.Location', {extend:Ext.data.Model, config:{field
 Ext.define('ConnectorTest.model.Order', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'local_id'}, {name:'origin'}, {name:'origin_id', type:'int'}, {name:'ref'}, {name:'ref_ext'}, {name:'comment'}, {name:'availability_id'}, {name:'availability_code'}, {name:'shipment_id', type:'int'}, {name:'customer_id', type:'int'}, {name:'supplier_id', type:'int'}, {name:'user_id', type:'int'}, {name:'user_valid_id', type:'int'}, {name:'user_approve_id', type:'int'}, {name:'orderstatus_id', type:'int'}, 
 {dateFormat:'timestamp', name:'create_date', type:'date'}, {dateFormat:'timestamp', name:'valid_date', type:'date'}, {dateFormat:'timestamp', name:'approve_date', type:'date'}, {dateFormat:'timestamp', name:'order_date', type:'date'}, {dateFormat:'timestamp', name:'deliver_date', type:'date'}, {name:'note_private'}, {name:'note_public'}, {name:'ref_customer'}, {name:'ref_supplier'}, {name:'user_name'}, {name:'customer_name'}, {name:'supplier_name'}, {name:'orderstatus'}, {name:'weight_units'}, {name:'weight', 
 type:'float'}, {name:'size_units'}, {name:'trueDepth', type:'float'}, {name:'trueWidth', type:'float'}, {name:'trueHeight', type:'float'}, {name:'reduction_percent', type:'float'}, {name:'payment_condition_id', type:'int'}, {name:'payment_type_id', type:'int'}, {name:'warehouse_id', type:'int'}, {name:'order_method_id'}, {name:'order_method'}, {name:'total_net', type:'float'}, {name:'total_tax', type:'float'}, {name:'total_inc', type:'float'}, {name:'total_localtax1', type:'float'}, {name:'total_localtax2', 
-type:'float'}, {name:'shipping_method_id', type:'int'}, {name:'incoterms_id', type:'int'}, {name:'location_incoterms'}, {name:'delivery_address_id', type:'int'}, {name:'model_pdf'}, {name:'tracking_number'}, {name:'customer_type'}, {name:'reduction', type:'float'}, {name:'has_signature', type:'int'}, {name:'signature'}, {name:'app_id'}]}});
+type:'float'}, {name:'shipping_method_id', type:'int'}, {name:'incoterms_id', type:'int'}, {name:'location_incoterms'}, {name:'delivery_address_id', type:'int'}, {name:'model_pdf'}, {name:'tracking_number'}, {name:'customer_type'}, {name:'reduction', type:'float'}, {name:'has_signature', type:'int'}, {name:'signature'}, {name:'shipmentstatus_id', type:'int'}, {dateFormat:'timestamp', name:'shipment_date', type:'date'}, {name:'shipmentstatus'}, {name:'app_id'}]}});
 Ext.define('ConnectorTest.model.OrderLine', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'local_id'}, {name:'line_id'}, {name:'origin_id', type:'int'}, {name:'description'}, {name:'comment'}, {name:'product_id', type:'int'}, {name:'qty_asked', type:'float'}, {defaultValue:0, name:'qty_shipped', type:'float'}, {defaultValue:0, name:'stock', type:'float'}, {defaultValue:0, name:'qty_toship', type:'float'}, {name:'ref'}, {name:'product_label'}, {name:'product_desc'}, {name:'product_price', 
 type:'float'}, {name:'product_price_ttc', type:'float'}, {name:'barcode'}, {name:'barcode_type', type:'int'}, {name:'barcode_with_checksum'}, {name:'product_tax'}, {name:'warehouse_id', type:'int'}, {name:'default_warehouse_id', type:'int'}, {name:'origin_line_id', type:'int'}, {name:'reduction_percent', type:'float'}, {name:'label'}, {name:'product_type'}, {name:'ref_supplier'}, {name:'ref_supplier_id', type:'int'}, {name:'tax_tx', type:'float'}, {name:'localtax1_tx', type:'float'}, {name:'localtax2_tx', 
 type:'float'}, {name:'total_net', type:'float'}, {name:'total_inc', type:'float'}, {name:'total_tax', type:'float'}, {name:'total_localtax1', type:'float'}, {name:'total_localtax2', type:'float'}, {name:'rang', type:'int'}, {name:'price', type:'float'}, {name:'price_base_type'}, {name:'subprice', type:'float'}, {name:'has_batch', type:'int'}, {name:'batch_id', type:'int'}, {name:'stock_id', type:'int'}, {dateFormat:'timestamp', name:'sellby', type:'date'}, {dateFormat:'timestamp', name:'eatby', type:'date'}, 
@@ -26092,7 +26092,7 @@ Ext.define('ConnectorTest.model.ContactLinkTypeList', {extend:Ext.data.Model, co
 Ext.define('ConnectorTest.model.IncotermsCode', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'code'}]}});
 Ext.define('ConnectorTest.model.ShipmentMode', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'code'}, {name:'label'}]}});
 Ext.define('ConnectorTest.model.PriceBaseType', {extend:Ext.data.Model, config:{fields:[{name:'code'}, {name:'label'}]}});
-Ext.define('ConnectorTest.model.ShipmentList', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'ref'}, {name:'ref_ext'}, {name:'supplier_id', type:'int'}, {name:'orderstatus_id', type:'int'}, {name:'orderstatus'}, {name:'status'}, {name:'mode'}]}});
+Ext.define('ConnectorTest.model.ShipmentList', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'ref'}, {name:'ref_ext'}, {name:'supplier_id', type:'int'}, {name:'shipmentstatus_id', type:'int'}, {name:'shipmentstatus'}, {name:'status'}, {name:'mode'}]}});
 Ext.define('ConnectorTest.model.Constant', {extend:Ext.data.Model, config:{fields:[{name:'constant'}, {name:'value'}]}});
 Ext.define('ConnectorTest.model.DataConstant', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'code'}, {name:'label'}, {name:'type'}]}});
 Ext.define('ConnectorTest.model.OptionalModel', {extend:Ext.data.Model, config:{fields:[{name:'name'}, {name:'label'}, {name:'type'}, {name:'default'}]}});
@@ -26101,6 +26101,7 @@ Ext.define('ConnectorTest.model.Intervention', {extend:Ext.data.Model, config:{f
 {name:'customer_name'}, {name:'status'}, {name:'model_pdf'}, {name:'project_id', type:'int'}, {name:'project_ref'}, {name:'contract_id', type:'int'}, {name:'contract_ref'}, {name:'duration', type:'float'}, {name:'has_signature', type:'int'}, {name:'signature'}, {name:'app_id'}]}});
 Ext.define('ConnectorTest.model.InterventionLine', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'local_id'}, {name:'line_id'}, {name:'origin_id', type:'int'}, {name:'description'}, {defaultValue:0, name:'duration', type:'float'}, {name:'rang'}, {dateFormat:'timestamp', name:'date', type:'date'}, {name:'app_id'}]}});
 Ext.define('ConnectorTest.model.InterventionList', {extend:Ext.data.Model, config:{fields:[{name:'id'}, {name:'ref'}, {name:'description'}, {name:'customer'}, {name:'status_id', type:'int'}, {name:'status'}, {name:'customer_id', type:'int'}, {name:'status'}, {name:'user_id', type:'int'}, {name:'user_name'}, {dateFormat:'timestamp', name:'create_date', type:'date'}]}});
+Ext.define('ConnectorTest.model.Shipment', {extend:ConnectorTest.model.Order, fields:[{name:'shipmentstatus_id', type:'int'}, {dateFormat:'timestamp', name:'shipment_date', type:'date'}, {name:'shipmentstatus'}]});
 Ext.define('ConnectorTest.store.ActionList', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.ActionList', remoteFilter:true, storeId:'actionlist'}});
 Ext.define('ConnectorTest.store.Actions', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.Action', remoteFilter:true, storeId:'actions'}});
 Ext.define('ConnectorTest.store.Activities', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.Activity', remoteFilter:true, storeId:'activities'}});
@@ -26138,7 +26139,7 @@ Ext.define('ConnectorTest.store.PurchaseOrderList', {extend:Ext.data.Store, conf
   return item.get('orderstatus');
 }, sortProperty:'orderstatus_id'}}});
 Ext.define('ConnectorTest.store.PurchaseOrderStatus', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.OrderStatus', storeId:'PurchaseOrderStatus'}});
-Ext.define('ConnectorTest.store.Shipment', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.Order', remoteFilter:true, storeId:'shipment'}});
+Ext.define('ConnectorTest.store.Shipment', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.Shipment', remoteFilter:true, storeId:'shipment'}});
 Ext.define('ConnectorTest.store.ShipmentLine', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.OrderLine', remoteFilter:true, storeId:'shipmentline'}});
 Ext.define('ConnectorTest.store.States', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.State', remoteFilter:true, storeId:'States'}});
 Ext.define('ConnectorTest.store.Towns', {extend:Ext.data.Store, config:{model:'ConnectorTest.model.Town', remoteFilter:true, storeId:'towns'}});
@@ -26209,22 +26210,30 @@ Ext.define('ConnectorTest.controller.Main', {extend:Ext.app.Controller, debug:tr
   Ext.getStore('categories').setProxy({type:'direct', api:{create:ExtDirectCategorie.createCategorie, read:ExtDirectCategorie.readCategorie, update:ExtDirectCategorie.updateCategorie, destroy:ExtDirectCategorie.destroyCategorie}});
   Ext.getStore('actions').setProxy({type:'direct', api:{create:ExtDirectActionComm.createAction, read:ExtDirectActionComm.readAction, update:ExtDirectActionComm.updateAction, destroy:ExtDirectActionComm.destroyAction}});
   Ext.getStore('companylist').setProxy({type:'direct', directFn:ExtDirectSociete.readSocieteList});
+  Ext.getStore('companylist').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('towns').setProxy({type:'direct', directFn:ExtDirectSociete.getTowns});
   Ext.getStore('categorielist').setProxy({type:'direct', directFn:ExtDirectCategorie.readCategorieList});
   Ext.getStore('commercialstatus').setProxy({type:'direct', directFn:ExtDirectSociete.readStComm});
   Ext.getStore('contactlist').setProxy({type:'direct', directFn:ExtDirectContact.readContactList});
+  Ext.getStore('contactlist').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('actionlist').setProxy({type:'direct', directFn:ExtDirectActionComm.readActionList});
+  Ext.getStore('actionlist').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('prospectlevel').setProxy({type:'direct', directFn:ExtDirectSociete.readProspectLevel});
   Ext.getStore('orderlist').setProxy({type:'direct', directFn:ExtDirectCommande.readOrderList});
+  Ext.getStore('orderlist').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('PurchaseOrderList').setProxy({type:'direct', directFn:ExtDirectCommandeFournisseur.readOrderList});
+  Ext.getStore('PurchaseOrderList').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('InterventionList').setProxy({type:'direct', directFn:ExtDirectFichinter.readList});
+  Ext.getStore('InterventionList').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('productlist').setProxy({type:'direct', directFn:ExtDirectProduct.readProductList});
+  Ext.getStore('productlist').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('productbatchlist').setProxy({type:'direct', directFn:ExtDirectProduct.readProductBatchList});
   Ext.getStore('orderstatus').setProxy({type:'direct', directFn:ExtDirectCommande.readOrderStatus});
   Ext.getStore('PurchaseOrderStatus').setProxy({type:'direct', directFn:ExtDirectCommandeFournisseur.readOrderStatus});
   Ext.getStore('InterventionStatus').setProxy({type:'direct', directFn:ExtDirectFichinter.readStatus});
   Ext.getStore('lang').setProxy({type:'direct', directFn:ExtDirectTranslate.load});
   Ext.getStore('warehouse').setProxy({type:'direct', directFn:ExtDirectFormProduct.readWarehouses});
+  Ext.getStore('warehouse').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('priceindex').setProxy({type:'direct', directFn:ExtDirectFormProduct.readPriceIndex});
   Ext.getStore('users').setProxy({type:'direct', directFn:ExtDirectActionComm.getAllUsers});
   Ext.getStore('availability').setProxy({type:'direct', directFn:ExtDirectCommande.readAvailabilityCodes});
@@ -26239,6 +26248,7 @@ Ext.define('ConnectorTest.controller.Main', {extend:Ext.app.Controller, debug:tr
   Ext.getStore('IncotermsCodes').setProxy({type:'direct', directFn:ExtDirectCommande.readIncotermCodes});
   Ext.getStore('PriceBaseTypes').setProxy({type:'direct', directFn:ExtDirectFormProduct.readPriceBaseType});
   Ext.getStore('ShipmentList').setProxy({type:'direct', directFn:ExtDirectExpedition.readShipmentList});
+  Ext.getStore('ShipmentList').on('beforeload', this.onBeforeLoaded, this);
   Ext.getStore('ShipmentStatus').setProxy({type:'direct', directFn:ExtDirectExpedition.readShipmentStatus});
   Ext.getStore('ShipmentContactTypeList').setProxy({type:'direct', directFn:ExtDirectExpedition.readContactTypes});
   Ext.getStore('OrderConstants').setProxy({type:'direct', directFn:ExtDirectCommande.readConstants});
@@ -26249,6 +26259,9 @@ Ext.define('ConnectorTest.controller.Main', {extend:Ext.app.Controller, debug:tr
   Ext.getStore('SupplierReputations').setProxy({type:'direct', directFn:ExtDirectFormProduct.readSupplierReputations});
   Ext.getStore('ProductOptionalModel').setProxy({type:'direct', directFn:ExtDirectProduct.readOptionalModel});
   Ext.getStore('ProductOptionals').setProxy({type:'direct', api:{create:ExtDirectProduct.createOptionals, read:ExtDirectProduct.readOptionals, update:ExtDirectProduct.updateOptionals, destroy:ExtDirectProduct.destroyOptionals}});
+}, onBeforeLoaded:function(listStore, operation, eOpts) {
+  var includeTotal = false, allowPaging = false;
+  operation.setParams({include_total:includeTotal, allow_paging:allowPaging});
 }, launch:function() {
   this.debug ? console.log('launch main controller') : null;
   this.jasmineEnv.execute();
@@ -26256,8 +26269,8 @@ Ext.define('ConnectorTest.controller.Main', {extend:Ext.app.Controller, debug:tr
 Ext.define('ConnectorTest.view.MainView', {extend:Ext.Panel, alias:'widget.mainview', config:{itemId:'mainView', padding:10, items:[{xtype:'button', itemId:'runButton', text:'Run Action'}, {xtype:'panel', itemId:'detailPanel', padding:10, tpl:['', '\x3cdiv\x3eID: {id}\x3c/div\x3e', '\x3cdiv\x3eText: {text}\x3c/div\x3e']}]}});
 Ext.Loader.setConfig({});
 Ext.application({controllers:['Main'], models:['Authentication', 'Action', 'ActionList', 'Activity', 'Availability', 'BarcodeType', 'Categorie', 'CategorieList', 'CommercialStatus', 'Company', 'CompanyList', 'Contact', 'ContactList', 'Country', 'Lang', 'Location', 'Order', 'OrderLine', 'OrderList', 'DispatchList', 'OrderStatus', 'PaymentCondition', 'PaymentType', 'PriceIndex', 'Product', 'ProductList', 'ProductBatchList', 'ProductType', 'ProspectLevel', 'State', 'Town', 'User', 'Warehouse', 'ContactLinkTypeList', 
-'IncotermsCode', 'ShipmentMode', 'PriceBaseType', 'ShipmentList', 'Constant', 'DataConstant', 'OptionalModel', 'Optional', 'Intervention', 'InterventionLine', 'InterventionList'], stores:['ActionList', 'Actions', 'Activities', 'Authentication', 'Availability', 'BarcodeTypes', 'CategorieList', 'Categories', 'CommercialStatus', 'Companies', 'CompanyList', 'ContactLinkTypeList', 'ContactList', 'Contacts', 'Countries', 'Lang', 'Locations', 'Order', 'OrderLine', 'OrderList', 'OrderStatus', 'PaymentConditions', 
-'PaymentTypes', 'PriceIndex', 'Product', 'ProductBatchList', 'ProductList', 'ProductTypeList', 'ProspectLevel', 'PurchaseOrder', 'PurchaseOrderLine', 'PurchaseOrderList', 'PurchaseOrderStatus', 'Shipment', 'ShipmentLine', 'States', 'Towns', 'Users', 'Warehouse', 'IncotermsCodes', 'ShipmentModes', 'PriceBaseTypes', 'ShipmentList', 'ShipmentStatus', 'ShipmentContactTypeList', 'OrderConstants', 'ShipmentConstants', 'CompanyConstants', 'SupplierReputations', 'PurchaseConstants', 'ProductOptionalModel', 
-'ProductOptionals', 'Intervention', 'InterventionLines', 'InterventionList', 'InterventionConstants', 'InterventionStatus'], views:['MainView'], name:'ConnectorTest', launch:function() {
+'IncotermsCode', 'ShipmentMode', 'PriceBaseType', 'ShipmentList', 'Constant', 'DataConstant', 'OptionalModel', 'Optional', 'Intervention', 'InterventionLine', 'InterventionList', 'Shipment'], stores:['ActionList', 'Actions', 'Activities', 'Authentication', 'Availability', 'BarcodeTypes', 'CategorieList', 'Categories', 'CommercialStatus', 'Companies', 'CompanyList', 'ContactLinkTypeList', 'ContactList', 'Contacts', 'Countries', 'Lang', 'Locations', 'Order', 'OrderLine', 'OrderList', 'OrderStatus', 
+'PaymentConditions', 'PaymentTypes', 'PriceIndex', 'Product', 'ProductBatchList', 'ProductList', 'ProductTypeList', 'ProspectLevel', 'PurchaseOrder', 'PurchaseOrderLine', 'PurchaseOrderList', 'PurchaseOrderStatus', 'Shipment', 'ShipmentLine', 'States', 'Towns', 'Users', 'Warehouse', 'IncotermsCodes', 'ShipmentModes', 'PriceBaseTypes', 'ShipmentList', 'ShipmentStatus', 'ShipmentContactTypeList', 'OrderConstants', 'ShipmentConstants', 'CompanyConstants', 'SupplierReputations', 'PurchaseConstants', 
+'ProductOptionalModel', 'ProductOptionals', 'Intervention', 'InterventionLines', 'InterventionList', 'InterventionConstants', 'InterventionStatus'], views:['MainView'], name:'ConnectorTest', launch:function() {
   Ext.Viewport.hide();
 }});
