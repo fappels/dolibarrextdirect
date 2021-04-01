@@ -1320,11 +1320,9 @@ class ExtDirectProduct extends Product
                             $sqlWhere .= "sp.rowid IS NOT NULL";
                         }
                     } elseif ($filter->property == 'content') {
-                        $contentValue = strtolower($value);
-                        $sqlWhere.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
-                        $sqlWhere.= " OR LOWER(p.barcode) like '%".$contentValue."%'";
-                        if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $sqlWhere .= " OR LOWER(sp.barcode) like '%".$contentValue."%'";
-                        $sqlWhere.= ")";
+                        $fields = array('p.ref', 'p.label', 'p.barcode');
+                        if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $fields[] = 'sp.barcode';
+                        $sqlWhere .= natural_search($fields, $value, 0, 1);
                     } elseif ($filter->property == 'photo_size' && !empty($value)) {
                         $sqlWhere .= '1';
                         $photoSize = $value;

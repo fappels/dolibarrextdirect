@@ -92,7 +92,7 @@ class ExtDirectFormProduct extends FormProduct
             $statusFilter = '';
         }
 
-        $includeTotal = false; // keep default false for mobilid full warehouse list store 
+        $includeTotal = false; // keep default false for mobilid full warehouse list store
 
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -411,10 +411,11 @@ class ExtDirectFormProduct extends FormProduct
         }
         if (!empty($contentValue)) {
             if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-                $sql.= " AND (LOWER(e.ref) like '%".$this->db->escape($contentValue)."%' OR LOWER(e.description) like '%".$this->db->escape($contentValue)."%')";
+                $fields = array('e.ref', 'e.description');
             } else {
-                $sql.= " AND (LOWER(e.label) like '%".$this->db->escape($contentValue)."%' OR LOWER(e.description) like '%".$this->db->escape($contentValue)."%')";
+                $fields = array('e.label', 'e.description');
             }
+            $sql .= natural_search($fields, $contentValue);
         }
         if ($sumStock && empty($fk_product)) {
             if (ExtDirect::checkDolVersion(0, '7.0', '')) {

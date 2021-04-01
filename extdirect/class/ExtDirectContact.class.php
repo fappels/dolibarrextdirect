@@ -323,9 +323,8 @@ class ExtDirectContact extends Contact
                     $sqlWhere .= "c.town = '".$this->db->escape($filter->value)."'";
                 }
                 elseif ($filter->property == 'content') {
-                    $contentValue = $this->db->escape(strtolower($filter->value));
-                    $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    $sqlWhere.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
+                    $fields = array('c.firstname', 'c.lastname', 'c.town', 'c.zip');
+                    $sqlWhere .= natural_search($fields, $filter->value, 0, 1);
                 } else break;
                 if ($key < ($filterSize-1)) {
                     if ($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';

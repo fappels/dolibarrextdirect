@@ -431,10 +431,8 @@ class ExtDirectSociete extends Societe
                             $sqlWhere .= "c.rowid = ".$value;
                         }
                     } elseif ($filter->property == 'content') {
-                        $contentValue = strtolower($value);
-                        $sqlWhere.= " (LOWER(s.nom) like '%".$contentValue."%' OR LOWER(c.label) like '%".$contentValue."%'";
-                        $sqlWhere.= " OR LOWER(s.code_client) like '%".$contentValue."%' OR LOWER(s.code_fournisseur) like '%".$contentValue."%'" ;
-                        $sqlWhere.= " OR LOWER(s.town) like '%".$contentValue."%' OR LOWER(s.zip) like '%".$contentValue."%')";
+                        $fields = array('s.nom', 'c.label', 's.code_client', 's.code_fournisseur', 's.town', 's.zip');
+                        $sqlWhere .= natural_search($fields, $value, 0, 1);
                     } else {
                         $sqlWhere .= '1';
                     }
@@ -873,9 +871,8 @@ class ExtDirectSociete extends Societe
                 elseif ($filter->property == 'idprof4')
                     $sql .= "(s.idprof4 = '".$this->db->escape($filter->value)."' AND s.entity = ".$conf->entity.")";
                 elseif ($filter->property == 'content') {
-                    $contentValue = strtolower($this->db->escape($filter->value));
-                    $sql.= " (LOWER(s.zip) like '%".$contentValue."%'";
-                    $sql.= " OR LOWER(s.town) like '%".$contentValue."%')" ;
+                    $fields = array('s.town', 's.zip');
+                    $sql .= natural_search($fields, $filter->value, 0, 1);
                 }
                 else break;
                 if ($key < ($filterSize-1)) {
