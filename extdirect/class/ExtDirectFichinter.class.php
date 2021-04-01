@@ -381,12 +381,7 @@ class ExtDirectFichinter extends Fichinter
                                 $outputlangs = new Translate("", $conf);
                                 $outputlangs->setDefaultLang($newlang);
                             }
-                            if (ExtDirect::checkDolVersion(0, '3.7', '')) {
-                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            } else {
-                                require_once DOL_DOCUMENT_ROOT.'/core/modules/fichinter/modules_fichinter.php';
-                                commande_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            }
+                            $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
                         }
                         break;
                     case self::STATUS_CLOSED:
@@ -400,7 +395,7 @@ class ExtDirectFichinter extends Fichinter
                 }
 
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                if (ExtDirect::checkDolVersion(0, '3.5', '') && $this->fk_contrat > 0) {
+                if ($this->fk_contrat > 0) {
                     if (($result = $this->set_contrat($this->_user, $this->fk_contrat)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 if (($result = $this->update($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -897,23 +892,14 @@ class ExtDirectFichinter extends Fichinter
                 $this->prepareInterventionLineFields($params, $line);
                 if (($result = $this->fetch($line->fk_fichinter)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 
-                if (ExtDirect::checkDolVersion(0, '3.5', '')) {
-                    if (($result = $this->addline(
-                        $this->_user,
-                        $line->fk_fichinter,
-                        $line->desc,
-                        $line->datei,
-                        $line->duration
-                    )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                    $params->id=$result;
-                } else {
-                    if (($result = $this->addline(
-                        $line->fk_fichinter,
-                        $line->desc,
-                        $line->datei,
-                        $line->duration
-                    )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                }
+                if (($result = $this->addline(
+                    $this->_user,
+                    $line->fk_fichinter,
+                    $line->desc,
+                    $line->datei,
+                    $line->duration
+                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                $params->id=$result;
             } else {
                 return PARAMETERERROR;
             }

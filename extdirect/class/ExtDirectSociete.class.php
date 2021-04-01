@@ -132,13 +132,8 @@ class ExtDirectSociete extends Societe
         $results = array();
 
         $sql = "SELECT rowid, code, libelle as label";
-        if (ExtDirect::checkDolVersion(0, '3.7')) {
-            $sql = "SELECT rowid, code, label";
-            $sql.= " FROM ".MAIN_DB_PREFIX."c_country";
-        } else {
-            $sql = "SELECT rowid, code, libelle as label";
-            $sql.= " FROM ".MAIN_DB_PREFIX."c_pays";
-        }
+        $sql = "SELECT rowid, code, label";
+        $sql.= " FROM ".MAIN_DB_PREFIX."c_country";
         $sql.= " WHERE active = 1";
 
         $resql=$this->db->query($sql);
@@ -189,11 +184,7 @@ class ExtDirectSociete extends Societe
         array_push($results, $row);
 
         $sql = "SELECT d.rowid, d.code_departement as code , d.nom as label, p.rowid as country_id FROM";
-        if (ExtDirect::checkDolVersion(0, '3.7')) {
-            $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_country as p";
-        } else {
-            $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_pays as p";
-        }
+        $sql .= " ".MAIN_DB_PREFIX ."c_departements as d, ".MAIN_DB_PREFIX."c_regions as r,".MAIN_DB_PREFIX."c_country as p";
         $sql .= " WHERE d.fk_region=r.code_region and r.fk_pays=p.rowid";
         $sql .= " AND d.active = 1 AND r.active = 1 AND p.active = 1";
         if ($country_id) $sql .= " AND p.rowid = ".$country_id;
@@ -390,11 +381,7 @@ class ExtDirectSociete extends Societe
         $sqlFields .= ', c.rowid as categorie_id, c.label as categorie, s.fk_stcomm';
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
-        if (ExtDirect::checkDolVersion(0, '3.8')) {
-            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
-        } else {
-            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_societe';
-        }
+        $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
         if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
         	$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe_commerciaux as sc ON s.rowid = sc.fk_soc';
@@ -598,13 +585,8 @@ class ExtDirectSociete extends Societe
                 $row->name          = $this->name;
                 $row->ref_ext       = $this->ref_ext;
 
-                if (ExtDirect::checkDolVersion(0, '3.6', '')) {
-                    $row->date_create   = $this->date_creation;
-                    $row->date_update   = $this->date_modification;
-                } else {
-                    $row->date_create   = $this->datec;
-                    $row->date_update   = $this->date_update;
-                }
+                $row->date_create   = $this->date_creation;
+                $row->date_update   = $this->date_modification;
                 $row->address       = $this->address;
                 $row->zip           = $this->zip;
                 $row->town          = $this->town;
@@ -843,11 +825,7 @@ class ExtDirectSociete extends Societe
 
         $sql .= ' FROM '.MAIN_DB_PREFIX.'societe as s';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_effectif as e ON s.fk_effectif = e.id';
-        if (ExtDirect::checkDolVersion(0, '3.7')) {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_country as p ON s.fk_pays = p.rowid';
-        } else {
-            $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_pays as p ON s.fk_pays = p.rowid';
-        }
+        $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_country as p ON s.fk_pays = p.rowid';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_forme_juridique as fj ON s.fk_forme_juridique = fj.code';
         $sql .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_departements as d ON s.fk_departement = d.rowid';

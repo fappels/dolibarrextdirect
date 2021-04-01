@@ -402,12 +402,7 @@ class ExtDirectCommande extends Commande
                                 $outputlangs = new Translate("", $conf);
                                 $outputlangs->setDefaultLang($newlang);
                             }
-                            if (ExtDirect::checkDolVersion(0, '3.7', '')) {
-                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            } else {
-                                require_once DOL_DOCUMENT_ROOT.'/core/modules/commande/modules_commande.php';
-                                commande_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            }
+                            $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
                         }
                         break;
                     case 3:
@@ -792,38 +787,34 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
 
-        if (ExtDirect::checkDolVersion(0, '3.7', '')) {
-            $sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
-            $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
-            $sql .= ' WHERE csm.active > 0';
-            $sql .= ' ORDER BY csm.rowid';
+        $sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
+        $sql .= ' WHERE csm.active > 0';
+        $sql .= ' ORDER BY csm.rowid';
 
-            $resql=$this->db->query($sql);
+        $resql=$this->db->query($sql);
 
-            if ($resql) {
-                $num=$this->db->num_rows($resql);
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
 
-                for ($i = 0;$i < $num; $i++) {
-                    $obj = $this->db->fetch_object($resql);
-                    $row = new stdClass;
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
 
-                    $row->id = $obj->rowid;
-                    $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
-                    $label=($transcode!=null?$transcode:$obj->label);
-                    $row->code = $obj->code;
-                    $row->label = $label;
-                    array_push($results, $row);
-                }
-
-                $this->db->free($resql);
-                return $results;
-            } else {
-                $error="Error ".$this->db->lasterror();
-                dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
-                return SQLERROR;
+                $row->id = $obj->rowid;
+                $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
+                $label=($transcode!=null?$transcode:$obj->label);
+                $row->code = $obj->code;
+                $row->label = $label;
+                array_push($results, $row);
             }
-        } else {
+
+            $this->db->free($resql);
             return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
+            return SQLERROR;
         }
     }
 
@@ -837,35 +828,31 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
 
-        if (ExtDirect::checkDolVersion(0, '3.8', '')) {
-            $sql = 'SELECT ci.rowid, ci.code';
-            $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
-            $sql .= ' WHERE ci.active > 0';
-            $sql .= ' ORDER BY ci.rowid';
+        $sql = 'SELECT ci.rowid, ci.code';
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
+        $sql .= ' WHERE ci.active > 0';
+        $sql .= ' ORDER BY ci.rowid';
 
-            $resql=$this->db->query($sql);
+        $resql=$this->db->query($sql);
 
-            if ($resql) {
-                $num=$this->db->num_rows($resql);
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
 
-                for ($i = 0;$i < $num; $i++) {
-                    $obj = $this->db->fetch_object($resql);
-                    $row = new stdClass;
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
 
-                    $row->id = $obj->rowid;
-                    $row->code = $obj->code;
-                    array_push($results, $row);
-                }
-
-                $this->db->free($resql);
-                return $results;
-            } else {
-                $error="Error ".$this->db->lasterror();
-                dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
-                return SQLERROR;
+                $row->id = $obj->rowid;
+                $row->code = $obj->code;
+                array_push($results, $row);
             }
-        }  else {
+
+            $this->db->free($resql);
             return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
+            return SQLERROR;
         }
     }
 
@@ -970,12 +957,10 @@ class ExtDirectCommande extends Commande
                     (!$line->fk_product) ? $isFreeLine = true : $isFreeLine = false;
                     $myprod = new ExtDirectProduct($this->_user->login);
                     if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                    if (ExtDirect::checkDolVersion() >= 3.5) {
-                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                            if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
-                        } else {
-                            if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
-                        }
+                    if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                        if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                    } else {
+                        if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                     }
                     if (!$isFreeLine && ! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
                         $myprod->get_sousproduits_arbo();
@@ -1431,60 +1416,33 @@ class ExtDirectCommande extends Commande
                 $pu_ttc = $tabprice[5];
             }
 
-            if (ExtDirect::checkDolVersion() >= 3.5) {
-                $this->id = $orderLine->fk_commande;
-                if (($result = $this->addline(
-                    $orderLine->desc,
-                    $pu_ht,
-                    $orderLine->qty,
-                    $tva_tx,
-                    $localtax1_tx,
-                    $localtax2_tx,
-                    $orderLine->fk_product,
-                    $orderLine->remise_percent,
-                    $info_bits,
-                    $orderLine->fk_remise_except,
-                    $orderLine->price_base_type,
-                    $pu_ttc,
-                    $orderLine->date_start,
-                    $orderLine->date_end,
-                    $orderLine->product_type,
-                    $orderLine->rang,
-                    $orderLine->special_code,
-                    $orderLine->fk_parent_line,
-                    $orderLine->fk_fournprice,
-                    $orderLine->pa_ht,
-                    $orderLine->label,
-                    0,
-                    $orderLine->fk_unit
-                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                $params->id=$result;
-            } else {
-                if (($result = $this->addline(
-                    $orderLine->fk_commande,
-                    $orderLine->desc,
-                    $pu_ht,
-                    $orderLine->qty,
-                    $tva_tx,
-                    $localtax1_tx,
-                    $localtax2_tx,
-                    $orderLine->fk_product,
-                    $orderLine->remise_percent,
-                    $info_bits,
-                    $orderLine->fk_remise_except,
-                    $orderLine->price_base_type,
-                    $pu_ttc,
-                    $orderLine->date_start,
-                    $orderLine->date_end,
-                    $orderLine->product_type,
-                    $orderLine->rang,
-                    $orderLine->special_code,
-                    $orderLine->fk_parent_line,
-                    $orderLine->fk_fournprice,
-                    $orderLine->pa_ht,
-                    $orderLine->label
-                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            }
+            $this->id = $orderLine->fk_commande;
+            if (($result = $this->addline(
+                $orderLine->desc,
+                $pu_ht,
+                $orderLine->qty,
+                $tva_tx,
+                $localtax1_tx,
+                $localtax2_tx,
+                $orderLine->fk_product,
+                $orderLine->remise_percent,
+                $info_bits,
+                $orderLine->fk_remise_except,
+                $orderLine->price_base_type,
+                $pu_ttc,
+                $orderLine->date_start,
+                $orderLine->date_end,
+                $orderLine->product_type,
+                $orderLine->rang,
+                $orderLine->special_code,
+                $orderLine->fk_parent_line,
+                $orderLine->fk_fournprice,
+                $orderLine->pa_ht,
+                $orderLine->label,
+                0,
+                $orderLine->fk_unit
+            )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            $params->id=$result;
         }
 
         if (is_array($param)) {

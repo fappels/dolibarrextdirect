@@ -186,5 +186,5 @@ Demo data from dev/initdemo should work. Add two multiprice levels and a string 
 
 **Supported Dolibarr Versions:**
 
-- Min version:	3.4
+- Min version:	3.8
 - Max version:	13.0

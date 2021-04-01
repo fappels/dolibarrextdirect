@@ -202,14 +202,8 @@ class ExtDirectProduct extends Product
 
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
-                    if (ExtDirect::checkDolVersion() >= 3.5) {
-                        $this->load_stock('novirtual, warehouseopen, warehouseinternal');
-                    }
-                    if (ExtDirect::checkDolVersion() >= 3.8) {
-                        $row->pmp = $this->pmp;
-                    } else {
-                        $row->pmp = $this->stock_warehouse[$warehouse]->pmp;
-                    }
+                    $this->load_stock('novirtual, warehouseopen, warehouseinternal');
+                    $row->pmp = $this->pmp;
 
                     if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
                         $productBatch = new Productbatch($this->db);
@@ -258,12 +252,10 @@ class ExtDirectProduct extends Product
                     if (! empty($conf->productbatch->enabled) && ! empty($batch)) {
                         // fetch qty and warehouse of first batch found
                         $formProduct = new FormProduct($this->db);
-                        if (ExtDirect::checkDolVersion() >= 3.5) {
-                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                                $this->load_stock('warehouseopen, warehouseinternal');
-                            } else {
-                                $this->load_stock('novirtual, warehouseopen, warehouseinternal');
-                            }
+                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                            $this->load_stock('warehouseopen, warehouseinternal');
+                        } else {
+                            $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                         }
                         $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
@@ -878,9 +870,7 @@ class ExtDirectProduct extends Product
                 if ($updated && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
                 if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
                 // verify
-                if ($updated && (ExtDirect::checkDolVersion() >= 3.6)) {
-                    if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                }
+                if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 // update
                 if ($updated) {
                     if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1542,11 +1532,7 @@ class ExtDirectProduct extends Product
     {
         $diff = false; // difference flag, set to true if a param element diff detected
         $diff = ExtDirect::prepareField($diff, $param, $this, 'ref', 'ref');
-        if (ExtDirect::checkDolVersion() >= 3.8) {
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'label', 'label');
-        } else {
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'label', 'libelle');
-        }
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'label', 'label');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'description', 'description');
         //! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
         $diff = ExtDirect::prepareField($diff, $param, $this, 'type', 'type');
@@ -1824,13 +1810,8 @@ class ExtDirectProduct extends Product
 
         $maxNum = 0;
         if (empty($productObj)) $productObj=$this;
-        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion(0, '', '3.6')))
-        {
-            if (ExtDirect::checkDolVersion(0, '', '3.7')) {
-                $pdir = get_exdir($productObj->id, 2) . $productObj->id ."/photos/";
-            } else {
-                $pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
-            }
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) {
+            $pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
         } else {
             $pdir = $productObj->ref.'/';
         }
@@ -1844,11 +1825,7 @@ class ExtDirectProduct extends Product
             $photoFile = $photos[$num]['photo'];
             $photo_parts = pathinfo($photoFile);
             if ($format == 'mini') {
-                if (ExtDirect::checkDolVersion() <= 3.6) {
-                    $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
-                } else {
-                    $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
-                }
+                $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
             } elseif ($format == 'small') {
                 $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
                 if (!file_exists($filename)) {
@@ -1908,7 +1885,7 @@ class ExtDirectProduct extends Product
 
         $tdir = $dir. '/temp';
 
-        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion() <= 3.6)) $dir .= '/'. get_exdir($this->id, 2) . $this->id ."/photos";
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) $dir .= '/'. get_exdir($this->id, 2, 0, 0, null, '') . $this->id ."/photos";
         else $dir .= '/'.dol_sanitizeFileName($this->ref);
 
         dol_mkdir($tdir);

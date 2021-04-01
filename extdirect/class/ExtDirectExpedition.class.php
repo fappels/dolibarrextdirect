@@ -144,11 +144,7 @@ class ExtDirectExpedition extends Expedition
                 if ($myUser->fetch($this->user_author_id) > 0) {
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
-                if (ExtDirect::checkDolVersion(0, '3.8', '')) {
-                    $row->shipment_date = $this->date_shipping;
-                } else {
-                    $row->shipment_date = $this->date_expedition;
-                }
+                $row->shipment_date = $this->date_shipping;
                 $row->deliver_date = $this->date_delivery;
                 $row->origin_id = $this->origin_id;
                 $row->origin = $this->origin;
@@ -381,12 +377,7 @@ class ExtDirectExpedition extends Expedition
                                 $outputlangs = new Translate("", $conf);
                                 $outputlangs->setDefaultLang($newlang);
                             }
-                            if (ExtDirect::checkDolVersion(0, '3.7', '')) {
-                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            } else {
-                                require_once DOL_DOCUMENT_ROOT . '/core/modules/expedition/modules_expedition.php';
-                                expedition_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            }
+                            $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
                         }
                         break;
                     case 2:
@@ -773,13 +764,8 @@ class ExtDirectExpedition extends Expedition
                         if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
                         if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) $myprod->get_sousproduits_arbo();
                     }
-                    if (ExtDirect::checkDolVersion() < 3.6) {
-                        $row->id = $key; // no line id available
-                        $row->line_id = $key;
-                    } else {
-                        $row->id = $line->line_id;
-                        $row->line_id = $line->line_id;
-                    }
+                    $row->id = $line->line_id;
+                    $row->line_id = $line->line_id;
                     $row->origin_line_id = $line->fk_origin_line;
                     $row->description = $line->description;
                     $row->product_id = $line->fk_product;
@@ -1088,9 +1074,6 @@ class ExtDirectExpedition extends Expedition
      */
     public function updateShipmentLine($param)
     {
-        if (ExtDirect::checkDolVersion() < 3.6) {
-            return PARAMETERERROR; // no update possible, no line id available
-        }
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
@@ -1175,11 +1158,7 @@ class ExtDirectExpedition extends Expedition
                 // store colleted batches
                 foreach ($batches as $batch) {
                     if ($batch->warehouse_id == $stockLocation) {
-                        if (ExtDirect::checkDolVersion(0, '3.8', '')) {
-                            $expeditionLineBatch = new ExpeditionLineBatch($this->db);
-                        } else {
-                            $expeditionLineBatch = new ExpeditionLigneBatch($this->db);
-                        }
+                        $expeditionLineBatch = new ExpeditionLineBatch($this->db);
                         $expeditionLineBatch->sellby = $batch->sellby;
                         $expeditionLineBatch->eatby = $batch->eatby;
                         $expeditionLineBatch->batch = $batch->batch;
@@ -1202,9 +1181,6 @@ class ExtDirectExpedition extends Expedition
      */
     public function destroyShipmentLine($param)
     {
-        if (ExtDirect::checkDolVersion() < 3.6) {
-            return PARAMETERERROR; // no destroy possible, no line id available
-        }
         if (!isset($this->db)) return CONNECTERROR;
         if (!isset($this->_user->rights->expedition->supprimer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
@@ -1254,6 +1230,8 @@ class ExtDirectExpedition extends Expedition
      * @param object $row object with line data to add to results
      * @param int $lineId expedition line id
      * @param int $fk_product product id
+     * @param object $myprod product object
+     * @param string $photoFormat small or mini
      * @return int < 0 if error > 0 if OK
      */
     private function fetchBatches(&$results, $row, $lineId, $fk_product, $myprod, $photoFormat)
@@ -1261,11 +1239,7 @@ class ExtDirectExpedition extends Expedition
         require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
         $batches = array();
 
-        if (ExtDirect::checkDolVersion() >= 3.8) {
-            if (($batches = ExpeditionLineBatch::FetchAll($this->db, $lineId, $fk_product)) < 0) return $batches;
-        } else {
-            if (($batches = ExpeditionLigneBatch::FetchAll($this->db, $lineId)) < 0) return $batches;
-        }
+        if (($batches = ExpeditionLineBatch::FetchAll($this->db, $lineId, $fk_product)) < 0) return $batches;
 
         if (!empty($batches)) {
             foreach ($batches as $batch) {

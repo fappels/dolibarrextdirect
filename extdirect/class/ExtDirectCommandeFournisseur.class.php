@@ -851,7 +851,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $results = array();
         $res = 0;
         $order_id = 0;
-        $productAskedQty = array();
         $photoSize = '';
         $includePhoto = false;
         $batch = '';
@@ -872,28 +871,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $this->id=$order_id;
             if (($result = $this->fetch($this->id)) < 0)  return $result;
             if (!$this->error) {
-                if (ExtDirect::checkDolVersion(0, '', '3.6')) {
-                    foreach ($this->lines as $line) {
-                        if (!array_key_exists($line->fk_product, $productAskedQty)) {
-                            $productAskedQty[$line->fk_product] = $line->qty;
-                        } else {
-                            $productAskedQty[$line->fk_product] += $line->qty;
-                        }
-                    }
-                }
-
                 foreach ($this->lines as $line) {
                     if (!isset($id) || ($id == $line->id)) {
                         if ($line->fk_product) {
                             $isFreeLine = false;
                             $myprod = new ExtDirectProduct($this->_user->login);
                             if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                            if (ExtDirect::checkDolVersion() >= 3.5) {
-                                if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                                    if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
-                                } else {
-                                    if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
-                                }
+                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                                if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                            } else {
+                                if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                             }
                             if (ExtDirect::checkDolVersion(0, '13.0', '')) {
                                 // supplier product for supplier barcode
@@ -941,12 +928,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
                                     $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                                 }
-                                if (ExtDirect::checkDolVersion(0, '', '3.6')) {
-                                    //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
-                                    $row->qty_asked = $productAskedQty[$line->fk_product];
-                                } else {
-                                    $row->qty_asked = $line->qty;
-                                }
+                                $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
                                 $row->localtax2_tx = $line->localtax2_tx;
@@ -967,7 +949,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
-                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
                                 if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                     $row->is_virtual_stock = true;
                                     $row->stock = $myprod->stock_theorique;
@@ -1018,12 +1000,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
                                     $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                                 }
-                                if (ExtDirect::checkDolVersion(0, '', '3.6')) {
-                                    //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
-                                    $row->qty_asked = $productAskedQty[$line->fk_product];
-                                } else {
-                                    $row->qty_asked = $line->qty;
-                                }
+                                $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
                                 $row->localtax2_tx = $line->localtax2_tx;
@@ -1044,7 +1021,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
-                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
                                 if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                     if ($warehouse_id) {
                                         $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real;
@@ -1128,7 +1105,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->date_start = $line->date_start;
                                     $row->date_end = $line->date_end;
                                     // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-                                    $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
+                                    $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse);
                                     $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
                                     if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                         $row->is_virtual_stock = true;
@@ -1640,16 +1617,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      *
      * @param int $lineId supplier order line id
      * @param int $productId product to get qty ditpatched
-     * @param int $qtyAsked ordered line qty
      * @param int $warehouseId warehouse id
      *
      * @return int qty
      */
-    private function getDispatched($lineId, $productId, $qtyAsked, $warehouseId = 0)
+    private function getDispatched($lineId, $productId, $warehouseId = 0)
     {
-        static $dispatchedProducts = array();
-        static $totalDispatchedProducts = array(); // in case of orderlines of same product
-
         $dispatched = 0;
         $qtyShipped = 0;
 
@@ -1658,9 +1631,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur_dispatch as cfd";
             $sql.= " WHERE cfd.fk_commande = ".$this->id;
             $sql.= " AND cfd.fk_product = ".$productId;
-            if (!empty($lineId) && ExtDirect::checkDolVersion(0, '3.7', '')) {
-                $sql.= " AND cfd.fk_commandefourndet = ".$lineId;
-            }
+            $sql.= " AND cfd.fk_commandefourndet = ".$lineId;
             if ($warehouseId > 0) {
                 $sql.= " AND cfd.fk_entrepot = ".$warehouseId;
             }
@@ -1674,36 +1645,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $this->db->free($resql);
             }
 
-            if (!empty($lineId) && ExtDirect::checkDolVersion(0, '3.7', '')) {
-                $qtyShipped = $dispatched;
-            } else {
-                // assemble qtyshipped from products for Dolibarr < 3.7
-                // accept lines with same product for orderline list
-                if ($warehouseId > 0) {
-                    if (!array_key_exists($productId, $dispatchedProducts[$warehouseId])) {
-                        $qtyShipped = $dispatched;
-                        if ($qtyShipped > $qtyAsked) {
-                            $dispatchedProducts[$warehouseId][$productId]=$qtyShipped - $qtyAsked;
-                            $qtyShipped = $qtyAsked;
-                        } else {
-                            $dispatchedProducts[$warehouseId][$productId]=0;
-                        }
-                    } else {
-                        if ($dispatchedProducts[$warehouseId][$productId]) {
-                            $qtyShipped = $dispatchedProducts[$warehouseId][$productId];
-                            if ($qtyShipped > $qtyAsked) {
-                                $qtyShipped = $qtyAsked;
-                            }
-                            if ($totalDispatchedProducts[$warehouseId][$productId] > $qtyShipped) {
-                                $qtyShipped = $dispatched - $totalDispatchedProducts[$warehouseId][$productId];
-                            }
-                        }
-                    }
-                } else {
-                    $qtyShipped = $dispatched;
-                }
-                $totalDispatchedProducts[$warehouseId][$productId] += $qtyShipped;
-            }
+            $qtyShipped = $dispatched;
         }
 
         return $qtyShipped;

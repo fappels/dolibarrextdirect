@@ -304,11 +304,7 @@ class ExtDirectContact extends Contact
         if (isset($params->include_total)) {
             $includeTotal = $params->include_total;
         }
-        if (ExtDirect::checkDolVersion() >= 3.5) {
-            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
-        } else {
-            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
-        }
+        $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
         if ($filterSize > 0) {
