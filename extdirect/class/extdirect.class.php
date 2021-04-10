@@ -668,8 +668,9 @@ class ExtDirect
      */
     public static function fileUpload($param, $dir)
     {
-        global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
+        global $conf, $langs, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
 
+        $langs->load("errors");
         $response = array(
             'success' => false,
             'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
@@ -712,6 +713,8 @@ class ExtDirect
                     );
                 }
             }
+        } elseif ($param['file']['error'] == 1 || $param['file']['error'] == 2) {
+            $response['message'] = 'File: ' . $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
         }
         return $response;
     }
