@@ -1206,6 +1206,7 @@ class ExtDirectProduct extends Product
         $categorieFilter = false;
         $socid = null;
         $includeTotal = true;
+        $warehouseIds = array();
 
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -1218,11 +1219,14 @@ class ExtDirectProduct extends Product
             $includeTotal = $param->include_total;
         }
         foreach ($param->filter as $key => $filter) {
-            if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
-            elseif (($filter->property == 'customer_id') && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
-            elseif (($filter->property == 'categorie_id')) $categorieFilter=true;
-            elseif (($filter->property == 'supplier_id')) $supplierFilter=true;
-            elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
+            if ($filter->property == 'multiprices_index' && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
+            elseif ($filter->property == 'customer_id' && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
+            elseif ($filter->property == 'categorie_id') $categorieFilter=true;
+            elseif ($filter->property == 'supplier_id') $supplierFilter=true;
+            elseif ($filter->property == 'warehouse_id') {
+                $warehouseFilter = true;
+                if ($filter->value > 0) $warehouseIds[] = $filter->value;
+            }
         }
 
         if (isset($param->sort)) {
@@ -1250,7 +1254,12 @@ class ExtDirectProduct extends Product
             }
         }
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
-        if ($warehouseFilter) $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+        if ($warehouseFilter) {
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+            if (count($warehouseIds) > 0) {
+                $sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
+            }
+        }
         if ($categorieFilter) {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
@@ -1261,6 +1270,9 @@ class ExtDirectProduct extends Product
 
         if ($warehouseFilter) {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
+            if (count($warehouseIds) > 0) {
+                $sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
+            }
             if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
                 $sqlFrom.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
             }
@@ -1287,9 +1299,7 @@ class ExtDirectProduct extends Product
                 if (empty($value) && ($filter->property != 'type') && ($filter->property != 'supplier_id')) {
                     $sqlWhere .= '1';
                 } else {
-                    if ($filter->property == 'warehouse_id') {
-                        $sqlWhere .= 'ps.fk_entrepot = '.$value;
-                    } elseif ($filter->property == 'tosell') {
+                    if ($filter->property == 'tosell') {
                         $sqlWhere .= "p.tosell = ".$value;
                     } elseif ($filter->property == 'tobuy') {
                         $sqlWhere .= "p.tobuy = ".$value;
@@ -1312,7 +1322,7 @@ class ExtDirectProduct extends Product
                     } elseif ($filter->property == 'content') {
                         $fields = array('p.ref', 'p.label', 'p.barcode');
                         if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $fields[] = 'sp.barcode';
-                        $sqlWhere .= natural_search($fields, $value, 0, 1);
+                        $sqlWhere .= natural_search($fields, $filter->value, 0, 1);
                     } elseif ($filter->property == 'photo_size' && !empty($value)) {
                         $sqlWhere .= '1';
                         $photoSize = $value;
