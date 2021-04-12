@@ -476,6 +476,7 @@ class ExtDirectExpedition extends Expedition
         isset($params->ref_customer) ? $this->ref_customer = $params->ref_customer : (isset($this->ref_customer) ? null : $this->ref_customer = null);
         isset($params->customer_id) ? $this->socid = $params->customer_id : (isset($this->socid) ? null : $this->socid = null);
         isset($params->deliver_date) ? $this->date_delivery = $params->deliver_date : (isset($this->date_delivery) ? null : $this->date_delivery = null);
+        isset($params->shipment_date) ? $this->date_shipping = $params->shipment_date : (isset($this->date_shipping) ? null : $this->date_shipping = null);
         isset($params->weight_units) ? $this->weight_units = $params->weight_units : (isset($this->weight_units) ? null : $this->weight_units = 0);
         isset($params->weight) ? $this->weight = $params->weight : (isset($this->weight) ? null : $this->weight = 0);
         isset($params->size_units) ? $this->size_units = $params->size_units : (isset($this->size_units) ? null : $this->size_units = 0);

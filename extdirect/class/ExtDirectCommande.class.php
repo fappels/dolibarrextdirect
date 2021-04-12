@@ -143,6 +143,7 @@ class ExtDirectCommande extends Commande
                 }
                 $row->order_date = $this->date;
                 $row->deliver_date= $this->date_livraison;
+                $row->deliver_date= $this->delivery_date;
                 $row->availability_id = $this->availability_id;
                 $row->availability_code = $this->availability_code;
                 $row->reduction_percent = $this->remise_percent;
@@ -415,7 +416,7 @@ class ExtDirectCommande extends Commande
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->set_date($this->_user, $this->date)) < 0) return $result;
                 if (function_exists('setDeliveryDate')) {
-                    if (($result = $this->setDeliveryDate($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->setDeliveryDate($this->_user, $this->delivery_date)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 } else {
                     if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
@@ -494,7 +495,8 @@ class ExtDirectCommande extends Commande
         isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
         isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
         isset($params->order_date) ? ( $this->date =$params->order_date) : ( isset($this->date) ? null : ($this->date = null));
-        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->deliver_date) ? ( $this->date_livraison = $params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->deliver_date) ? ( $this->delivery_date = $params->deliver_date) : ( isset($this->delivery_date) ? null : ($this->delivery_date = null));
         isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ( isset($this->availability_id) ? null : ($this->availability_id = null));
         isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ( isset($this->availability_code) ? null : ($this->availability_code = null));
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;

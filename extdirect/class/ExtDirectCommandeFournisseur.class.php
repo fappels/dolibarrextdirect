@@ -55,6 +55,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE');
 
     /**
+     * @var int Date when delivery received
+	 *
+	 * not used for the moment
+     */
+    public $date_delivered;
+
+    /**
      * Constructor
      *
      * @param string $login user name
@@ -154,7 +161,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->valid_date = $this->date_valid;
                 $row->approve_date = $this->date_approve;
                 $row->order_date = $this->date_commande;
-                $row->deliver_date= $this->date_livraison;
+                $row->deliver_date = $this->delivery_date;
                 $row->order_method_id = $this->methode_commande_id;
                 $row->order_method = $this->methode_commande;
                 $row->reduction_percent = $this->remise_percent;
@@ -394,16 +401,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         $result = $this->commande($this->_user, $this->date_commande, $this->methode_commande_id, $params->comment);
                         break;
                     case 4:
-                        $result = $this->Livraison($this->_user, $this->date_livraison, 'par', $params->comment);
+                        $result = $this->Livraison($this->_user, $this->date_delivered, 'par', $params->comment);
                         break;
                     case 5:
-                        $result = $this->Livraison($this->_user, $this->date_livraison, 'tot', $params->comment);
+                        $result = $this->Livraison($this->_user, $this->date_delivered, 'tot', $params->comment);
                         break;
                     case 6:
                         $result = $this->Cancel($this->_user);
                         break;
                     case 7:
-                        $result = $this->Livraison($this->_user, $this->date_livraison, 'nev', $params->comment);
+                        $result = $this->Livraison($this->_user, $this->date_delivered, 'nev', $params->comment);
                         break;
                     case 9:
                         $result = $this->refuse($this->_user);
@@ -413,9 +420,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 }
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (function_exists('setDeliveryDate')) {
-                    if (($result = $this->setDeliveryDate($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                } else {
-                    if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->setDeliveryDate($this->_user, $this->delivery_date)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 if (isset($this->cond_reglement_id) &&
                     ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -517,7 +522,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
         isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
         isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
-        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->date_delivered) ? ( $this->date_delivered =$params->date_delivered) : ( isset($this->date_delivered) ? null : ($this->date_delivered = null));
+        isset($params->deliver_date) ? ( $this->delivary_date = $params->deliver_date) : ( isset($this->delivary_date) ? null : ($this->delivary_date = null));
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
         isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
@@ -575,7 +581,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
 
-        $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
@@ -638,6 +644,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         $sortfield = 'c.fk_statut';
                     } elseif ($sort->property == 'order_date') {
                         $sortfield = 'c.date_commande';
+                    } elseif ($sort->property == 'deliver_date') {
+                        $sortfield = 'c.date_livraison';
                     } elseif ($sort->property == 'ref') {
                         $sortfield = 'c.ref';
                     } elseif ($sort->property == 'supplier') {
@@ -701,7 +709,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
                 $row->total_inc		= $obj->total_ttc;
-                $row->order_date  = $this->db->jdate($obj->date_commande);
+                $row->order_date    = $this->db->jdate($obj->date_commande);
+                $row->deliver_date  = $this->db->jdate($obj->delivery_date);
                 array_push($data, $row);
             }
             $this->db->free($resql);
