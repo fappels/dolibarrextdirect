@@ -1592,7 +1592,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     public function destroyOrderLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->fournisseur->commande->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {

@@ -1183,7 +1183,7 @@ class ExtDirectExpedition extends Expedition
     public function destroyShipmentLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->expedition->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {

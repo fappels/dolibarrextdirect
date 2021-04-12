@@ -1554,7 +1554,7 @@ class ExtDirectCommande extends Commande
     public function destroyOrderLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {

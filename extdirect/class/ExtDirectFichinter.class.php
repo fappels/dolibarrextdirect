@@ -957,7 +957,7 @@ class ExtDirectFichinter extends Fichinter
     public function destroyInterventionLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->ficheinter->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->ficheinter->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
         $line = new FichinterLigne($this->db);
         $notrigger=0;
