@@ -41,6 +41,26 @@ class ExtDirectCommande extends Commande
         'STOCK_CALCULATE_ON_VALIDATE_ORDER',
         'STOCK_USE_VIRTUAL_STOCK');
 
+        /**
+     * Fully shippable status of validated order
+     */
+    const STATUS_VALIDATED_FULLY_SHIPPABLE = 20;
+
+    /**
+     * partly shippable status of validated order
+     */
+    const STATUS_VALIDATED_PARTLY_SHIPPABLE = 21;
+
+    /**
+     * Fully shippable status of validated order
+     */
+    const STATUS_ONPROCESS_FULLY_SHIPPABLE = 22;
+
+    /**
+     * partly shippable status of validated order
+     */
+    const STATUS_ONPROCESS_PARTLY_SHIPPABLE = 23;
+
     /** Constructor
      *
      * @param string $login user name
@@ -61,6 +81,7 @@ class ExtDirectCommande extends Commande
                 $mysoc->setMysoc($conf);
                 $langs->load("orders");
                 $langs->load("sendings"); // for shipment methods
+                $langs->load("extdirect@extdirect"); // for custom order status
                 parent::__construct($db);
             }
         }
@@ -530,6 +551,10 @@ class ExtDirectCommande extends Commande
 
         $includeTotal = true;
 
+        $orderstatusSort = false;
+        $orderstatusSortDirection = 'ASC';
+        $resultSort = false;
+
         if (isset($params->limit)) {
             $limit = $params->limit;
             $start = $params->start;
@@ -576,6 +601,8 @@ class ExtDirectCommande extends Commande
         if ($statusFilterCount>0) {
             $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
+                if ($fk_statut === self::STATUS_VALIDATED_FULLY_SHIPPABLE || $fk_statut === self::STATUS_VALIDATED_PARTLY_SHIPPABLE) $fk_statut = self::STATUS_VALIDATED;
+                if ($fk_statut === self::STATUS_ONPROCESS_FULLY_SHIPPABLE || $fk_statut === self::STATUS_ONPROCESS_PARTLY_SHIPPABLE) $fk_statut = self::STATUS_SHIPMENTONPROCESS;
                 $sqlWhere .= "c.fk_statut = ".$fk_statut;
                 if ($key < ($statusFilterCount-1)) $sqlWhere .= " OR ";
             }
@@ -601,6 +628,8 @@ class ExtDirectCommande extends Commande
                 if (!empty($sort->property)) {
                     if ($sort->property == 'orderstatus_id') {
                         $sortfield = 'c.fk_statut';
+                        $orderstatusSort = true;
+                        $orderstatusSortDirection = $sort->direction;
                     } elseif ($sort->property == 'order_date') {
                         $sortfield = 'c.date_commande';
                     } elseif ($sort->property == 'ref') {
@@ -659,7 +688,59 @@ class ExtDirectCommande extends Commande
                 $row->ref           = $obj->ref;
                 $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
-                $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
+                if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
+                    && $obj->fk_statut > self::STATUS_DRAFT
+                    && $obj->fk_statut < self::STATUS_CLOSED
+                    && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
+                        || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
+                        || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
+                        || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
+                    )
+                ) {
+                    dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+                    $generic_product = new ExtDirectProduct($this->db);
+                    $productstat_cache = array();
+                    $notshippable = 0;
+                    $notshippableQty = 0;
+                    $shippableQty = 0;
+                    if ($orderstatusSort) $resultSort = true;
+                    $this->id = $row->id;
+                    $this->getLinesArray(); // This set ->lines
+                    $nbprod = 0;
+                    $numlines = count($this->lines); // Loop on each line of order
+                    for ($lig = 0; $lig < $numlines; $lig++) {
+                        if ($this->lines[$lig]->product_type == 0 && $this->lines[$lig]->fk_product > 0)  // If line is a product and not a service
+                        {
+                            $nbprod++; // order contains real products
+                            $generic_product->id = $this->lines[$lig]->fk_product;
+
+                            // Get local and virtual stock and store it into cache
+                            if (empty($productstat_cache[$this->lines[$lig]->fk_product])) {
+                                $generic_product->load_stock('nobatch, novirtual');
+                                $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
+                            } else {
+                                $generic_product->stock_reel = $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
+                            }
+
+                            if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
+                                $notshippable++;
+                                $notshippableQty += $this->lines[$lig]->qty - $generic_product->stock_reel;
+                            } else {
+                                $shippableQty += $this->lines[$lig]->qty;
+                            }
+                        }
+                    }
+                    if ($notshippable == 0) {
+                        if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_FULLY_SHIPPABLE;
+                        elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_FULLY_SHIPPABLE;
+                        $row->shippable_qty = $shippableQty . ' - 0' ;
+                    } else {
+                        if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_PARTLY_SHIPPABLE;
+                        elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_PARTLY_SHIPPABLE;
+                        $row->shippable_qty = $shippableQty . ' - ' . $notshippableQty;
+                    }
+                }
+                $row->orderstatus   = html_entity_decode($this->LibStatut($row->orderstatus_id, false, 1));
                 $row->availability_id = $obj->fk_availability;
                 $row->status        = $obj->status;
                 $row->customer_price_level = ($obj->price_level) ? (int) $obj->price_level : 1;
@@ -675,6 +756,7 @@ class ExtDirectCommande extends Commande
                 array_push($data, $row);
             }
             $this->db->free($resql);
+            if ($resultSort && $orderstatusSort) $data = ExtDirect::resultSort($data, 'orderstatus_id', $orderstatusSortDirection);
             if ($includeTotal) {
                 $result->total = $total;
                 $result->data = $data;
@@ -688,6 +770,53 @@ class ExtDirectCommande extends Commande
             return SQLERROR;
         }
     }
+
+    // phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
+	/**
+	 *	Return label of status
+	 *
+	 *	@param		int		$status      	  Id status
+	 *  @param      int		$billed    		  If invoiced
+	 *	@param      int		$mode        	  1=Short label
+	 *  @param      int     $donotshowbilled  Do not show billed status after order status
+	 *  @return     string					  Label of status
+	 */
+	public function LibStatut($status, $billed, $mode, $donotshowbilled = 0)
+	{
+		// phpcs:enable
+		global $langs, $conf;
+
+		$billedtext = '';
+		if (empty($donotshowbilled)) $billedtext .= ($billed ? ' - '.$langs->transnoentitiesnoconv("Billed") : '');
+
+		if ($status == self::STATUS_CANCELED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderCanceledShort');
+		} elseif ($status == self::STATUS_DRAFT) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderDraftShort');
+		} elseif ($status == self::STATUS_VALIDATED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderValidatedShort').$billedtext;
+		} elseif ($status == self::STATUS_VALIDATED_FULLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderValidatedFullyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_VALIDATED_PARTLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderValidatedPartlyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_ONPROCESS_FULLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderOnprocessFullyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_ONPROCESS_PARTLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderOnprocessPartlyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_SHIPMENTONPROCESS) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderSentShort').$billedtext;
+		} elseif ($status == self::STATUS_CLOSED && (!$billed && empty($conf->global->WORKFLOW_BILL_ON_SHIPMENT))) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderToBillShort');
+		} elseif ($status == self::STATUS_CLOSED && ($billed && empty($conf->global->WORKFLOW_BILL_ON_SHIPMENT))) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderProcessedShort').$billedtext;
+		} elseif ($status == self::STATUS_CLOSED && (!empty($conf->global->WORKFLOW_BILL_ON_SHIPMENT))) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderDeliveredShort');
+		} else {
+			$labelStatusShort = '';
+		}
+
+		return $labelStatusShort;
+	}
 
     /**
      * public method to read a list of orderstatusses

@@ -718,4 +718,26 @@ class ExtDirect
         }
         return $response;
     }
+
+    /**
+     * resultSort, sort result array on object element
+     *
+     * @param array $data result array
+     * @param string $field object element
+     * @param string $direction 'ASC' or 'DESC'
+     * @return array sorted result data
+     */
+    public static function resultSort(array $data, string $field, string $direction)
+    {
+        if ($direction == 'DESC') {
+            usort($data, function ($a, $b) use ($field) {
+                return $a->$field < $b->$field;
+            });
+        } else {
+            usort($data, function ($a, $b) use ($field) {
+                return $a->$field > $b->$field;
+            });
+        }
+        return $data;
+    }
 }
