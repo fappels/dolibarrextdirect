@@ -551,9 +551,11 @@ class ExtDirectCommande extends Commande
 
         $includeTotal = true;
 
+        $orderstatus_id = array();
         $orderstatusSort = false;
         $orderstatusSortDirection = 'ASC';
         $resultSort = false;
+        $customStatus = false;
 
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -575,6 +577,19 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
                 if ($filter->property == 'barcode') $barcode = $filter->value;
             }
+        }
+
+        if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
+            && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
+                || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
+                || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
+                || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
+            )
+        ) {
+            $customStatus = true;
+            // always load page from start to be able to sort on complete result
+            $limit += $start;
+            $start = 0;
         }
 
         $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande";
@@ -688,15 +703,7 @@ class ExtDirectCommande extends Commande
                 $row->ref           = $obj->ref;
                 $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
-                if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
-                    && $obj->fk_statut > self::STATUS_DRAFT
-                    && $obj->fk_statut < self::STATUS_CLOSED
-                    && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
-                        || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
-                        || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
-                        || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
-                    )
-                ) {
+                if ($customStatus && $obj->fk_statut > self::STATUS_DRAFT && $obj->fk_statut < self::STATUS_CLOSED) {
                     dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
                     $generic_product = new ExtDirectProduct($this->db);
                     $productstat_cache = array();
