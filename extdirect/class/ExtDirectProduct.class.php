@@ -64,6 +64,7 @@ class ExtDirectProduct extends Product
                 $mysoc->setMysoc($conf);
                 $langs->load("products");
                 $langs->load("stocks");
+                $langs->load("errors");
                 if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
                 parent::__construct($db);
             }
@@ -828,7 +829,7 @@ class ExtDirectProduct extends Product
      */
     public function updateProduct($params)
     {
-        global $conf;
+        global $conf, $langs;
 
         if (!isset($this->db)) return CONNECTERROR;
         // dolibarr update settings
@@ -877,7 +878,7 @@ class ExtDirectProduct extends Product
                 // verify
                 if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 // update
-                if ($updated || $updatedBarcode) {
+                if ($updated) {
                     if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 // check batch or non batch
@@ -1046,8 +1047,11 @@ class ExtDirectProduct extends Product
                 }
                 // barcode
                 if ($updatedBarcode && !empty($this->barcode)) {
-                    if (($result = $this->setValueFrom('barcode', $this->barcode)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                     if (($result = $this->setValueFrom('fk_barcode_type', $this->barcode_type)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->setValueFrom('barcode', $this->barcode, '', null, '', '', null, 'BARCODE_MODIFY')) < 0) {
+                        $this->error = $langs->trans("Error")." : ".$langs->trans("ErrorProductBarCodeAlreadyExists", $this->barcode);
+                        return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    }
                 }
                 // update product batch
                 if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id) || $createNewBatchFromZeroStock)) {
