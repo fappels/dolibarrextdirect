@@ -955,6 +955,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
                                 $row->ref_supplier = $line->ref_supplier;
+                                if (!empty($line->fk_fournprice)) {
+                                    $row->ref_supplier_id = $line->fk_fournprice;
+                                } elseif (isset($supplierProduct) && !empty($supplierProduct->product_fourn_price_id)) {
+                                    $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                                }
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
@@ -1027,6 +1032,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
                                 $row->ref_supplier = $line->ref_supplier;
+                                if (!empty($line->fk_fournprice)) {
+                                    $row->ref_supplier_id = $line->fk_fournprice;
+                                } elseif (isset($supplierProduct) && !empty($supplierProduct->product_fourn_price_id)) {
+                                    $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                                }
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
@@ -1111,6 +1121,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                     $row->reduction_percent = $line->remise_percent;
                                     $row->ref_supplier = $line->ref_supplier;
+                                    if (!empty($line->fk_fournprice)) {
+                                        $row->ref_supplier_id = $line->fk_fournprice;
+                                    } elseif (isset($supplierProduct) && !empty($supplierProduct->product_fourn_price_id)) {
+                                        $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                                    }
                                     $row->date_start = $line->date_start;
                                     $row->date_end = $line->date_end;
                                     // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
