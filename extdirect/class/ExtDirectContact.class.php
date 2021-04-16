@@ -66,7 +66,6 @@ class ExtDirectContact extends Contact
     public function readContact(stdClass $params)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 
         $results = array();
         $result = 0;
@@ -98,6 +97,7 @@ class ExtDirectContact extends Contact
                     }
                 }
                 if ($result > 0) {
+                    if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
                     $row = new stdClass;
                     $row->id                = (int) $this->id;
                     $row->civility_id       = $this->civilite_id;
