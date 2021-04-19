@@ -891,7 +891,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                             } else {
                                 if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                             }
-                            if (ExtDirect::checkDolVersion(0, '13.0', '')) {
+                            if (ExtDirect::checkDolVersion(0, '4.0', '')) {
                                 // supplier product for supplier barcode
                                 $supplierProduct = new ProductFournisseur($this->db);
                                 $supplierProducts = $supplierProduct->list_product_fournisseur_price($line->fk_product);
