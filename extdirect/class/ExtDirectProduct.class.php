@@ -385,7 +385,11 @@ class ExtDirectProduct extends Product
                 $row->ref_supplier = $supplierProduct->fourn_ref;
                 $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
                 $row->price_supplier = $supplierProduct->fourn_price;
-                $row->qty_supplier = $supplierProduct->fourn_qty;
+                if (!empty($supplierProduct->fourn_qty)) {
+                    $row->qty_supplier = $supplierProduct->fourn_qty;
+                } else {
+                    $row->qty_supplier = 1; //default
+                }
                 $row->reduction_percent_supplier = $supplierProduct->fourn_remise_percent;
                 $row->reduction_supplier = $supplierProduct->fourn_remise;
                 $row->pu_supplier = $supplierProduct->fourn_unitprice;
@@ -1094,7 +1098,7 @@ class ExtDirectProduct extends Product
                     if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 // supplier fields
-                if ($updatedBuyPrice && !empty($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id)) {
+                if ($updatedBuyPrice && isset($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id) && !empty($this->fourn_qty)) {
                     $supplierProduct = new ProductFournisseur($this->db);
                     $supplier = new Societe($this->db);
                     if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
