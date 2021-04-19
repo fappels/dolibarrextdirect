@@ -32,3 +32,7 @@ Clear=Clear
 DolibarrCompatibilityError=Dolibarr version not yet tested for compatibility
 AllLocationsDesc=All Locations
 ActivitiesFromUser=Activities from user
+StatusOrderValidatedFullyShippableShort=Validated shippable
+StatusOrderValidatedPartlyShippableShort=Validated partly shippable
+StatusOrderOnprocessFullyShippableShort=In process shippable
+StatusOrderOnprocessPartlyShippableShort=In process partly shippable

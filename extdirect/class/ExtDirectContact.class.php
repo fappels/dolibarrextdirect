@@ -66,7 +66,6 @@ class ExtDirectContact extends Contact
     public function readContact(stdClass $params)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 
         $results = array();
         $result = 0;
@@ -98,6 +97,7 @@ class ExtDirectContact extends Contact
                     }
                 }
                 if ($result > 0) {
+                    if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
                     $row = new stdClass;
                     $row->id                = (int) $this->id;
                     $row->civility_id       = $this->civilite_id;
@@ -304,11 +304,7 @@ class ExtDirectContact extends Contact
         if (isset($params->include_total)) {
             $includeTotal = $params->include_total;
         }
-        if (ExtDirect::checkDolVersion() >= 3.5) {
-            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
-        } else {
-            $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town';
-        }
+        $sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
         $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
         if ($filterSize > 0) {
@@ -323,9 +319,8 @@ class ExtDirectContact extends Contact
                     $sqlWhere .= "c.town = '".$this->db->escape($filter->value)."'";
                 }
                 elseif ($filter->property == 'content') {
-                    $contentValue = $this->db->escape(strtolower($filter->value));
-                    $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    $sqlWhere.= " OR LOWER(c.town) like '%".$contentValue."%' OR LOWER(c.zip) like '%".$contentValue."%')" ;
+                    $fields = array('c.firstname', 'c.lastname', 'c.town', 'c.zip');
+                    $sqlWhere .= natural_search($fields, $filter->value, 0, 1);
                 } else break;
                 if ($key < ($filterSize-1)) {
                     if ($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';

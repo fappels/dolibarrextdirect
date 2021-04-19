@@ -92,7 +92,7 @@ class ExtDirectFormProduct extends FormProduct
             $statusFilter = '';
         }
 
-        $includeTotal = false; // keep default false for mobilid full warehouse list store 
+        $includeTotal = false; // keep default false for mobilid full warehouse list store
 
         if (isset($params->limit)) {
             $limit = $params->limit;
@@ -411,10 +411,11 @@ class ExtDirectFormProduct extends FormProduct
         }
         if (!empty($contentValue)) {
             if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-                $sql.= " AND (LOWER(e.ref) like '%".$this->db->escape($contentValue)."%' OR LOWER(e.description) like '%".$this->db->escape($contentValue)."%')";
+                $fields = array('e.ref', 'e.description');
             } else {
-                $sql.= " AND (LOWER(e.label) like '%".$this->db->escape($contentValue)."%' OR LOWER(e.description) like '%".$this->db->escape($contentValue)."%')";
+                $fields = array('e.label', 'e.description');
             }
+            $sql .= natural_search($fields, $contentValue);
         }
         if ($sumStock && empty($fk_product)) {
             if (ExtDirect::checkDolVersion(0, '7.0', '')) {
@@ -525,44 +526,36 @@ class ExtDirectFormProduct extends FormProduct
         if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 
         $results = array();
-        if (ExtDirect::checkDolVersion(0, '3.8', '')) {
-            if (ExtDirect::checkDolVersion(0, '10.0', '')) {
-                $sql = "SELECT rowid, label, code, short_label, scale, unit_type";
-            } else {
-                $sql = "SELECT rowid, label, code, short_label";
-            }
-            $sql.= " FROM ".MAIN_DB_PREFIX."c_units";
-            $sql.= " WHERE active > 0";
-            $sql.= " ORDER BY rowid";
-            $resql = $this->db->query($sql);
-            if ($resql) {
-                $num = $this->db->num_rows($resql);
-                $i = 0;
-                while ($i < $num) {
-                    $obj = $this->db->fetch_object($resql);
-                    $row = new stdClass;
-                    $row->id = $obj->rowid;
-                    $row->label = ($langs->transnoentities('unit'.$obj->code)!=$obj->label?$langs->transnoentities('unit'.$obj->code):$obj->label);
-                    $row->short_label = ($langs->transnoentities($obj->short_label)!=$obj->short_label?$langs->transnoentities($obj->short_label):$obj->short_label);
-                    if (ExtDirect::checkDolVersion(0, '10.0', '')) {
-                        $row->scale = $obj->scale;
-                        $row->unit_type = $obj->unit_type;
-                    }
-                    array_push($results, $row);
-                    $i++;
-                }
-                return $results;
-            } else {
-                $error="Error ".$this->db->lasterror();
-                dol_syslog(get_class($this)."::readProductUnits ".$error, LOG_ERR);
-                return SQLERROR;
-            }
+        if (ExtDirect::checkDolVersion(0, '10.0', '')) {
+            $sql = "SELECT rowid, label, code, short_label, scale, unit_type";
         } else {
-            $row = new stdClass;
-            $row->id = 0;
-            $row->label = ($langs->transnoentities('unitP')!='piece'?$langs->transnoentities('unitP'):'piece');
-            $row->short_label = ($langs->transnoentities('p')!='p'?$langs->transnoentities('p'):'p');
-            array_push($results, $row);
+            $sql = "SELECT rowid, label, code, short_label";
+        }
+        $sql.= " FROM ".MAIN_DB_PREFIX."c_units";
+        $sql.= " WHERE active > 0";
+        $sql.= " ORDER BY rowid";
+        $resql = $this->db->query($sql);
+        if ($resql) {
+            $num = $this->db->num_rows($resql);
+            $i = 0;
+            while ($i < $num) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
+                $row->id = $obj->rowid;
+                $row->label = ($langs->transnoentities('unit'.$obj->code)!=$obj->label?$langs->transnoentities('unit'.$obj->code):$obj->label);
+                $row->short_label = ($langs->transnoentities($obj->short_label)!=$obj->short_label?$langs->transnoentities($obj->short_label):$obj->short_label);
+                if (ExtDirect::checkDolVersion(0, '10.0', '')) {
+                    $row->scale = $obj->scale;
+                    $row->unit_type = $obj->unit_type;
+                }
+                array_push($results, $row);
+                $i++;
+            }
+            return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readProductUnits ".$error, LOG_ERR);
+            return SQLERROR;
         }
     }
 }

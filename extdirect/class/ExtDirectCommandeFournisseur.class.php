@@ -55,6 +55,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE');
 
     /**
+     * @var int Date when delivery received
+	 *
+	 * not used for the moment
+     */
+    public $date_delivered;
+
+    /**
      * Constructor
      *
      * @param string $login user name
@@ -154,7 +161,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $row->valid_date = $this->date_valid;
                 $row->approve_date = $this->date_approve;
                 $row->order_date = $this->date_commande;
-                $row->deliver_date= $this->date_livraison;
+                $row->deliver_date = $this->delivery_date;
                 $row->order_method_id = $this->methode_commande_id;
                 $row->order_method = $this->methode_commande;
                 $row->reduction_percent = $this->remise_percent;
@@ -394,16 +401,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         $result = $this->commande($this->_user, $this->date_commande, $this->methode_commande_id, $params->comment);
                         break;
                     case 4:
-                        $result = $this->Livraison($this->_user, $this->date_livraison, 'par', $params->comment);
+                        $result = $this->Livraison($this->_user, $this->date_delivered, 'par', $params->comment);
                         break;
                     case 5:
-                        $result = $this->Livraison($this->_user, $this->date_livraison, 'tot', $params->comment);
+                        $result = $this->Livraison($this->_user, $this->date_delivered, 'tot', $params->comment);
                         break;
                     case 6:
                         $result = $this->Cancel($this->_user);
                         break;
                     case 7:
-                        $result = $this->Livraison($this->_user, $this->date_livraison, 'nev', $params->comment);
+                        $result = $this->Livraison($this->_user, $this->date_delivered, 'nev', $params->comment);
                         break;
                     case 9:
                         $result = $this->refuse($this->_user);
@@ -413,9 +420,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 }
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (function_exists('setDeliveryDate')) {
-                    if (($result = $this->setDeliveryDate($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                } else {
-                    if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->setDeliveryDate($this->_user, $this->delivery_date)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 if (isset($this->cond_reglement_id) &&
                     ($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -517,7 +522,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
         isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
         isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
-        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->date_delivered) ? ( $this->date_delivered =$params->date_delivered) : ( isset($this->date_delivered) ? null : ($this->date_delivered = null));
+        isset($params->deliver_date) ? ( $this->delivary_date = $params->deliver_date) : ( isset($this->delivary_date) ? null : ($this->delivary_date = null));
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
         isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
         isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
@@ -575,7 +581,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             }
         }
 
-        $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande";
+        $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date";
         $sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
         $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
         if ($barcode || $productId) {
@@ -638,6 +644,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         $sortfield = 'c.fk_statut';
                     } elseif ($sort->property == 'order_date') {
                         $sortfield = 'c.date_commande';
+                    } elseif ($sort->property == 'deliver_date') {
+                        $sortfield = 'c.date_livraison';
                     } elseif ($sort->property == 'ref') {
                         $sortfield = 'c.ref';
                     } elseif ($sort->property == 'supplier') {
@@ -701,7 +709,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                     $row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
                 }
                 $row->total_inc		= $obj->total_ttc;
-                $row->order_date  = $this->db->jdate($obj->date_commande);
+                $row->order_date    = $this->db->jdate($obj->date_commande);
+                $row->deliver_date  = $this->db->jdate($obj->delivery_date);
                 array_push($data, $row);
             }
             $this->db->free($resql);
@@ -851,7 +860,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         $results = array();
         $res = 0;
         $order_id = 0;
-        $productAskedQty = array();
         $photoSize = '';
         $includePhoto = false;
         $batch = '';
@@ -872,30 +880,18 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $this->id=$order_id;
             if (($result = $this->fetch($this->id)) < 0)  return $result;
             if (!$this->error) {
-                if (ExtDirect::checkDolVersion(0, '', '3.6')) {
-                    foreach ($this->lines as $line) {
-                        if (!array_key_exists($line->fk_product, $productAskedQty)) {
-                            $productAskedQty[$line->fk_product] = $line->qty;
-                        } else {
-                            $productAskedQty[$line->fk_product] += $line->qty;
-                        }
-                    }
-                }
-
                 foreach ($this->lines as $line) {
                     if (!isset($id) || ($id == $line->id)) {
                         if ($line->fk_product) {
                             $isFreeLine = false;
                             $myprod = new ExtDirectProduct($this->_user->login);
                             if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                            if (ExtDirect::checkDolVersion() >= 3.5) {
-                                if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                                    if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
-                                } else {
-                                    if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
-                                }
+                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                                if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                            } else {
+                                if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                             }
-                            if (ExtDirect::checkDolVersion(0, '13.0', '')) {
+                            if (ExtDirect::checkDolVersion(0, '4.0', '')) {
                                 // supplier product for supplier barcode
                                 $supplierProduct = new ProductFournisseur($this->db);
                                 $supplierProducts = $supplierProduct->list_product_fournisseur_price($line->fk_product);
@@ -941,12 +937,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
                                     $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                                 }
-                                if (ExtDirect::checkDolVersion(0, '', '3.6')) {
-                                    //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
-                                    $row->qty_asked = $productAskedQty[$line->fk_product];
-                                } else {
-                                    $row->qty_asked = $line->qty;
-                                }
+                                $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
                                 $row->localtax2_tx = $line->localtax2_tx;
@@ -964,10 +955,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
                                 $row->ref_supplier = $line->ref_supplier;
+                                if (!empty($line->fk_fournprice)) {
+                                    $row->ref_supplier_id = $line->fk_fournprice;
+                                } elseif (isset($supplierProduct) && !empty($supplierProduct->product_fourn_price_id)) {
+                                    $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                                }
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
-                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
                                 if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                     $row->is_virtual_stock = true;
                                     $row->stock = $myprod->stock_theorique;
@@ -1018,12 +1014,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
                                     $row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
                                 }
-                                if (ExtDirect::checkDolVersion(0, '', '3.6')) {
-                                    //  total qty asked for all same products (in < 3.7 there is no line_id in dispatched table)
-                                    $row->qty_asked = $productAskedQty[$line->fk_product];
-                                } else {
-                                    $row->qty_asked = $line->qty;
-                                }
+                                $row->qty_asked = $line->qty;
                                 $row->tax_tx = $line->tva_tx;
                                 $row->localtax1_tx = $line->localtax1_tx;
                                 $row->localtax2_tx = $line->localtax2_tx;
@@ -1041,10 +1032,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                 $row->reduction_percent = $line->remise_percent;
                                 $row->ref_supplier = $line->ref_supplier;
+                                if (!empty($line->fk_fournprice)) {
+                                    $row->ref_supplier_id = $line->fk_fournprice;
+                                } elseif (isset($supplierProduct) && !empty($supplierProduct->product_fourn_price_id)) {
+                                    $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                                }
                                 $row->date_start = $line->date_start;
                                 $row->date_end = $line->date_end;
                                 // qty shipped for product line
-                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty);
+                                $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
                                 if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                     if ($warehouse_id) {
                                         $row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real;
@@ -1125,10 +1121,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
                                     $row->reduction_percent = $line->remise_percent;
                                     $row->ref_supplier = $line->ref_supplier;
+                                    if (!empty($line->fk_fournprice)) {
+                                        $row->ref_supplier_id = $line->fk_fournprice;
+                                    } elseif (isset($supplierProduct) && !empty($supplierProduct->product_fourn_price_id)) {
+                                        $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
+                                    }
                                     $row->date_start = $line->date_start;
                                     $row->date_end = $line->date_end;
                                     // qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-                                    $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $line->qty, $warehouse);
+                                    $row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse);
                                     $row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
                                     if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
                                         $row->is_virtual_stock = true;
@@ -1606,7 +1607,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
     public function destroyOrderLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->fournisseur->commande->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {
@@ -1640,16 +1641,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
      *
      * @param int $lineId supplier order line id
      * @param int $productId product to get qty ditpatched
-     * @param int $qtyAsked ordered line qty
      * @param int $warehouseId warehouse id
      *
      * @return int qty
      */
-    private function getDispatched($lineId, $productId, $qtyAsked, $warehouseId = 0)
+    private function getDispatched($lineId, $productId, $warehouseId = 0)
     {
-        static $dispatchedProducts = array();
-        static $totalDispatchedProducts = array(); // in case of orderlines of same product
-
         $dispatched = 0;
         $qtyShipped = 0;
 
@@ -1658,9 +1655,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
             $sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur_dispatch as cfd";
             $sql.= " WHERE cfd.fk_commande = ".$this->id;
             $sql.= " AND cfd.fk_product = ".$productId;
-            if (!empty($lineId) && ExtDirect::checkDolVersion(0, '3.7', '')) {
-                $sql.= " AND cfd.fk_commandefourndet = ".$lineId;
-            }
+            $sql.= " AND cfd.fk_commandefourndet = ".$lineId;
             if ($warehouseId > 0) {
                 $sql.= " AND cfd.fk_entrepot = ".$warehouseId;
             }
@@ -1674,36 +1669,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                 $this->db->free($resql);
             }
 
-            if (!empty($lineId) && ExtDirect::checkDolVersion(0, '3.7', '')) {
-                $qtyShipped = $dispatched;
-            } else {
-                // assemble qtyshipped from products for Dolibarr < 3.7
-                // accept lines with same product for orderline list
-                if ($warehouseId > 0) {
-                    if (!array_key_exists($productId, $dispatchedProducts[$warehouseId])) {
-                        $qtyShipped = $dispatched;
-                        if ($qtyShipped > $qtyAsked) {
-                            $dispatchedProducts[$warehouseId][$productId]=$qtyShipped - $qtyAsked;
-                            $qtyShipped = $qtyAsked;
-                        } else {
-                            $dispatchedProducts[$warehouseId][$productId]=0;
-                        }
-                    } else {
-                        if ($dispatchedProducts[$warehouseId][$productId]) {
-                            $qtyShipped = $dispatchedProducts[$warehouseId][$productId];
-                            if ($qtyShipped > $qtyAsked) {
-                                $qtyShipped = $qtyAsked;
-                            }
-                            if ($totalDispatchedProducts[$warehouseId][$productId] > $qtyShipped) {
-                                $qtyShipped = $dispatched - $totalDispatchedProducts[$warehouseId][$productId];
-                            }
-                        }
-                    }
-                } else {
-                    $qtyShipped = $dispatched;
-                }
-                $totalDispatchedProducts[$warehouseId][$productId] += $qtyShipped;
-            }
+            $qtyShipped = $dispatched;
         }
 
         return $qtyShipped;

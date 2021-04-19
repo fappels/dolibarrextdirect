@@ -467,13 +467,13 @@ class ExtDirect
 
         if ($validate)
         {
-            $minVersion = '3.4';
+            $minVersion = '3.8';
             $maxVersion = '13.0'; // tested version
         }
         if (empty($minVersion) && empty($maxVersion)) {
             return $dolMajorMinorVersion;
         } else {
-            if (empty($minVersion)) $minVersion = '3.4';
+            if (empty($minVersion)) $minVersion = '3.8';
             if (empty($maxVersion)) $maxVersion = '13.0'; // debugging version
             if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
                 return 1;
@@ -668,8 +668,9 @@ class ExtDirect
      */
     public static function fileUpload($param, $dir)
     {
-        global $conf, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
+        global $conf, $langs, $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini, $quality;
 
+        $langs->load("errors");
         $response = array(
             'success' => false,
             'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
@@ -712,7 +713,31 @@ class ExtDirect
                     );
                 }
             }
+        } elseif ($param['file']['error'] == 1 || $param['file']['error'] == 2) {
+            $response['message'] = 'File: ' . $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
         }
         return $response;
+    }
+
+    /**
+     * resultSort, sort result array on object element
+     *
+     * @param array $data result array
+     * @param string $field object element
+     * @param string $direction 'ASC' or 'DESC'
+     * @return array sorted result data
+     */
+    public static function resultSort(array $data, string $field, string $direction)
+    {
+        if ($direction == 'DESC') {
+            usort($data, function ($a, $b) use ($field) {
+                return $a->$field < $b->$field;
+            });
+        } else {
+            usort($data, function ($a, $b) use ($field) {
+                return $a->$field > $b->$field;
+            });
+        }
+        return $data;
     }
 }

@@ -64,7 +64,7 @@ class ExtDirectProduct extends Product
                 $mysoc->setMysoc($conf);
                 $langs->load("products");
                 $langs->load("stocks");
-                $langs->load("productbatch");
+                $langs->load("errors");
                 if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
                 parent::__construct($db);
             }
@@ -202,14 +202,8 @@ class ExtDirectProduct extends Product
 
                 //! Stock
                 if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
-                    if (ExtDirect::checkDolVersion() >= 3.5) {
-                        $this->load_stock('novirtual, warehouseopen, warehouseinternal');
-                    }
-                    if (ExtDirect::checkDolVersion() >= 3.8) {
-                        $row->pmp = $this->pmp;
-                    } else {
-                        $row->pmp = $this->stock_warehouse[$warehouse]->pmp;
-                    }
+                    $this->load_stock('novirtual, warehouseopen, warehouseinternal');
+                    $row->pmp = $this->pmp;
 
                     if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
                         $productBatch = new Productbatch($this->db);
@@ -258,12 +252,10 @@ class ExtDirectProduct extends Product
                     if (! empty($conf->productbatch->enabled) && ! empty($batch)) {
                         // fetch qty and warehouse of first batch found
                         $formProduct = new FormProduct($this->db);
-                        if (ExtDirect::checkDolVersion() >= 3.5) {
-                            if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                                $this->load_stock('warehouseopen, warehouseinternal');
-                            } else {
-                                $this->load_stock('novirtual, warehouseopen, warehouseinternal');
-                            }
+                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                            $this->load_stock('warehouseopen, warehouseinternal');
+                        } else {
+                            $this->load_stock('novirtual, warehouseopen, warehouseinternal');
                         }
                         $warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
                         foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
@@ -393,7 +385,11 @@ class ExtDirectProduct extends Product
                 $row->ref_supplier = $supplierProduct->fourn_ref;
                 $row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
                 $row->price_supplier = $supplierProduct->fourn_price;
-                $row->qty_supplier = $supplierProduct->fourn_qty;
+                if (!empty($supplierProduct->fourn_qty)) {
+                    $row->qty_supplier = $supplierProduct->fourn_qty;
+                } else {
+                    $row->qty_supplier = 1; //default
+                }
                 $row->reduction_percent_supplier = $supplierProduct->fourn_remise_percent;
                 $row->reduction_supplier = $supplierProduct->fourn_remise;
                 $row->pu_supplier = $supplierProduct->fourn_unitprice;
@@ -793,11 +789,11 @@ class ExtDirectProduct extends Product
                                 $this->fourn_qty,
                                 $this->fourn_price,
                                 $this->_user,
-                                $param->price_base_type_supplier,
+                                $param->price_base_type_supplier ? $param->price_base_type_supplier : 'HT',
                                 $supplier,
                                 0,
                                 $this->fourn_ref,
-                                $this->fourn_tva_tx,
+                                $this->fourn_tva_tx ? $this->fourn_tva_tx : 0,
                                 0,
                                 $this->fourn_remise_percent,
                                 0,
@@ -837,11 +833,10 @@ class ExtDirectProduct extends Product
      */
     public function updateProduct($params)
     {
-        global $conf;
+        global $conf, $langs;
 
         if (!isset($this->db)) return CONNECTERROR;
         // dolibarr update settings
-        $allowmodcodeclient=0;
         $notrigger=false;
         $supplierProducts = array();
 
@@ -872,15 +867,20 @@ class ExtDirectProduct extends Product
                     }
                 }
                 $updated = $this->prepareFields($param);
+                $updatedBarcode = $this->prepareFieldsBarcode($param);
+                if (!empty($conf->global->PRODUIT_MULTIPRICES) && $param->multiprices_index > 0) {
+                    $updatedSellPrice = $this->prepareFieldsSellPrice($param, $param->multiprices_index);
+                } else {
+                    $updatedSellPrice = $this->prepareFieldsSellPrice($param);
+                }
+                $updatedBuyPrice = $this->prepareFieldsBuyPrice($param);
                 if (!empty($this->barcode)) {
                     $this->fetch_barcode();
                 }
-                if ($updated && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
+                if (($updated || $updatedBarcode || $updatedSellPrice || $updatedBuyPrice) && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
                 if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
                 // verify
-                if ($updated && (ExtDirect::checkDolVersion() >= 3.6)) {
-                    if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                }
+                if (($result = $this->verify()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 // update
                 if ($updated) {
                     if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1050,9 +1050,12 @@ class ExtDirectProduct extends Product
                     if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
                 // barcode
-                if ($updated && !empty($this->barcode)) {
-                    $this->setValueFrom('barcode', $this->barcode);
-                    $this->setValueFrom('fk_barcode_type', $this->barcode_type);
+                if ($updatedBarcode && !empty($this->barcode)) {
+                    if (($result = $this->setValueFrom('fk_barcode_type', $this->barcode_type)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->setValueFrom('barcode', $this->barcode, '', null, '', '', null, 'BARCODE_MODIFY')) < 0) {
+                        $this->error = $langs->trans("Error")." : ".$langs->trans("ErrorProductBarCodeAlreadyExists", $this->barcode);
+                        return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    }
                 }
                 // update product batch
                 if (!empty($conf->productbatch->enabled) && (!empty($param->batch) || !empty($param->batch_id) || $createNewBatchFromZeroStock)) {
@@ -1085,50 +1088,50 @@ class ExtDirectProduct extends Product
                         if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
                     }
                 }
-                if ($updated) {
+                if ($updatedSellPrice && (isset($param->price) || isset($param->price_ttc))) {
                     // price
-                    if ($this->price_base_type == 'TTC') {
-                        $newSellPrice = $this->price_ttc;
+                    if ($param->price_base_type == 'TTC') {
+                        $newSellPrice = $param->price_ttc;
                     } else {
-                        $newSellPrice = $this->price;
+                        $newSellPrice = $param->price;
                     }
                     if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                    // supplier fields
-                    if (!empty($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id)) {
-                        $supplierProduct = new ProductFournisseur($this->db);
-                        $supplier = new Societe($this->db);
-                        if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
-                        $supplierProduct->id = $this->id;
-                        if (empty($this->product_fourn_price_id)) {
-                            if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                        }
-                        $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
-                        if (($result = $supplierProduct->update_buyprice(
-                                        $this->fourn_qty,
-                                        $this->fourn_price,
-                                        $this->_user,
-                                        $param->price_base_type_supplier,
-                                        $supplier,
-                                        0,
-                                        $this->fourn_ref,
-                                        $this->fourn_tva_tx,
-                                        0,
-                                        $this->fourn_remise_percent,
-                                        0,
-                                        0,
-                                        0,
-                                        $this->supplier_reputation,
-                                        array(),
-                                        '',
-                                        0,
-                                        'HT',
-                                        1,
-                                        '',
-                                        '',
-                                        $this->barcode,
-                                        $this->barcode_type
-                        )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
+                }
+                // supplier fields
+                if ($updatedBuyPrice && isset($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id) && !empty($this->fourn_qty)) {
+                    $supplierProduct = new ProductFournisseur($this->db);
+                    $supplier = new Societe($this->db);
+                    if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
+                    $supplierProduct->id = $this->id;
+                    if (empty($this->product_fourn_price_id)) {
+                        if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                     }
+                    $supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
+                    if (($result = $supplierProduct->update_buyprice(
+                                    $this->fourn_qty,
+                                    $this->fourn_price,
+                                    $this->_user,
+                                    $param->price_base_type_supplier ? $param->price_base_type_supplier : 'HT',
+                                    $supplier,
+                                    0,
+                                    $this->fourn_ref,
+                                    $this->fourn_tva_tx ? $this->fourn_tva_tx : 0,
+                                    0,
+                                    $this->fourn_remise_percent,
+                                    0,
+                                    0,
+                                    0,
+                                    $this->supplier_reputation,
+                                    array(),
+                                    '',
+                                    0,
+                                    'HT',
+                                    1,
+                                    '',
+                                    '',
+                                    $this->barcode,
+                                    $this->barcode_type
+                    )) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
                 }
 
                 // add photo
@@ -1216,6 +1219,7 @@ class ExtDirectProduct extends Product
         $categorieFilter = false;
         $socid = null;
         $includeTotal = true;
+        $warehouseIds = array();
 
         if (isset($param->limit)) {
             $limit = $param->limit;
@@ -1228,11 +1232,14 @@ class ExtDirectProduct extends Product
             $includeTotal = $param->include_total;
         }
         foreach ($param->filter as $key => $filter) {
-            if (($filter->property == 'multiprices_index') && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
-            elseif (($filter->property == 'customer_id') && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
-            elseif (($filter->property == 'categorie_id')) $categorieFilter=true;
-            elseif (($filter->property == 'supplier_id')) $supplierFilter=true;
-            elseif (($filter->property == 'warehouse_id')) $warehouseFilter=true;
+            if ($filter->property == 'multiprices_index' && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
+            elseif ($filter->property == 'customer_id' && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
+            elseif ($filter->property == 'categorie_id') $categorieFilter=true;
+            elseif ($filter->property == 'supplier_id') $supplierFilter=true;
+            elseif ($filter->property == 'warehouse_id') {
+                $warehouseFilter = true;
+                if ($filter->value > 0) $warehouseIds[] = $filter->value;
+            }
         }
 
         if (isset($param->sort)) {
@@ -1260,7 +1267,12 @@ class ExtDirectProduct extends Product
             }
         }
         $sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
-        if ($warehouseFilter) $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+        if ($warehouseFilter) {
+            $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+            if (count($warehouseIds) > 0) {
+                $sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
+            }
+        }
         if ($categorieFilter) {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_product as cp ON p.rowid = cp.fk_product';
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cp.fk_categorie';
@@ -1271,6 +1283,9 @@ class ExtDirectProduct extends Product
 
         if ($warehouseFilter) {
             $sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot as e on ps.fk_entrepot = e.rowid';
+            if (count($warehouseIds) > 0) {
+                $sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
+            }
             if (! empty($conf->global->ENTREPOT_EXTRA_STATUS)) {
                 $sqlFrom.= ' AND e.statut IN ('.Entrepot::STATUS_OPEN_ALL.','.Entrepot::STATUS_OPEN_INTERNAL.')';
             }
@@ -1297,9 +1312,7 @@ class ExtDirectProduct extends Product
                 if (empty($value) && ($filter->property != 'type') && ($filter->property != 'supplier_id')) {
                     $sqlWhere .= '1';
                 } else {
-                    if ($filter->property == 'warehouse_id') {
-                        $sqlWhere .= 'ps.fk_entrepot = '.$value;
-                    } elseif ($filter->property == 'tosell') {
+                    if ($filter->property == 'tosell') {
                         $sqlWhere .= "p.tosell = ".$value;
                     } elseif ($filter->property == 'tobuy') {
                         $sqlWhere .= "p.tobuy = ".$value;
@@ -1320,11 +1333,9 @@ class ExtDirectProduct extends Product
                             $sqlWhere .= "sp.rowid IS NOT NULL";
                         }
                     } elseif ($filter->property == 'content') {
-                        $contentValue = strtolower($value);
-                        $sqlWhere.= " (LOWER(p.ref) like '%".$contentValue."%' OR LOWER(p.label) like '%".$contentValue."%'";
-                        $sqlWhere.= " OR LOWER(p.barcode) like '%".$contentValue."%'";
-                        if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $sqlWhere .= " OR LOWER(sp.barcode) like '%".$contentValue."%'";
-                        $sqlWhere.= ")";
+                        $fields = array('p.ref', 'p.label', 'p.barcode');
+                        if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $fields[] = 'sp.barcode';
+                        $sqlWhere .= natural_search($fields, $filter->value, 0, 1);
                     } elseif ($filter->property == 'photo_size' && !empty($value)) {
                         $sqlWhere .= '1';
                         $photoSize = $value;
@@ -1544,30 +1555,12 @@ class ExtDirectProduct extends Product
     {
         $diff = false; // difference flag, set to true if a param element diff detected
         $diff = ExtDirect::prepareField($diff, $param, $this, 'ref', 'ref');
-        if (ExtDirect::checkDolVersion() >= 3.8) {
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'label', 'label');
-        } else {
-            $diff = ExtDirect::prepareField($diff, $param, $this, 'label', 'libelle');
-        }
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'label', 'label');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'description', 'description');
         //! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
         $diff = ExtDirect::prepareField($diff, $param, $this, 'type', 'type');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'note', 'note');
         (isset($this->note) ? null : ($this->note = '')); // create new product, set note to ''
-        //! Selling price
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'price', 'price');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'price_ttc', 'price_ttc');
-        //! Default VAT rate of product
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_tx', 'tva_tx');
-        //! Base price ('TTC' for price including tax or 'HT' for net price)
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'price_base_type', 'price_base_type');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min', 'price_min');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min_ttc', 'price_min_ttc');
-        //! French VAT NPR (0 or 1)
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_npr', 'tva_npr');
-        //! local taxes
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'localtax1_tx', 'localtax1_tx');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'localtax2_tx', 'localtax2_tx');
         //! Stock alert
         $diff = ExtDirect::prepareField($diff, $param, $this, 'seuil_stock_alerte', 'seuil_stock_alerte');
         //! Duree de validite du service
@@ -1598,9 +1591,6 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'volume_units', 'volume_units');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'accountancy_code_buy', 'accountancy_code_buy');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'accountancy_code_sell', 'accountancy_code_sell');
-        //! barcode
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'barcode', 'barcode');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'barcode_type', 'barcode_type');
         // no links to offers in this version
         // no multilangs in this version
         //! Canevas a utiliser si le produit n'est pas un produit generique
@@ -1612,7 +1602,72 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'unit_id', 'fk_unit');
         // has batch
         $diff = ExtDirect::prepareField($diff, $param, $this, 'has_batch', 'status_batch');
-        //ExtDirect::prepareField($diff, $param, $this, 'productinfo', 'array_options['options_productinfo']');
+        return $diff;
+    }
+
+    /**
+     * private method to copy fields into dolibarr object
+     *
+     * @param stdclass $param object with fields
+     * @return boolean $diff true if changed
+     */
+    private function prepareFieldsBarcode($param)
+    {
+        $diff = false; // difference flag, set to true if a param element diff detected
+        //! barcode
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'barcode', 'barcode');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'barcode_type', 'barcode_type');
+        return $diff;
+    }
+
+    /**
+     * private method to copy fields into dolibarr object
+     *
+     * @param stdclass $param object with fields
+     * @param int $multiprices_index multiprice level
+     * @return boolean $diff true if changed
+     */
+    private function prepareFieldsSellPrice($param, $multiprices_index = null)
+    {
+        $diff = false; // difference flag, set to true if a param element diff detected
+        if ($multiprices_index > 0) {
+            //! Selling price
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price', 'multiprices', null, null, $multiprices_index);
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_ttc', 'multiprices_ttc', null, null, $multiprices_index);
+            //! Default VAT rate of product
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_tx', 'multiprices_tva_tx', null, null, $multiprices_index);
+            //! Base price ('TTC' for price including tax or 'HT' for net price)
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_base_type', 'multiprices_base_type', null, null, $multiprices_index);
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min', 'multiprices_min', null, null, $multiprices_index);
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min_ttc', 'multiprices_min_ttc', null, null, $multiprices_index);
+        } else {
+            //! Selling price
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price', 'price');
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_ttc', 'price_ttc');
+            //! Default VAT rate of product
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_tx', 'tva_tx');
+            //! Base price ('TTC' for price including tax or 'HT' for net price)
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_base_type', 'price_base_type');
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min', 'price_min');
+            $diff = ExtDirect::prepareField($diff, $param, $this, 'price_min_ttc', 'price_min_ttc');
+        }
+        //! French VAT NPR (0 or 1)
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'tva_npr', 'tva_npr');
+        //! local taxes
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'localtax1_tx', 'localtax1_tx');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'localtax2_tx', 'localtax2_tx');
+        return $diff;
+    }
+
+    /**
+     * private method to copy fields into dolibarr object
+     *
+     * @param stdclass $param object with fields
+     * @return boolean $diff true if changed
+     */
+    private function prepareFieldsBuyPrice($param)
+    {
+        $diff = false; // difference flag, set to true if a param element diff detected
         $diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier', 'fourn_ref');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier_id', 'product_fourn_price_id');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'price_supplier', 'fourn_price');
@@ -1624,7 +1679,6 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_id', 'fourn_id');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'desiredstock', 'desiredstock');
         $diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_reputation', 'supplier_reputation');
-        $diff = ExtDirect::prepareField($diff, $param, $this, 'default_warehouse_id', 'fk_default_warehouse');
         return $diff;
     }
 
@@ -1826,13 +1880,8 @@ class ExtDirectProduct extends Product
 
         $maxNum = 0;
         if (empty($productObj)) $productObj=$this;
-        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion(0, '', '3.6')))
-        {
-            if (ExtDirect::checkDolVersion(0, '', '3.7')) {
-                $pdir = get_exdir($productObj->id, 2) . $productObj->id ."/photos/";
-            } else {
-                $pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
-            }
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) {
+            $pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
         } else {
             $pdir = $productObj->ref.'/';
         }
@@ -1846,11 +1895,7 @@ class ExtDirectProduct extends Product
             $photoFile = $photos[$num]['photo'];
             $photo_parts = pathinfo($photoFile);
             if ($format == 'mini') {
-                if (ExtDirect::checkDolVersion() <= 3.6) {
-                    $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
-                } else {
-                    $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
-                }
+                $filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
             } elseif ($format == 'small') {
                 $filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
                 if (!file_exists($filename)) {
@@ -1910,7 +1955,7 @@ class ExtDirectProduct extends Product
 
         $tdir = $dir. '/temp';
 
-        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO) || (ExtDirect::checkDolVersion() <= 3.6)) $dir .= '/'. get_exdir($this->id, 2) . $this->id ."/photos";
+        if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) $dir .= '/'. get_exdir($this->id, 2, 0, 0, null, '') . $this->id ."/photos";
         else $dir .= '/'.dol_sanitizeFileName($this->ref);
 
         dol_mkdir($tdir);

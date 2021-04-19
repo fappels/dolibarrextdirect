@@ -41,6 +41,26 @@ class ExtDirectCommande extends Commande
         'STOCK_CALCULATE_ON_VALIDATE_ORDER',
         'STOCK_USE_VIRTUAL_STOCK');
 
+        /**
+     * Fully shippable status of validated order
+     */
+    const STATUS_VALIDATED_FULLY_SHIPPABLE = 20;
+
+    /**
+     * partly shippable status of validated order
+     */
+    const STATUS_VALIDATED_PARTLY_SHIPPABLE = 21;
+
+    /**
+     * Fully shippable status of validated order
+     */
+    const STATUS_ONPROCESS_FULLY_SHIPPABLE = 22;
+
+    /**
+     * partly shippable status of validated order
+     */
+    const STATUS_ONPROCESS_PARTLY_SHIPPABLE = 23;
+
     /** Constructor
      *
      * @param string $login user name
@@ -61,6 +81,7 @@ class ExtDirectCommande extends Commande
                 $mysoc->setMysoc($conf);
                 $langs->load("orders");
                 $langs->load("sendings"); // for shipment methods
+                $langs->load("extdirect@extdirect"); // for custom order status
                 parent::__construct($db);
             }
         }
@@ -143,6 +164,7 @@ class ExtDirectCommande extends Commande
                 }
                 $row->order_date = $this->date;
                 $row->deliver_date= $this->date_livraison;
+                $row->deliver_date= $this->delivery_date;
                 $row->availability_id = $this->availability_id;
                 $row->availability_code = $this->availability_code;
                 $row->reduction_percent = $this->remise_percent;
@@ -402,12 +424,7 @@ class ExtDirectCommande extends Commande
                                 $outputlangs = new Translate("", $conf);
                                 $outputlangs->setDefaultLang($newlang);
                             }
-                            if (ExtDirect::checkDolVersion(0, '3.7', '')) {
-                                $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            } else {
-                                require_once DOL_DOCUMENT_ROOT.'/core/modules/commande/modules_commande.php';
-                                commande_pdf_create($this->db, $this, $this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-                            }
+                            $this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
                         }
                         break;
                     case 3:
@@ -420,7 +437,7 @@ class ExtDirectCommande extends Commande
                 if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 if (($result = $this->set_date($this->_user, $this->date)) < 0) return $result;
                 if (function_exists('setDeliveryDate')) {
-                    if (($result = $this->setDeliveryDate($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+                    if (($result = $this->setDeliveryDate($this->_user, $this->delivery_date)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 } else {
                     if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
                 }
@@ -499,7 +516,8 @@ class ExtDirectCommande extends Commande
         isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
         isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
         isset($params->order_date) ? ( $this->date =$params->order_date) : ( isset($this->date) ? null : ($this->date = null));
-        isset($params->deliver_date) ? ( $this->date_livraison =$params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->deliver_date) ? ( $this->date_livraison = $params->deliver_date) : ( isset($this->date_livraison) ? null : ($this->date_livraison = null));
+        isset($params->deliver_date) ? ( $this->delivery_date = $params->deliver_date) : ( isset($this->delivery_date) ? null : ($this->delivery_date = null));
         isset($params->availability_id) ? ( $this->availability_id =$params->availability_id) : ( isset($this->availability_id) ? null : ($this->availability_id = null));
         isset($params->availability_code) ? ( $this->availability_code =$params->availability_code) : ( isset($this->availability_code) ? null : ($this->availability_code = null));
         isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
@@ -533,6 +551,12 @@ class ExtDirectCommande extends Commande
 
         $includeTotal = true;
 
+        $orderstatus_id = array();
+        $orderstatusSort = false;
+        $orderstatusSortDirection = 'ASC';
+        $resultSort = false;
+        $customStatus = false;
+
         if (isset($params->limit)) {
             $limit = $params->limit;
             $start = $params->start;
@@ -553,6 +577,19 @@ class ExtDirectCommande extends Commande
                 if ($filter->property == 'contact_id') $contactId = $filter->value;
                 if ($filter->property == 'barcode') $barcode = $filter->value;
             }
+        }
+
+        if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
+            && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
+                || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
+                || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
+                || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
+            )
+        ) {
+            $customStatus = true;
+            // always load page from start to be able to sort on complete result
+            $limit += $start;
+            $start = 0;
         }
 
         $sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande";
@@ -579,6 +616,8 @@ class ExtDirectCommande extends Commande
         if ($statusFilterCount>0) {
             $sqlWhere .= " AND ( ";
             foreach ($orderstatus_id as $key => $fk_statut) {
+                if ($fk_statut === self::STATUS_VALIDATED_FULLY_SHIPPABLE || $fk_statut === self::STATUS_VALIDATED_PARTLY_SHIPPABLE) $fk_statut = self::STATUS_VALIDATED;
+                if ($fk_statut === self::STATUS_ONPROCESS_FULLY_SHIPPABLE || $fk_statut === self::STATUS_ONPROCESS_PARTLY_SHIPPABLE) $fk_statut = self::STATUS_SHIPMENTONPROCESS;
                 $sqlWhere .= "c.fk_statut = ".$fk_statut;
                 if ($key < ($statusFilterCount-1)) $sqlWhere .= " OR ";
             }
@@ -604,6 +643,8 @@ class ExtDirectCommande extends Commande
                 if (!empty($sort->property)) {
                     if ($sort->property == 'orderstatus_id') {
                         $sortfield = 'c.fk_statut';
+                        $orderstatusSort = true;
+                        $orderstatusSortDirection = $sort->direction;
                     } elseif ($sort->property == 'order_date') {
                         $sortfield = 'c.date_commande';
                     } elseif ($sort->property == 'ref') {
@@ -662,7 +703,51 @@ class ExtDirectCommande extends Commande
                 $row->ref           = $obj->ref;
                 $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
-                $row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
+                if ($customStatus && $obj->fk_statut > self::STATUS_DRAFT && $obj->fk_statut < self::STATUS_CLOSED) {
+                    dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+                    $generic_product = new ExtDirectProduct($this->db);
+                    $productstat_cache = array();
+                    $notshippable = 0;
+                    $notshippableQty = 0;
+                    $shippableQty = 0;
+                    if ($orderstatusSort) $resultSort = true;
+                    $this->id = $row->id;
+                    $this->getLinesArray(); // This set ->lines
+                    $nbprod = 0;
+                    $numlines = count($this->lines); // Loop on each line of order
+                    for ($lig = 0; $lig < $numlines; $lig++) {
+                        if ($this->lines[$lig]->product_type == 0 && $this->lines[$lig]->fk_product > 0)  // If line is a product and not a service
+                        {
+                            $nbprod++; // order contains real products
+                            $generic_product->id = $this->lines[$lig]->fk_product;
+
+                            // Get local and virtual stock and store it into cache
+                            if (empty($productstat_cache[$this->lines[$lig]->fk_product])) {
+                                $generic_product->load_stock('nobatch, novirtual');
+                                $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
+                            } else {
+                                $generic_product->stock_reel = $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
+                            }
+
+                            if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
+                                $notshippable++;
+                                $notshippableQty += $this->lines[$lig]->qty - $generic_product->stock_reel;
+                            } else {
+                                $shippableQty += $this->lines[$lig]->qty;
+                            }
+                        }
+                    }
+                    if ($notshippable == 0) {
+                        if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_FULLY_SHIPPABLE;
+                        elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_FULLY_SHIPPABLE;
+                        $row->shippable_qty = $shippableQty . ' - 0' ;
+                    } else {
+                        if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_PARTLY_SHIPPABLE;
+                        elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_PARTLY_SHIPPABLE;
+                        $row->shippable_qty = $shippableQty . ' - ' . $notshippableQty;
+                    }
+                }
+                $row->orderstatus   = html_entity_decode($this->LibStatut($row->orderstatus_id, false, 1));
                 $row->availability_id = $obj->fk_availability;
                 $row->status        = $obj->status;
                 $row->customer_price_level = ($obj->price_level) ? (int) $obj->price_level : 1;
@@ -678,6 +763,7 @@ class ExtDirectCommande extends Commande
                 array_push($data, $row);
             }
             $this->db->free($resql);
+            if ($resultSort && $orderstatusSort) $data = ExtDirect::resultSort($data, 'orderstatus_id', $orderstatusSortDirection);
             if ($includeTotal) {
                 $result->total = $total;
                 $result->data = $data;
@@ -691,6 +777,53 @@ class ExtDirectCommande extends Commande
             return SQLERROR;
         }
     }
+
+    // phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
+	/**
+	 *	Return label of status
+	 *
+	 *	@param		int		$status      	  Id status
+	 *  @param      int		$billed    		  If invoiced
+	 *	@param      int		$mode        	  1=Short label
+	 *  @param      int     $donotshowbilled  Do not show billed status after order status
+	 *  @return     string					  Label of status
+	 */
+	public function LibStatut($status, $billed, $mode, $donotshowbilled = 0)
+	{
+		// phpcs:enable
+		global $langs, $conf;
+
+		$billedtext = '';
+		if (empty($donotshowbilled)) $billedtext .= ($billed ? ' - '.$langs->transnoentitiesnoconv("Billed") : '');
+
+		if ($status == self::STATUS_CANCELED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderCanceledShort');
+		} elseif ($status == self::STATUS_DRAFT) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderDraftShort');
+		} elseif ($status == self::STATUS_VALIDATED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderValidatedShort').$billedtext;
+		} elseif ($status == self::STATUS_VALIDATED_FULLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderValidatedFullyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_VALIDATED_PARTLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderValidatedPartlyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_ONPROCESS_FULLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderOnprocessFullyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_ONPROCESS_PARTLY_SHIPPABLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderOnprocessPartlyShippableShort').$billedtext;
+		} elseif ($status == self::STATUS_SHIPMENTONPROCESS) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderSentShort').$billedtext;
+		} elseif ($status == self::STATUS_CLOSED && (!$billed && empty($conf->global->WORKFLOW_BILL_ON_SHIPMENT))) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderToBillShort');
+		} elseif ($status == self::STATUS_CLOSED && ($billed && empty($conf->global->WORKFLOW_BILL_ON_SHIPMENT))) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderProcessedShort').$billedtext;
+		} elseif ($status == self::STATUS_CLOSED && (!empty($conf->global->WORKFLOW_BILL_ON_SHIPMENT))) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusOrderDeliveredShort');
+		} else {
+			$labelStatusShort = '';
+		}
+
+		return $labelStatusShort;
+	}
 
     /**
      * public method to read a list of orderstatusses
@@ -792,38 +925,34 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
 
-        if (ExtDirect::checkDolVersion(0, '3.7', '')) {
-            $sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
-            $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
-            $sql .= ' WHERE csm.active > 0';
-            $sql .= ' ORDER BY csm.rowid';
+        $sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
+        $sql .= ' WHERE csm.active > 0';
+        $sql .= ' ORDER BY csm.rowid';
 
-            $resql=$this->db->query($sql);
+        $resql=$this->db->query($sql);
 
-            if ($resql) {
-                $num=$this->db->num_rows($resql);
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
 
-                for ($i = 0;$i < $num; $i++) {
-                    $obj = $this->db->fetch_object($resql);
-                    $row = new stdClass;
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
 
-                    $row->id = $obj->rowid;
-                    $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
-                    $label=($transcode!=null?$transcode:$obj->label);
-                    $row->code = $obj->code;
-                    $row->label = $label;
-                    array_push($results, $row);
-                }
-
-                $this->db->free($resql);
-                return $results;
-            } else {
-                $error="Error ".$this->db->lasterror();
-                dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
-                return SQLERROR;
+                $row->id = $obj->rowid;
+                $transcode=$langs->transnoentities("SendingMethod".strtoupper($obj->code));
+                $label=($transcode!=null?$transcode:$obj->label);
+                $row->code = $obj->code;
+                $row->label = $label;
+                array_push($results, $row);
             }
-        } else {
+
+            $this->db->free($resql);
             return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readShipmentModes ".$error, LOG_ERR);
+            return SQLERROR;
         }
     }
 
@@ -837,35 +966,31 @@ class ExtDirectCommande extends Commande
         if (!isset($this->db)) return CONNECTERROR;
         $results = array();
 
-        if (ExtDirect::checkDolVersion(0, '3.8', '')) {
-            $sql = 'SELECT ci.rowid, ci.code';
-            $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
-            $sql .= ' WHERE ci.active > 0';
-            $sql .= ' ORDER BY ci.rowid';
+        $sql = 'SELECT ci.rowid, ci.code';
+        $sql .= ' FROM '.MAIN_DB_PREFIX.'c_incoterms as ci';
+        $sql .= ' WHERE ci.active > 0';
+        $sql .= ' ORDER BY ci.rowid';
 
-            $resql=$this->db->query($sql);
+        $resql=$this->db->query($sql);
 
-            if ($resql) {
-                $num=$this->db->num_rows($resql);
+        if ($resql) {
+            $num=$this->db->num_rows($resql);
 
-                for ($i = 0;$i < $num; $i++) {
-                    $obj = $this->db->fetch_object($resql);
-                    $row = new stdClass;
+            for ($i = 0;$i < $num; $i++) {
+                $obj = $this->db->fetch_object($resql);
+                $row = new stdClass;
 
-                    $row->id = $obj->rowid;
-                    $row->code = $obj->code;
-                    array_push($results, $row);
-                }
-
-                $this->db->free($resql);
-                return $results;
-            } else {
-                $error="Error ".$this->db->lasterror();
-                dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
-                return SQLERROR;
+                $row->id = $obj->rowid;
+                $row->code = $obj->code;
+                array_push($results, $row);
             }
-        }  else {
+
+            $this->db->free($resql);
             return $results;
+        } else {
+            $error="Error ".$this->db->lasterror();
+            dol_syslog(get_class($this)."::readIncotermCodes ".$error, LOG_ERR);
+            return SQLERROR;
         }
     }
 
@@ -970,12 +1095,10 @@ class ExtDirectCommande extends Commande
                     (!$line->fk_product) ? $isFreeLine = true : $isFreeLine = false;
                     $myprod = new ExtDirectProduct($this->_user->login);
                     if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                    if (ExtDirect::checkDolVersion() >= 3.5) {
-                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                            if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
-                        } else {
-                            if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
-                        }
+                    if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                        if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                    } else {
+                        if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
                     }
                     if (!$isFreeLine && ! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
                         $myprod->get_sousproduits_arbo();
@@ -1431,60 +1554,33 @@ class ExtDirectCommande extends Commande
                 $pu_ttc = $tabprice[5];
             }
 
-            if (ExtDirect::checkDolVersion() >= 3.5) {
-                $this->id = $orderLine->fk_commande;
-                if (($result = $this->addline(
-                    $orderLine->desc,
-                    $pu_ht,
-                    $orderLine->qty,
-                    $tva_tx,
-                    $localtax1_tx,
-                    $localtax2_tx,
-                    $orderLine->fk_product,
-                    $orderLine->remise_percent,
-                    $info_bits,
-                    $orderLine->fk_remise_except,
-                    $orderLine->price_base_type,
-                    $pu_ttc,
-                    $orderLine->date_start,
-                    $orderLine->date_end,
-                    $orderLine->product_type,
-                    $orderLine->rang,
-                    $orderLine->special_code,
-                    $orderLine->fk_parent_line,
-                    $orderLine->fk_fournprice,
-                    $orderLine->pa_ht,
-                    $orderLine->label,
-                    0,
-                    $orderLine->fk_unit
-                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-                $params->id=$result;
-            } else {
-                if (($result = $this->addline(
-                    $orderLine->fk_commande,
-                    $orderLine->desc,
-                    $pu_ht,
-                    $orderLine->qty,
-                    $tva_tx,
-                    $localtax1_tx,
-                    $localtax2_tx,
-                    $orderLine->fk_product,
-                    $orderLine->remise_percent,
-                    $info_bits,
-                    $orderLine->fk_remise_except,
-                    $orderLine->price_base_type,
-                    $pu_ttc,
-                    $orderLine->date_start,
-                    $orderLine->date_end,
-                    $orderLine->product_type,
-                    $orderLine->rang,
-                    $orderLine->special_code,
-                    $orderLine->fk_parent_line,
-                    $orderLine->fk_fournprice,
-                    $orderLine->pa_ht,
-                    $orderLine->label
-                )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-            }
+            $this->id = $orderLine->fk_commande;
+            if (($result = $this->addline(
+                $orderLine->desc,
+                $pu_ht,
+                $orderLine->qty,
+                $tva_tx,
+                $localtax1_tx,
+                $localtax2_tx,
+                $orderLine->fk_product,
+                $orderLine->remise_percent,
+                $info_bits,
+                $orderLine->fk_remise_except,
+                $orderLine->price_base_type,
+                $pu_ttc,
+                $orderLine->date_start,
+                $orderLine->date_end,
+                $orderLine->product_type,
+                $orderLine->rang,
+                $orderLine->special_code,
+                $orderLine->fk_parent_line,
+                $orderLine->fk_fournprice,
+                $orderLine->pa_ht,
+                $orderLine->label,
+                0,
+                $orderLine->fk_unit
+            )) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+            $params->id=$result;
         }
 
         if (is_array($param)) {
@@ -1594,7 +1690,7 @@ class ExtDirectCommande extends Commande
     public function destroyOrderLine($param)
     {
         if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->commande->supprimer)) return PERMISSIONERROR;
+        if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
         $paramArray = ExtDirect::toArray($param);
 
         foreach ($paramArray as &$params) {

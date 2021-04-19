@@ -325,9 +325,8 @@ class ExtDirectActionComm extends ActionComm
                 elseif ($filter->property == 'type')
                     $sqlWhere.= "(ac.type = '".$this->db->escape($filter->value)."')";
                 elseif ($filter->property == 'content') {
-                    $contentValue = strtolower($filter->value);
-                    $sqlWhere.= " (LOWER(c.lastname) like '%".$contentValue."%' OR LOWER(c.firstname) like '%".$contentValue."%'";
-                    $sqlWhere.= " OR LOWER(s.nom) like '%".$contentValue."%' OR LOWER(a.label) like '%".$contentValue."%')" ;
+                    $fields = array('c.firstname', 'c.lastname', 's.nom', 'a.label');
+                    $sqlWhere .= natural_search($fields, $filter->value, 0, 1);
                 } else break;
                 if ($key < ($filterSize-1)) {
                     if ($filter->property == $params->filter[$key+1]->property) $sqlWhere .= ' OR ';
