@@ -1695,6 +1695,11 @@ class ExtDirectProduct extends Product
 
         $id = array('product'=>0, 'supplier_product'=>0);
         dol_syslog(get_class($this)."::fetch ".$table." id from barcode=".$barcode);
+        $formProduct = new ExtDirectFormProduct($this->db);
+        $barcodeTypeData = $formProduct->readBarcodeType(new stdClass);
+        foreach ($barcodeTypeData as $barcodeType) {
+            $barcodeTypes[$barcodeType->code] = $barcodeType->id;
+        }
         if ($table == 'product_fournisseur_price') {
             $fkProductField = ', fk_product';
             $refField = 'ref_fourn';
@@ -1709,13 +1714,13 @@ class ExtDirectProduct extends Product
             $fk_barcode_type = null;
         }
         if (strlen($barcode) == 13) {
-            $this->barcode_type = 2;
+            $this->barcode_type = $barcodeTypes['EAN13'];
             $couldBeEAN = true;
         } elseif (strlen($barcode) == 12) {
-            $this->barcode_type = 3;
+            $this->barcode_type = $barcodeTypes['UPC'];
             $couldBeEAN = true;
         } elseif (strlen($barcode) == 8) {
-            $this->barcode_type = 1;
+            $this->barcode_type = $barcodeTypes['EAN8'];
             $couldBeEAN = true;
         }
         if ($couldBeEAN) {
@@ -1739,7 +1744,7 @@ class ExtDirectProduct extends Product
                 if ($obj->fk_barcode_type) {
                     $fk_barcode_type = $obj->fk_barcode_type;
                 }
-                if (($fk_barcode_type == 2) || ($fk_barcode_type == 1) || !$couldBeEAN) { // EAN13 || EAN8 || for shure not EAN
+                if ($fk_barcode_type == $barcodeTypes['EAN8'] || $fk_barcode_type == $barcodeTypes['EAN13'] || $fk_barcode_type == $barcodeTypes['UPC'] || !$couldBeEAN) { // EAN13 || EAN8 || UPC || for shure not EAN
                     if ($fkProductField) {
                         $id['product'] = (int) $obj->fk_product;
                         $id['supplier_product'] = (int) $obj->rowid;
@@ -1747,7 +1752,7 @@ class ExtDirectProduct extends Product
                         $id['product'] = (int) $obj->rowid;
                     }
                 } elseif ($couldBeEAN) {
-                    // re-search if len of EAN but not EAN
+                    // re-search if len of EAN/UPC but not EAN/UPC
                     $sql = "SELECT rowid".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$barcode."'";
                     $resql2 = $this->db->query($sql);
                     if ( $resql2 ) {
@@ -2008,21 +2013,26 @@ class ExtDirectProduct extends Product
         $barcodeType = '';
         $barcode = '';
 
-        if ($object->barcode_type == '1' || $object->supplier_fk_barcode_type == '1') { // EAN8
-            $barcodeType = 'EAN8';
-        } elseif ($object->barcode_type == '2' || $object->supplier_fk_barcode_type == '2') { // EAN13
-            $barcodeType = 'EAN13';
-        } elseif ($object->barcode_type == '3' || $object->supplier_fk_barcode_type == '3') { // UPC
-            $barcodeType = 'UPCA';
+        $formProduct = new ExtDirectFormProduct($this->db);
+        $barcodeTypeData = $formProduct->readBarcodeType(new stdClass);
+        foreach ($barcodeTypeData as $barcodeType) {
+            $barcodeTypes[$barcodeType->id] = $barcodeType->code;
         }
 
         if (!empty($object->supplier_barcode)) {
             $barcode = $object->supplier_barcode;
+            $barcodeType = $barcodeTypes[$object->supplier_fk_barcode_type];
         } else {
             $barcode = $object->barcode;
+            $barcodeType = $barcodeTypes[$object->barcode_type];
         }
 
-        if (!empty($barcodeType) && !empty($barcode)) {
+        if ($barcodeType == 'UPC') {
+            // dolibarr UPC is UPCA
+            $barcodeType = 'UPCA';
+        }
+
+        if (in_array($barcodeType, array('EAN8', 'EAN13', 'UPCA')) && !empty($barcode)) {
             include_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
             $barcodeObj = new TCPDFBarcode($barcode, $barcodeType);
             $barcode = $barcodeObj->getBarcodeArray();
