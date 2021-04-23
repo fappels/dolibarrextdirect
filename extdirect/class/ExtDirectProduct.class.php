@@ -412,6 +412,7 @@ class ExtDirectProduct extends Product
                     // get barcode with checksum included, same when scanned
                     $row->barcode_with_checksum = $this->fetchBarcodeWithChecksum($supplierProduct);
                 }
+                $row->cost_price = $this->cost_price;
                 $row->has_photo = 0;
                 if (!empty($photoSize)) {
                     $this->fetchPhoto($row, $photoSize);
@@ -1602,6 +1603,8 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'unit_id', 'fk_unit');
         // has batch
         $diff = ExtDirect::prepareField($diff, $param, $this, 'has_batch', 'status_batch');
+        // cost price is set with product update
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'cost_price', 'cost_price');
         return $diff;
     }
 

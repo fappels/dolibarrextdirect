@@ -39,7 +39,8 @@ class ExtDirectCommande extends Commande
     private $_user;
     private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
         'STOCK_CALCULATE_ON_VALIDATE_ORDER',
-        'STOCK_USE_VIRTUAL_STOCK');
+        'STOCK_USE_VIRTUAL_STOCK',
+        'MARGIN_TYPE');
 
         /**
      * Fully shippable status of validated order
@@ -580,11 +581,11 @@ class ExtDirectCommande extends Commande
         }
 
         if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
-            && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
+            /*&& (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
                 || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
                 || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
                 || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
-            )
+            )*/
         ) {
             $customStatus = true;
             // always load page from start to be able to sort on complete result
@@ -1168,6 +1169,7 @@ class ExtDirectCommande extends Commande
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
                             $row->unit_id = $line->fk_unit;
+                            $row->cost_price = $line->pa_ht;
                             $row->is_sub_product = false;
                             if ($isService) {
                                 $row->warehouse_id = -1; // service is not stocked
@@ -1258,6 +1260,7 @@ class ExtDirectCommande extends Commande
                                 $myprod->fetchPhoto($row, $photoSize);
                             }
                             $row->unit_id = $line->fk_unit;
+                            $row->cost_price = $line->pa_ht;
                             // split orderlines by batch
                             if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                             $row->is_sub_product = false;
@@ -1327,6 +1330,7 @@ class ExtDirectCommande extends Commande
                                     $myprod->fetchPhoto($row, $photoSize);
                                 }
                                 $row->unit_id = $line->fk_unit;
+                                $row->cost_price = $line->pa_ht;
                                 // split orderlines by batch
                                 if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
                                 $row->is_sub_product = false;
