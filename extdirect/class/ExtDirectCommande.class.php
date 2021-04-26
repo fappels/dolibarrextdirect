@@ -553,9 +553,7 @@ class ExtDirectCommande extends Commande
         $includeTotal = true;
 
         $orderstatus_id = array();
-        $orderstatusSort = false;
-        $orderstatusSortDirection = 'ASC';
-        $resultSort = false;
+        $sorterSize = 0;
         $customStatus = false;
 
         if (isset($params->limit)) {
@@ -581,11 +579,11 @@ class ExtDirectCommande extends Commande
         }
 
         if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
-            /*&& (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
+            && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
                 || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
                 || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
                 || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
-            )*/
+            )
         ) {
             $customStatus = true;
             // always load page from start to be able to sort on complete result
@@ -644,8 +642,6 @@ class ExtDirectCommande extends Commande
                 if (!empty($sort->property)) {
                     if ($sort->property == 'orderstatus_id') {
                         $sortfield = 'c.fk_statut';
-                        $orderstatusSort = true;
-                        $orderstatusSortDirection = $sort->direction;
                     } elseif ($sort->property == 'order_date') {
                         $sortfield = 'c.date_commande';
                     } elseif ($sort->property == 'ref') {
@@ -711,7 +707,6 @@ class ExtDirectCommande extends Commande
                     $notshippable = 0;
                     $notshippableQty = 0;
                     $shippableQty = 0;
-                    if ($orderstatusSort) $resultSort = true;
                     $this->id = $row->id;
                     $this->getLinesArray(); // This set ->lines
                     $nbprod = 0;
@@ -764,7 +759,7 @@ class ExtDirectCommande extends Commande
                 array_push($data, $row);
             }
             $this->db->free($resql);
-            if ($resultSort && $orderstatusSort) $data = ExtDirect::resultSort($data, 'orderstatus_id', $orderstatusSortDirection);
+            if ($customStatus && $sorterSize > 0) $data = ExtDirect::resultSort($data, $params->sort);
             if ($includeTotal) {
                 $result->total = $total;
                 $result->data = $data;

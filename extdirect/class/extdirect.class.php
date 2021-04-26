@@ -720,23 +720,41 @@ class ExtDirect
     }
 
     /**
-     * resultSort, sort result array on object element
+     * resultSort, sort result array on sort properties
      *
-     * @param array $data result array
-     * @param string $field object element
-     * @param string $direction 'ASC' or 'DESC'
+     * @param array $data result object array
+     * @param array $sorters array of sort properties
      * @return array sorted result data
      */
-    public static function resultSort(array $data, string $field, string $direction)
+    public static function resultSort(array $data, array $sorters)
     {
-        if ($direction == 'DESC') {
-            usort($data, function ($a, $b) use ($field) {
-                return $a->$field < $b->$field;
-            });
-        } else {
-            usort($data, function ($a, $b) use ($field) {
-                return $a->$field > $b->$field;
-            });
+        // convert object array to array of associative array
+        foreach ($data as &$value) {
+            $value = (array) $value;
+        }
+        // create args for php array_multisort
+        $multisortArgs = array();
+        foreach ($sorters as $sort) {
+            if (!empty($sort->property)) {
+                $tmp = array();
+                foreach ($data as $key => $value) {
+                    $tmp[$key] = $value[$sort->property];
+                }
+                $multisortArgs[] = $tmp;
+                if ($sort->direction == 'DESC') {
+                    $multisortArgs[] = SORT_DESC;
+                } else {
+                    $multisortArgs[] = SORT_ASC;
+                }
+            }
+        }
+        $multisortArgs[] = &$data;
+        // call php array_multisort and get sorted data
+        call_user_func_array('array_multisort', $multisortArgs);
+        $data = array_pop($multisortArgs);
+        // convert array of associative array to object array
+        foreach ($data as &$value) {
+            $value = (object) $value;
         }
         return $data;
     }
