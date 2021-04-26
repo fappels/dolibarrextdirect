@@ -157,6 +157,7 @@ class ExtDirectAuthenticate extends ExtDirect
             $result->connector_name = $moduleInfo->name;
             $result->connector_description = $moduleInfo->description;
             $result->connector_version = $moduleInfo->version;
+            $result->connector_compatibility = ExtDirect::checkDolVersion(1);
             $result->dolibarr_version = ExtDirect::checkDolVersion();
             $result->home_country_id = $mysoc->country_id;
             $result->home_state_id = $mysoc->state_id;
