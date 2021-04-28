@@ -62,6 +62,11 @@ class ExtDirectCommande extends Commande
      */
     const STATUS_ONPROCESS_PARTLY_SHIPPABLE = 23;
 
+    /**
+     * end status to allow status itteration
+     */
+    const STATUS_END = 24;
+
     /** Constructor
      *
      * @param string $login user name
@@ -131,6 +136,7 @@ class ExtDirectCommande extends Commande
         $ref_ext = '';
         $ref_int = '';
         $orderstatus_ids = array();
+        $customStatus = false;
 
         if (isset($params->filter)) {
             foreach ($params->filter as $key => $filter) {
@@ -140,6 +146,14 @@ class ExtDirectCommande extends Commande
                 elseif ($filter->property == 'ref_ext') $ref_ext=$filter->value;
                 elseif ($filter->property == 'orderstatus_id') array_push($orderstatus_ids, $filter->value);
             }
+        }
+
+        if (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_ids)
+            || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_ids)
+            || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_ids)
+            || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_ids)
+        ) {
+            $customStatus = true;
         }
 
         if (($id > 0) || ($ref != '') || ($ref_int != '') || ($ref_ext != '')) {
@@ -156,7 +170,12 @@ class ExtDirectCommande extends Commande
                 }
                 //! -1 for cancelled, 0 for draft, 1 for validated, 2 for send, 3 for closed
                 $row->orderstatus_id = $this->statut;
-                $row->orderstatus = $this->getLibStatut(1);
+                if ($customStatus) {
+                    $this->getShippable($row, 'longlabel');
+                    $row->orderstatus = html_entity_decode($this->LibStatut($row->orderstatus_id, false, 1));
+                } else {
+                    $row->orderstatus = $this->getLibStatut(1);
+                }
                 $row->note_private = $this->note_private;
                 $row->note_public = $this->note_public;
                 $row->user_id = $this->user_author_id;
@@ -578,12 +597,10 @@ class ExtDirectCommande extends Commande
             }
         }
 
-        if (!empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT)
-            && (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
-                || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
-                || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
-                || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
-            )
+        if (in_array(self::STATUS_VALIDATED_FULLY_SHIPPABLE, $orderstatus_id)
+            || in_array(self::STATUS_VALIDATED_PARTLY_SHIPPABLE, $orderstatus_id)
+            || in_array(self::STATUS_ONPROCESS_FULLY_SHIPPABLE, $orderstatus_id)
+            || in_array(self::STATUS_ONPROCESS_PARTLY_SHIPPABLE, $orderstatus_id)
         ) {
             $customStatus = true;
             // always load page from start to be able to sort on complete result
@@ -701,47 +718,7 @@ class ExtDirectCommande extends Commande
                 $row->ref_ext           = $obj->ref_ext;
                 $row->orderstatus_id= (int) $obj->fk_statut;
                 if ($customStatus && $obj->fk_statut > self::STATUS_DRAFT && $obj->fk_statut < self::STATUS_CLOSED) {
-                    dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
-                    $generic_product = new ExtDirectProduct($this->db);
-                    $productstat_cache = array();
-                    $notshippable = 0;
-                    $notshippableQty = 0;
-                    $shippableQty = 0;
-                    $this->id = $row->id;
-                    $this->getLinesArray(); // This set ->lines
-                    $nbprod = 0;
-                    $numlines = count($this->lines); // Loop on each line of order
-                    for ($lig = 0; $lig < $numlines; $lig++) {
-                        if ($this->lines[$lig]->product_type == 0 && $this->lines[$lig]->fk_product > 0)  // If line is a product and not a service
-                        {
-                            $nbprod++; // order contains real products
-                            $generic_product->id = $this->lines[$lig]->fk_product;
-
-                            // Get local and virtual stock and store it into cache
-                            if (empty($productstat_cache[$this->lines[$lig]->fk_product])) {
-                                $generic_product->load_stock('nobatch, novirtual');
-                                $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
-                            } else {
-                                $generic_product->stock_reel = $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
-                            }
-
-                            if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
-                                $notshippable++;
-                                $notshippableQty += $this->lines[$lig]->qty - $generic_product->stock_reel;
-                            } else {
-                                $shippableQty += $this->lines[$lig]->qty;
-                            }
-                        }
-                    }
-                    if ($notshippable == 0) {
-                        if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_FULLY_SHIPPABLE;
-                        elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_FULLY_SHIPPABLE;
-                        $row->shippable_qty = $shippableQty . ' - 0' ;
-                    } else {
-                        if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_PARTLY_SHIPPABLE;
-                        elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_PARTLY_SHIPPABLE;
-                        $row->shippable_qty = $shippableQty . ' - ' . $notshippableQty;
-                    }
+                    $this->getShippable($row);
                 }
                 $row->orderstatus   = html_entity_decode($this->LibStatut($row->orderstatus_id, false, 1));
                 $row->availability_id = $obj->fk_availability;
@@ -832,12 +809,15 @@ class ExtDirectCommande extends Commande
         $results = array();
         $statut = -1;
         $row = new stdClass;
-        while (($result = $this->LibStatut($statut, false, 1)) != '') {
-            if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
-            $row = new stdClass;
-            $row->id = $statut++;
-            $row->status = html_entity_decode($result);
-            array_push($results, $row);
+        while ($statut < self::STATUS_END) {
+            $result = $this->LibStatut($statut, false, 1);
+            if (!empty($result)) {
+                $row = new stdClass;
+                $row->id = $statut;
+                $row->status = html_entity_decode($result);
+                array_push($results, $row);
+            }
+            $statut++;
         }
         return $results;
     }
@@ -1023,6 +1003,65 @@ class ExtDirectCommande extends Commande
             }
         }
         return $response;
+    }
+
+    /**
+     * Get shippable status
+     *
+     * @param object $row row of resultset
+     * @param string $mode 'shortlabel' (default) for list else long translated label.
+     * @return void
+     */
+    private function getShippable(&$row, $mode = 'shortlabel')
+    {
+        global $langs;
+
+        dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+        $generic_product = new ExtDirectProduct($this->db);
+        $productstat_cache = array();
+        $notshippable = 0;
+        $notshippableQty = 0;
+        $shippableQty = 0;
+        $this->id = $row->id;
+        $this->getLinesArray(); // This set ->lines
+        if ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $this->loadExpeditions(); // get already shipped
+        $nbprod = 0;
+        $numlines = count($this->lines); // Loop on each line of order
+        for ($lig = 0; $lig < $numlines; $lig++) {
+            if ($this->lines[$lig]->product_type == 0 && $this->lines[$lig]->fk_product > 0)  // If line is a product and not a service
+            {
+                $nbprod++; // order contains real products
+                $generic_product->id = $this->lines[$lig]->fk_product;
+                $qtyToShip = $this->lines[$lig]->qty - $this->expeditions[$this->lines[$lig]->id];
+
+                // Get local and virtual stock and store it into cache
+                if (empty($productstat_cache[$this->lines[$lig]->fk_product])) {
+                    $generic_product->load_stock('nobatch, novirtual');
+                    $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
+                } else {
+                    $generic_product->stock_reel = $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
+                }
+
+                if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
+                    $notshippable++;
+                    $notshippableQty += $qtyToShip - $generic_product->stock_reel;
+                } else {
+                    $shippableQty += $qtyToShip;
+                }
+            }
+        }
+        if ($notshippable == 0) {
+            if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_FULLY_SHIPPABLE;
+            elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_FULLY_SHIPPABLE;
+        } else {
+            if ($row->orderstatus_id == self::STATUS_VALIDATED) $row->orderstatus_id = self::STATUS_VALIDATED_PARTLY_SHIPPABLE;
+            elseif ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $row->orderstatus_id = self::STATUS_ONPROCESS_PARTLY_SHIPPABLE;
+        }
+        if ($mode != 'shortlabel') {
+            $row->shippable_qty = $langs->trans('ShippableQtyInfo', $shippableQty, $notshippableQty);
+        } else {
+            $row->shippable_qty = $shippableQty . ' - ' . $notshippableQty;
+        }
     }
 
     /**
