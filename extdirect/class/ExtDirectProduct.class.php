@@ -710,6 +710,9 @@ class ExtDirectProduct extends Product
         foreach ($paramArray as &$param) {
             // prepare fields
             $this->prepareFields($param);
+            $this->prepareFieldsBarcode($param);
+            $this->prepareFieldsSellPrice($param);
+            $this->prepareFieldsBuyPrice($param);
             if (!empty($this->barcode)) {
             	$this->fetch_barcode();
             }
@@ -1311,7 +1314,7 @@ class ExtDirectProduct extends Product
             foreach ($param->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value) && ($filter->property != 'type') && ($filter->property != 'supplier_id')) {
-                    $sqlWhere .= '1';
+                    $sqlWhere .= '1 = 1';
                 } else {
                     if ($filter->property == 'tosell') {
                         $sqlWhere .= "p.tosell = ".$value;
@@ -1338,10 +1341,10 @@ class ExtDirectProduct extends Product
                         if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $fields[] = 'sp.barcode';
                         $sqlWhere .= natural_search($fields, $filter->value, 0, 1);
                     } elseif ($filter->property == 'photo_size' && !empty($value)) {
-                        $sqlWhere .= '1';
+                        $sqlWhere .= '1 = 1';
                         $photoSize = $value;
                     } else {
-                        $sqlWhere .= '1';
+                        $sqlWhere .= '1 = 1';
                     }
                 }
                 if ($key < ($filterSize-1)) {
@@ -1605,6 +1608,7 @@ class ExtDirectProduct extends Product
         $diff = ExtDirect::prepareField($diff, $param, $this, 'has_batch', 'status_batch');
         // cost price is set with product update
         $diff = ExtDirect::prepareField($diff, $param, $this, 'cost_price', 'cost_price');
+        $diff = ExtDirect::prepareField($diff, $param, $this, 'default_warehouse_id', 'fk_default_warehouse');
         return $diff;
     }
 

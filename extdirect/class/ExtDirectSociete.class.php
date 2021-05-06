@@ -396,7 +396,7 @@ class ExtDirectSociete extends Societe
             foreach ($params->filter as $key => $filter) {
                 $value = $this->db->escape($filter->value);
                 if (empty($value)) {
-                    $sqlWhere .= '1';
+                    $sqlWhere .= '1 = 1';
                 } else {
                     if ($filter->property == 'id')
                         $sqlWhere .= 's.rowid = '.$value;
@@ -421,7 +421,7 @@ class ExtDirectSociete extends Societe
                         $fields = array('s.nom', 'c.label', 's.code_client', 's.code_fournisseur', 's.town', 's.zip');
                         $sqlWhere .= natural_search($fields, $value, 0, 1);
                     } else {
-                        $sqlWhere .= '1';
+                        $sqlWhere .= '1 = 1';
                     }
                 }
                 if ($key < ($filterSize-1)) {
