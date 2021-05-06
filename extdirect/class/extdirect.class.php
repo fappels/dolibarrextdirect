@@ -637,7 +637,7 @@ class ExtDirect
      *
      * @param   Object  $object to read model from
      *
-     * @return stdClass array result data
+     * @return array array result data
      */
     public static function readOptionalModel($object)
     {
