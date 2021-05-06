@@ -725,7 +725,7 @@ class ExtDirectCommande extends Commande
                 $row->status        = $obj->status;
                 $row->customer_price_level = ($obj->price_level) ? (int) $obj->price_level : 1;
                 $row->ref_customer  = $obj->ref_client;
-            	$row->user_id 		= $obj->fk_user_author;
+                $row->user_id       = $obj->fk_user_author;
                 if (empty($authorName[$row->user_id]) && $myUser->fetch($row->user_id) > 0) {
                     $authorName[$row->user_id] = $myUser->firstname . ' ' . $myUser->lastname;
                 }
@@ -733,7 +733,13 @@ class ExtDirectCommande extends Commande
                 $row->total_inc		= $obj->total_ttc;
                 $row->deliver_date  = $this->db->jdate($obj->date_livraison);
                 $row->order_date  = $this->db->jdate($obj->date_commande);
-                array_push($data, $row);
+                if ($customStatus) {
+                    if (in_array($row->orderstatus_id, $orderstatus_id)) {
+                        array_push($data, $row);
+                    }
+                } else {
+                    array_push($data, $row);
+                }
             }
             $this->db->free($resql);
             if ($customStatus && $sorterSize > 0) $data = ExtDirect::resultSort($data, $params->sort);
