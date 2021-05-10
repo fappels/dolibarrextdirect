@@ -1548,15 +1548,17 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         // create reception
                                         $reception = new Reception($this->db);
                                         $this->prepareReceptionFields($reception, $params);
-                                        if ($result = $reception->create($this->_user) < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
+                                        $result = $reception->create($this->_user);
+                                        if ($result < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
                                         $reception->add_object_linked('order_supplier', $this->id);
                                     } else {
                                         // update reception
                                         $this->prepareReceptionFields($reception, $params);
-                                        if ($result = $reception->update($this->_user) < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
+                                        $result = $reception->update($this->_user);
+                                        if ($result < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
                                     }
                                     // reception addline
-                                    if ($lineIndex = $reception->addline(
+                                    $lineIndex = $reception->addline(
                                         $params->warehouse_id,
                                         $orderLine->id,
                                         $params->qty_shipped,
@@ -1565,9 +1567,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         ExtDirect::dateTimeToDate($params->eatby),
                                         ExtDirect::dateTimeToDate($params->sellby),
                                         $params->batch
-                                    ) < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
+                                    );
+                                    if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
                                     // create dispatch from line created by addline
-                                    if ($result = $reception->lines[$lineIndex]->create($this->_user) < 0) ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+                                    $result = $reception->lines[$lineIndex]->create($this->_user);
+                                    if ($result < 0) ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
                                 } else {
                                     // use dispatch mode
                                     if (($result = $this->DispatchProduct(
