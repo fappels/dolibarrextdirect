@@ -52,7 +52,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
         'SUPPLIER_ORDER_USE_DISPATCH_STATUS',
         'STOCK_USE_VIRTUAL_STOCK',
         'STOCK_ALLOW_NEGATIVE_TRANSFER',
-        'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE');
+        'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE',
+        'MAIN_MODULE_RECEPTION');
 
     /**
      * @var int Date when delivery received
@@ -885,11 +886,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                         if ($line->fk_product) {
                             $isFreeLine = false;
                             $myprod = new ExtDirectProduct($this->_user->login);
-                            if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+                            $result = $myprod->fetch($line->fk_product);
+                            if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
                             if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                                if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
+                                $result = $myprod->load_stock('warehouseopen');
+                                if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
                             } else {
-                                if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
+                                $result = $myprod->load_stock('novirtual, warehouseopen');
+                                if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
                             }
                             if (ExtDirect::checkDolVersion(0, '4.0', '')) {
                                 // supplier product for supplier barcode
@@ -900,6 +904,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                         $supplierProduct = $prodsupplier;
                                     }
                                 }
+                            }
+                            if (empty($myprod->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
+                                $myprod->barcode_type = (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
                             }
                         } else {
                             $isFreeLine = true;

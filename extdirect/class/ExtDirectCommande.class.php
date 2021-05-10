@@ -1135,14 +1135,22 @@ class ExtDirectCommande extends Commande
                     $isService = false;
                     (!$line->fk_product) ? $isFreeLine = true : $isFreeLine = false;
                     $myprod = new ExtDirectProduct($this->_user->login);
-                    if (!$isFreeLine && ($result = $myprod->fetch($line->fk_product)) < 0) return $result;
-                    if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-                        if (!$isFreeLine && ($result = $myprod->load_stock('warehouseopen')) < 0) return $result;
-                    } else {
-                        if (!$isFreeLine && ($result = $myprod->load_stock('novirtual, warehouseopen')) < 0) return $result;
-                    }
-                    if (!$isFreeLine && ! empty($conf->global->PRODUIT_SOUSPRODUITS)) {
-                        $myprod->get_sousproduits_arbo();
+                    if (!$isFreeLine) {
+                        $result = $myprod->fetch($line->fk_product);
+                        if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
+                        if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+                            $result = $myprod->load_stock('warehouseopen');
+                            if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
+                        } else {
+                            $result = $myprod->load_stock('novirtual, warehouseopen');
+                            if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
+                        }
+                        if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) {
+                            $myprod->get_sousproduits_arbo();
+                        }
+                        if (empty($myprod->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
+                            $myprod->barcode_type = (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
+                        }
                     }
                     if ($line->product_type == 1) {
                         $isService = true;
