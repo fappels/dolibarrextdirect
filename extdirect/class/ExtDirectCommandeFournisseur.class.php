@@ -917,11 +917,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->is_virtual_stock = false;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;
-                                if (empty($line->label)) {
-                                    $row->label = $line->product_label;
-                                } else {
-                                    $row->label = $line->label;
-                                }
+                                $row->label = $line->product_label;
                                 $row->description = $line->description;
                                 $row->product_id = $line->fk_product;
                                 $row->ref = $line->product_ref;
@@ -994,11 +990,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                 $row->is_virtual_stock = false;
                                 $row->origin_id = $this->id;
                                 $row->origin_line_id = $line->id;
-                                if (empty($line->label)) {
-                                    $row->label = $line->product_label;
-                                } else {
-                                    $row->label = $line->label;
-                                }
+                                $row->label = $line->product_label;
                                 $row->description = $line->description;
                                 $row->product_id = $line->fk_product;
                                 $row->ref = $line->product_ref;
@@ -1083,11 +1075,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
                                     $row->is_virtual_stock = false;
                                     $row->origin_id = $this->id;
                                     $row->origin_line_id = $line->id;
-                                    if (empty($line->label)) {
-                                        $row->label = $line->product_label;
-                                    } else {
-                                        $row->label = $line->label;
-                                    }
+                                    $row->label = $line->product_label;
                                     $row->description = $line->description;
                                     $row->product_id = $line->fk_product;
                                     $row->ref = $line->product_ref;
