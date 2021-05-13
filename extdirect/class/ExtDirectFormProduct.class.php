@@ -247,6 +247,37 @@ class ExtDirectFormProduct extends FormProduct
 	}
 
 	/**
+	 *    Load available lot types
+	 *
+	 *    @param    stdClass    $params     not used
+	 *
+	 *    @return     stdClass result data
+	 */
+	public function readProductLotType(stdClass $params)
+	{
+		global $conf, $langs;
+
+		if (!isset($this->db)) return CONNECTERROR;
+		$results = array();
+
+		if (! empty($conf->productbatch->enabled)) {
+			$langs->load("productbatch");
+			$statutarray = array(0 => $langs->trans("ProductStatusNotOnBatch"), 1 => $langs->trans("ProductStatusOnBatch"));
+			if (ExtDirect::checkDolVersion(0, '14.0', '')) {
+				$statutarray[2] = $langs->trans("ProductStatusOnSerial");
+			}
+			foreach ($statutarray as $key => $value) {
+				$row = new stdClass;
+				$row->id = $key;
+				$row->label = $value;
+				array_push($results, $row);
+			}
+		}
+
+		return $results;
+	}
+
+	/**
 	 *    Load available price_base_types
 	 *
 	 *    @param    stdClass    $params     not used

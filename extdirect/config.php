@@ -238,6 +238,9 @@ $API = array(
 			),
 			'readProductUnits' => array(
 				'len' => 1
+			),
+			'readProductLotType' => array(
+				'len' => 1
 			)
 		)
 	),
