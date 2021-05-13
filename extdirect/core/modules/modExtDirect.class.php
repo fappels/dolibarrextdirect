@@ -61,7 +61,7 @@ class modExtDirect extends DolibarrModules
 		// not found (where XXX is value of numeric property 'numero' of module)
 		$this->description = "Connect to external applications which use Sencha Ext.direct";
 		// Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-		$this->version = '1.0.62';
+		$this->version = '1.0.63';
 		// Key used in llx_const table to save module status enabled/disabled
 		// (where MYMODULE is value of property name of module in uppercase)
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
@@ -96,7 +96,7 @@ class modExtDirect extends DolibarrModules
 		$this->depends = array("modProduct","modStock","modExpedition");       // List of modules id that must be enabled if this module is enabled
 		$this->requiredby = array();    // List of modules id to disable if this one is disabled
 		$this->phpmin = array(5,2);                 // Minimum version of PHP required by module
-		$this->need_dolibarr_version = array(3,3);  // Minimum version of Dolibarr required by module
+		$this->need_dolibarr_version = array(3,8);  // Minimum version of Dolibarr required by module
 		$this->langfiles = array("extdirect@extdirect");
 
 		// Constants
