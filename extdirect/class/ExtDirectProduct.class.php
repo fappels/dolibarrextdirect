@@ -1485,20 +1485,12 @@ class ExtDirectProduct extends Product
 
 		$results = array();
 		$row = new stdClass;
-		$filterSize = 0;
 		$id = null;
 		$warehouseId = null;
 		$includeNoBatch = false;
-		$limit=null;
-		$start=0;
 
-		if (isset($param->limit)) {
-			$limit = $param->limit;
-			$start = $param->start;
-		}
 		if (isset($param->filter)) {
-			$filterSize = count($param->filter);
-			foreach ($param->filter as $key => $filter) {
+			foreach ($param->filter as $filter) {
 				if ($filter->property == 'product_id') $id=$filter->value;
 				elseif ($filter->property == 'warehouse_id') $warehouseId=$filter->value;
 				elseif ($filter->property == 'include_no_batch') $includeNoBatch=$filter->value;
@@ -1508,7 +1500,8 @@ class ExtDirectProduct extends Product
 		if (empty($conf->productbatch->enabled) || empty($id) || !isset($warehouseId)) return PARAMETERERROR;
 
 		$this->id = $id;
-		if (($res = $this->load_stock('novirtual, warehouseopen, warehouseinternal')) < 0) return $res;
+		$res = $this->load_stock('novirtual, warehouseopen, warehouseinternal');
+		if ($res < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 
 		if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
 			require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
@@ -1531,7 +1524,8 @@ class ExtDirectProduct extends Product
 					$row->stock_reel =$defaultStock;
 					$row->warehouse_id = $warehouseId;
 				}
-				if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
+				$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
+				if ($res < 0) return $res;
 			}
 		} else {
 			if ($includeNoBatch) {
@@ -1542,9 +1536,10 @@ class ExtDirectProduct extends Product
 				$row->stock_reel = !empty($this->stock_warehouse[$warehouseId]->real) ? (float) $this->stock_warehouse[$warehouseId]->real : 1;
 				$row->warehouse_id = $warehouseId;
 			}
-			if (($res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch)) < 0) return $res;
+			$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
+			if ($res < 0) return $res;
 		}
-
+		if (isset($param->sort)) $results = ExtDirect::resultSort($results, $param->sort);
 		return $results;
 	}
 
