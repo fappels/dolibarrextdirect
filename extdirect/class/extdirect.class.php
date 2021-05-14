@@ -737,8 +737,8 @@ class ExtDirect
         foreach ($sorters as $sort) {
             if (!empty($sort->property)) {
                 $tmp = array();
-                foreach ($data as $key => $value) {
-                    $tmp[$key] = $value[$sort->property];
+                foreach ($data as $key => $values) {
+                    $tmp[$key] = $values[$sort->property];
                 }
                 $multisortArgs[] = $tmp;
                 if ($sort->direction == 'DESC') {
