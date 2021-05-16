@@ -63,7 +63,6 @@ class modExtDirect extends DolibarrModules
 		// Possible values for version are: 'development', 'experimental', 'dolibarr' or version
 		$this->version = '1.0.63';
 		// Key used in llx_const table to save module status enabled/disabled
-		// (where MYMODULE is value of property name of module in uppercase)
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		// Where to store the module in setup page (0=common,1=interface,2=others,3=very specific)
 		$this->special = 1;
@@ -111,9 +110,9 @@ class modExtDirect extends DolibarrModules
 		$this->tabs = array();
 
 		// Dictionnaries
-		if (! isset($conf->mymodule->enabled)) {
-			$conf->mymodule=new stdClass();
-			$conf->mymodule->enabled=0;
+		if (! isset($conf->extdirect->enabled)) {
+			$conf->extdirect=new stdClass();
+			$conf->extdirect->enabled=0;
 		}
 		$this->dictionaries=array();
 
