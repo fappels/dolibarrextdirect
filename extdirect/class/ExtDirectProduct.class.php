@@ -138,6 +138,10 @@ class ExtDirectProduct extends Product
 		}
 
 		if (($id > 0) || ($ref != '')) {
+			if ($socid > 0) {
+				$customer = new Societe($this->db);
+				if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
+			}
 			if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if ($this->id > 0) {
 				$row->id = $this->id ;
@@ -153,25 +157,46 @@ class ExtDirectProduct extends Product
 				$row->price= $this->price?$this->price:'';              // Price net
 				$row->price_ttc= $this->price_ttc?$this->price_ttc:'';          // Price with tax
 				$row->tva_tx = '';
+				$row->price_min= $this->price_min;         // Minimum price net
+				$row->price_min_ttc= $this->price_min_ttc;     // Minimum price with tax
+				//! French VAT NPR (0 or 1)
+				$row->tva_npr= $this->tva_npr;
+				//! local taxes
+				$row->localtax1_tx = $this->localtax1_tx;
+				$row->localtax2_tx = $this->localtax2_tx;
 				//! Base price ('TTC' for price including tax or 'HT' for net price)
 				$row->price_base_type= $this->price_base_type;
 				if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
-					//! Arrays for multiprices
+					// from given price level
 					$row->price=$this->multiprices[$multiprices_index]?$this->multiprices[$multiprices_index]:'';
 					$row->price_ttc=$this->multiprices_ttc[$multiprices_index]?$this->multiprices_ttc[$multiprices_index]:'';
+					$row->price_min=$this->multiprices_min[$multiprices_index]?$this->multiprices_min[$multiprices_index]:'';
 					if (! empty($conf->global->PRODUIT_MULTIPRICES_USE_VAT_PER_LEVEL) || empty($socid)) {
 						// using this option is a bug. kept for backward compatibility
 						$row->tva_tx=$this->multiprices_tva_tx[$multiprices_index]?$this->multiprices_tva_tx[$multiprices_index]:'';
-					} else {
-						$customer = new Societe($this->db);
-						if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
-						if ($result > 0 && $mysoc->id > 0) {
-							$row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
-						}
+					} elseif (!empty($socid)) {
+						$row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
 					}
 					$row->price_base_type=$this->multiprices_base_type[$multiprices_index];
 					$row->multiprices_index=$multiprices_index;
-				} elseif (!empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) { // Price by customer
+				} elseif (ExtDirect::checkDolVersion(0, '10.0') && !empty($socid)) {
+					$priceArray = $this->getSellPrice($mysoc, $customer);
+					$row->price=$priceArray['pu_ht'];
+					$row->price_ttc=$priceArray['pu_ttc'];
+					$row->price_min= $priceArray['price_min'];
+					$row->tva_tx = $priceArray['tva_tx'];
+					$row->tva_npr= $priceArray['tva_npr'];
+					$row->price_base_type=$priceArray['price_base_type'];
+				} elseif (!empty($conf->global->PRODUIT_MULTIPRICES) && !empty($socid)) {
+					// from customer price level
+					$row->multiprices_index=$customer->price_level;
+					$row->price=$this->multiprices[$customer->price_level]?$this->multiprices[$customer->price_level]:'';
+					$row->price_ttc=$this->multiprices_ttc[$customer->price_level]?$this->multiprices_ttc[$customer->price_level]:'';
+					$row->price_min=$this->multiprices_min[$customer->price_level]?$this->multiprices_min[$customer->price_level]:'';
+					$row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
+					$row->price_base_type=$this->multiprices_base_type[$customer->price_level];
+				} elseif (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) {
+					// Price by customer
 					require_once DOL_DOCUMENT_ROOT . '/product/class/productcustomerprice.class.php';
 
 					$prodcustprice = new Productcustomerprice($this->db);
@@ -188,13 +213,6 @@ class ExtDirectProduct extends Product
 				}
 				//! Default VAT rate of product, make sure vat is set if multi/customer vat is not set.
 				if ($row->tva_tx === '') $row->tva_tx = ($this->tva_tx) ? $this->tva_tx : '';
-				$row->price_min= $this->price_min;         // Minimum price net
-				$row->price_min_ttc= $this->price_min_ttc;     // Minimum price with tax
-				//! French VAT NPR (0 or 1)
-				$row->tva_npr= $this->tva_npr;
-				//! local taxes
-				$row->localtax1_tx = $this->localtax1_tx;
-				$row->localtax2_tx = $this->localtax2_tx;
 
 				// batch managed product
 				if (!empty($conf->productbatch->enabled)) $row->has_batch = $this->status_batch;
