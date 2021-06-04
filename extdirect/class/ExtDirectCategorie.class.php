@@ -39,224 +39,224 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectCategorie extends Categorie
 {
-    private $_user;
+	private $_user;
 
-    /** Constructor
-     *
-     * @param string $login user name
-     */
-    public function __construct($login)
-    {
-        global $langs,$db,$user;
+	/** Constructor
+	 *
+	 * @param string $login user name
+	 */
+	public function __construct($login)
+	{
+		global $langs,$db,$user;
 
-        if (!empty($login)) {
-            if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-                $user->getrights();
-                $this->_user = $user;  //product.class uses global user
-                if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
-                    $langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
-                }
-                $langs->load("categories");
-                parent::__construct($db);
-            }
-        }
-    }
+		if (!empty($login)) {
+			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
+				$user->getrights();
+				$this->_user = $user;  //product.class uses global user
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				}
+				$langs->load("categories");
+				parent::__construct($db);
+			}
+		}
+	}
 
-    /**
-     *    Load categories from database into memory
-     *
-     *    @param    stdClass    $param  filter with elements:
-     *                                  id      Id of product to load
-     *                                  label   Reference of product, name
-     *
-     *    @return     stdClass result data or -1
-     */
-    public function readCategorie(stdClass $param)
-    {
-        global $conf,$langs;
+	/**
+	 *    Load categories from database into memory
+	 *
+	 *    @param    stdClass    $param  filter with elements:
+	 *                                  id      Id of product to load
+	 *                                  label   Reference of product, name
+	 *
+	 *    @return     stdClass result data or -1
+	 */
+	public function readCategorie(stdClass $param)
+	{
+		global $conf,$langs;
 
-        if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->categorie->lire)) return PERMISSIONERROR;
-        $results = array();
-        $row = new stdClass;
-        $id = 0;
-        $label = '';
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->categorie->lire)) return PERMISSIONERROR;
+		$results = array();
+		$row = new stdClass;
+		$id = 0;
+		$label = '';
 
-        if (isset($param->filter)) {
-            foreach ($param->filter as $key => $filter) {
-                if ($filter->property == 'id') $id=$filter->value;
-                elseif ($filter->property == 'label') $label=$filter->value;
-            }
-        }
+		if (isset($param->filter)) {
+			foreach ($param->filter as $key => $filter) {
+				if ($filter->property == 'id') $id=$filter->value;
+				elseif ($filter->property == 'label') $label=$filter->value;
+			}
+		}
 
-        if (($id > 0) || ($label != '')) {
-            if (($result = $this->fetch($id, $label)) < 0)    return $result;
-            if (!$this->error) {
-                $row->id           = $this->id ;
-                $row->fk_parent    = $this->fk_parent;
-                $row->label        = $this->label;
-                $row->description  = $this->description?$this->description:'';
-                $row->company_id   = $this->socid;
-                // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
-                $row->type= $this->type;
-                $row->entity= $this->entity;
-                array_push($results, $row);
-            } else {
-                return 0;
-            }
-        }
+		if (($id > 0) || ($label != '')) {
+			if (($result = $this->fetch($id, $label)) < 0)    return $result;
+			if (!$this->error) {
+				$row->id           = $this->id ;
+				$row->fk_parent    = $this->fk_parent;
+				$row->label        = $this->label;
+				$row->description  = $this->description?$this->description:'';
+				$row->company_id   = $this->socid;
+				// 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
+				$row->type= $this->type;
+				$row->entity= $this->entity;
+				array_push($results, $row);
+			} else {
+				return 0;
+			}
+		}
 
-        return $results;
-    }
+		return $results;
+	}
 
 
-    /**
-     * Ext.direct method to Create categorie
-     *
-     * @param unknown_type $params object or object array with categorie model(s)
-     * @return Ambigous <multitype:, unknown_type>|unknown
-     */
-    public function createCategorie($params)
-    {
+	/**
+	 * Ext.direct method to Create categorie
+	 *
+	 * @param unknown_type $params object or object array with categorie model(s)
+	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 */
+	public function createCategorie($params)
+	{
 
-        if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->categorie->creer)) return PERMISSIONERROR;
-        $notrigger=0;
-        $paramArray = ExtDirect::toArray($params);
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->categorie->creer)) return PERMISSIONERROR;
+		$notrigger=0;
+		$paramArray = ExtDirect::toArray($params);
 
-        foreach ($paramArray as &$param) {
-            // prepare fields
-            $this->prepareFields($param);
-            if (($result = $this->create($this->_user)) < 0) return $result;
+		foreach ($paramArray as &$param) {
+			// prepare fields
+			$this->prepareFields($param);
+			if (($result = $this->create($this->_user)) < 0) return $result;
 
-            $param->id=$this->id;
-        }
+			$param->id=$this->id;
+		}
 
-        if (is_array($params)) {
-            return $paramArray;
-        } else {
-            return $param;
-        }
-    }
+		if (is_array($params)) {
+			return $paramArray;
+		} else {
+			return $param;
+		}
+	}
 
-    /**
-     * Ext.direct method to update categorie
-     *
-     * @param unknown_type $params object or object array with categorie model(s)
-     * @return Ambigous <multitype:, unknown_type>|unknown
-     */
-    public function updateCategorie($params)
-    {
-        if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->categorie->creer)) return PERMISSIONERROR;
-        // dolibarr update settings
+	/**
+	 * Ext.direct method to update categorie
+	 *
+	 * @param unknown_type $params object or object array with categorie model(s)
+	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 */
+	public function updateCategorie($params)
+	{
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->categorie->creer)) return PERMISSIONERROR;
+		// dolibarr update settings
 
-        $paramArray = ExtDirect::toArray($params);
-        foreach ($paramArray as &$param) {
-            // prepare fields
-            if ($param->id) {
-                $id = $param->id;
-                $this->id = $id;
-                if (($result = $this->fetch($id, '')) < 0)    return $result;
-                $this->prepareFields($param);
-                // update
-                if (($result = $this->update($this->_user)) < 0)   return $result;
-            } else {
-                return PARAMETERERROR;
-            }
-        }
-        if (is_array($params)) {
-            return $paramArray;
-        } else {
-            return $param;
-        }
-    }
+		$paramArray = ExtDirect::toArray($params);
+		foreach ($paramArray as &$param) {
+			// prepare fields
+			if ($param->id) {
+				$id = $param->id;
+				$this->id = $id;
+				if (($result = $this->fetch($id, '')) < 0)    return $result;
+				$this->prepareFields($param);
+				// update
+				if (($result = $this->update($this->_user)) < 0)   return $result;
+			} else {
+				return PARAMETERERROR;
+			}
+		}
+		if (is_array($params)) {
+			return $paramArray;
+		} else {
+			return $param;
+		}
+	}
 
-    /**
-     * Ext.direct method to destroy categorie
-     *
-     * @param unknown_type $params object or object array with categorie model(s)
-     * @return Ambigous <multitype:, unknown_type>|unknown
-     */
-    public function destroyCategorie($params)
-    {
-        if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->categorie->supprimer)) return PERMISSIONERROR;
-        $paramArray = ExtDirect::toArray($params);
+	/**
+	 * Ext.direct method to destroy categorie
+	 *
+	 * @param unknown_type $params object or object array with categorie model(s)
+	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 */
+	public function destroyCategorie($params)
+	{
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->categorie->supprimer)) return PERMISSIONERROR;
+		$paramArray = ExtDirect::toArray($params);
 
-        foreach ($paramArray as &$param) {
-            // prepare fields
-            if ($param->id) {
-                $id = $param->id;
-                $this->id = $id;
-                $this->fk_parent = 0; // bug in categorie.class.php introduced in 3.5.4
-                // delete product
-                if (($result = $this->delete($this->_user)) <= 0)    return $result;
-            } else {
-                return PARAMETERERROR;
-            }
-        }
+		foreach ($paramArray as &$param) {
+			// prepare fields
+			if ($param->id) {
+				$id = $param->id;
+				$this->id = $id;
+				$this->fk_parent = 0; // bug in categorie.class.php introduced in 3.5.4
+				// delete product
+				if (($result = $this->delete($this->_user)) <= 0)    return $result;
+			} else {
+				return PARAMETERERROR;
+			}
+		}
 
-        if (is_array($params)) {
-            return $paramArray;
-        } else {
-            return $param;
-        }
-    }
+		if (is_array($params)) {
+			return $paramArray;
+		} else {
+			return $param;
+		}
+	}
 
-    /**
-     * public method to read a list of categories
-     *
-     * @param stdClass $param to    filter on type
-     *
-     * @return     stdClass result data or -1
-     */
-    public function readCategorieList(stdClass $param)
-    {
-        global $conf, $langs;
-        if (!isset($this->db)) return CONNECTERROR;
-        if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
-        $results = array();
-        $cats = array();
-        $row = new stdClass;
-        $type = 0;
+	/**
+	 * public method to read a list of categories
+	 *
+	 * @param stdClass $param to    filter on type
+	 *
+	 * @return     stdClass result data or -1
+	 */
+	public function readCategorieList(stdClass $param)
+	{
+		global $conf, $langs;
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+		$results = array();
+		$cats = array();
+		$row = new stdClass;
+		$type = 0;
 
-        if (isset($param->filter)) {
-            foreach ($param->filter as $key => $filter) {
-                if ($filter->property == 'type') $type=$filter->value;
-            }
-        }
+		if (isset($param->filter)) {
+			foreach ($param->filter as $key => $filter) {
+				if ($filter->property == 'type') $type=$filter->value;
+			}
+		}
 
-        if (($cats = $this->get_all_categories($type, false)) < 0) return $cats;
-        // id 0 is not categorised
-        $row->id = 0;
-        $row->categorie = ($langs->trans('NotCategorized') ? $langs->trans('NotCategorized') : 'Without category');
-        array_push($results, $row);
+		if (($cats = $this->get_all_categories($type, false)) < 0) return $cats;
+		// id 0 is not categorised
+		$row->id = 0;
+		$row->categorie = ($langs->trans('NotCategorized') ? $langs->trans('NotCategorized') : 'Without category');
+		array_push($results, $row);
 
-        foreach ($cats as $cat) {
-            $row = new stdClass;
-            $row->id = $cat->id;
-            $row->categorie = $cat->label;
-            array_push($results, $row);
-        }
-        return $results;
-    }
+		foreach ($cats as $cat) {
+			$row = new stdClass;
+			$row->id = $cat->id;
+			$row->categorie = $cat->label;
+			array_push($results, $row);
+		}
+		return $results;
+	}
 
-    /**
-     * private method to copy fields into dolibarr object
-     *
-     * @param stdclass $param object with fields
-     * @return null
-     */
-    private function prepareFields($param)
-    {
-        isset($param->id) ? ( $this->id = $param->id ) : null;
-        isset($param->label) ? ( $this->label = $param->label) : null;
-        isset($param->fk_parent) ? ( $this->fk_parent =$param->fk_parent) : null;
-        isset($param->description) ? ( $this->description = $param->description) : null;
-        // 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
-        isset($param->type) ? ( $this->type = $param->type) : null;
-        isset($param->company_id) ? ( $this->socid = $param->company_id) : null;
-        isset($param->entity) ? ( $this->entity = $param->entity ) : null;
-    }
+	/**
+	 * private method to copy fields into dolibarr object
+	 *
+	 * @param stdclass $param object with fields
+	 * @return null
+	 */
+	private function prepareFields($param)
+	{
+		isset($param->id) ? ( $this->id = $param->id ) : null;
+		isset($param->label) ? ( $this->label = $param->label) : null;
+		isset($param->fk_parent) ? ( $this->fk_parent =$param->fk_parent) : null;
+		isset($param->description) ? ( $this->description = $param->description) : null;
+		// 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
+		isset($param->type) ? ( $this->type = $param->type) : null;
+		isset($param->company_id) ? ( $this->socid = $param->company_id) : null;
+		isset($param->entity) ? ( $this->entity = $param->entity ) : null;
+	}
 }

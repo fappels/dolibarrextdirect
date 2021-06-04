@@ -36,3 +36,4 @@ StatusOrderValidatedFullyShippableShort=Validated shippable
 StatusOrderValidatedPartlyShippableShort=Validated partly shippable
 StatusOrderOnprocessFullyShippableShort=In process shippable
 StatusOrderOnprocessPartlyShippableShort=In process partly shippable
+ShippableQtyInfo=%d Shippable - %d Not shippable
