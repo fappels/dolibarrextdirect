@@ -605,13 +605,9 @@ class ExtDirectActionComm extends ActionComm
 		isset($params->type_code) ? $this->type_code = $params->type_code : $this->type_code = 'AC_OTH';
 		isset($params->label) ? $this->label = $params->label : null;
 		isset($params->note) ? $this->note = $params->note : null;
-		isset($params->usertodo_id) ? $this->usertodo->id = $params->usertodo_id : null; // deprecated
-		isset($params->userdone_id) ? $this->userdone->id = $params->userdone_id : null; // deprecated
 		isset($params->usertodo_id) ? $this->userownerid = $params->usertodo_id : null;
 		isset($params->userdone_id) ? $this->userdoneid = $params->userdone_id : null;
 		isset($params->location) ? $this->location = $params->location : null;
-		isset($params->company_id) ? $this->societe->id=$params->company_id : null; // deprecated
-		isset($params->contact_id) ? $this->contact->id=$params->contact_id : null; // deprecated
 		isset($params->company_id) ? $this->socid=$params->company_id : null;
 		isset($params->contact_id) ? $this->contactid=$params->contact_id : null;
 		isset($params->durationp) ? $this->durationp=$params->durationp : null;
