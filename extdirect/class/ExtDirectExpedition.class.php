@@ -107,6 +107,7 @@ class ExtDirectExpedition extends Expedition
 		$id = 0;
 		$ref = '';
 		$ref_ext = '';
+		$originObject = null;
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
@@ -148,6 +149,14 @@ class ExtDirectExpedition extends Expedition
 				$row->deliver_date = $this->date_delivery;
 				$row->origin_id = $this->origin_id;
 				$row->origin = $this->origin;
+				if (!empty($this->origin) && !empty($this->origin_id)) {
+					if ($this->origin == 'commande') {
+						$originObject = new Commande($this->db);
+						if ($originObject->fetch($this->origin_id) > 0) {
+							$row->origin_ref = $originObject->ref;
+						}
+					}
+				}
 				$row->weight_units = $this->weight_units;
 				$row->weight = $this->weight;
 				$row->size_units = $this->size_units;
