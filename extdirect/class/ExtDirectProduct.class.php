@@ -1241,6 +1241,7 @@ class ExtDirectProduct extends Product
 		$socid = null;
 		$includeTotal = true;
 		$warehouseIds = array();
+		$checkWarehouseIds = array();
 
 		if (isset($param->limit)) {
 			$limit = $param->limit;
@@ -1260,6 +1261,7 @@ class ExtDirectProduct extends Product
 			elseif ($filter->property == 'warehouse_id') {
 				$warehouseFilter = true;
 				if ($filter->value > 0) $warehouseIds[] = $filter->value;
+				$checkWarehouseIds[] = $filter->value;
 			}
 		}
 
@@ -1289,7 +1291,11 @@ class ExtDirectProduct extends Product
 		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
 		if ($warehouseFilter) {
-			$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+			if (in_array(0, $checkWarehouseIds)) {
+				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+			} else {
+				$sqlFrom .= ' INNER JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+			}
 			if (count($warehouseIds) > 0) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
 			}
