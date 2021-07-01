@@ -17,8 +17,10 @@ var appUuid = null,
 	actionId,
 	multiPrices = true,
 	dolibarrVersion = null,
-	sellby = Ext.Date.format(new Date(2020, 5, 30), 'U'),
-	eatby = Ext.Date.format(new Date(2020, 11, 31), 'U'),
+	sellby1 = Ext.Date.format(new Date(2022, 5, 30), 'U'),
+	eatby1 = Ext.Date.format(new Date(2022, 11, 31), 'U'),
+	sellby2 = Ext.Date.format(new Date(2022, 6, 30), 'U'),
+	eatby2 = Ext.Date.format(new Date(2022, 12, 30), 'U'),
 	optionalModel = [];
 
 var TIMEOUT = 8000;
@@ -1176,8 +1178,8 @@ describe("products", function () {
 						productData.has_photo = 0;
 						productData.photo = null;
 						//productData.productinfo = 'connectortest';
-						productData.sellby = sellby;
-						productData.eatby = eatby;
+						productData.sellby = sellby1;
+						productData.eatby = eatby1;
 						productData.batch = 'batch1';
 						productData.has_batch = 1;
 						productData.correct_stock_nbpiece = 5;
@@ -1452,8 +1454,8 @@ describe("products", function () {
 			record.set('correct_stock_movement', 0);
 			record.set('correct_stock_label', 'batch');
 			record.set('correct_stock_price', '15');
-			record.set('sellby', sellby);
-			record.set('eatby', eatby);
+			record.set('sellby', sellby2);
+			record.set('eatby', eatby2);
 			record.set('batch', 'batch2');
 			record.set('batch_info', 'batch2 info');
 			productStore.sync();
@@ -2140,7 +2142,7 @@ describe("shipment", function () {
 					expect(testresult).toBe('connectortest');
 				}
 				if (index == 3) {
-					expect(Ext.Date.format(sellbys[index], 'U')).toBe(sellby);
+					expect(Ext.Date.format(sellbys[index], 'U')).toBe(sellby2);
 					expect(batches[index]).toBe('batch2');
 				}
 			});
