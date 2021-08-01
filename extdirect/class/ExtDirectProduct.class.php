@@ -233,7 +233,7 @@ class ExtDirectProduct extends Product
 								if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
 									// fetch lot data
 									$productLot = new Productlot($this->db);
-									if (($result = $productLot->fetch(0, $this->id, $productBatch->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+									if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 									if ($productLot->id > 0) {
 										$productLotId = $productLot->id;
 									}
@@ -623,8 +623,11 @@ class ExtDirectProduct extends Product
 	 */
 	public function destroyOptionals($params)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
+		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -857,6 +860,7 @@ class ExtDirectProduct extends Product
 		global $conf, $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		// dolibarr update settings
 		$notrigger=false;
 		$supplierProducts = array();
@@ -1101,12 +1105,25 @@ class ExtDirectProduct extends Product
 						}
 					}
 					if (isset($productBatch->id)) {
+						$currentBatch = $productBatch->batch;
 						isset($param->batch) ? $productBatch->batch = $param->batch : null;
 						isset($param->sellby) ? $productBatch->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
 						isset($param->eatby) ? $productBatch->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
 						isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
 						!empty($batchCorrectQty) ? $productBatch->qty = $productBatch->qty - $batchCorrectQty : null;
 						if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
+						// also update product lot
+						if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+							// fetch lot data
+							$productLot = new Productlot($this->db);
+							if (($result = $productLot->fetch(0, $this->id, $currentBatch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+							if ($productLot->id > 0) {
+								isset($param->batch) ? $productLot->batch = $param->batch : null;
+								isset($param->sellby) ? $productLot->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
+								isset($param->eatby) ? $productLot->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
+								if (($result = $productLot->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+							}
+						}
 					}
 				}
 				if ($updatedSellPrice && (isset($param->price) || isset($param->price_ttc))) {
