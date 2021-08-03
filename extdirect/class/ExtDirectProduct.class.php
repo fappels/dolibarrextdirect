@@ -1928,7 +1928,7 @@ class ExtDirectProduct extends Product
 		$maxNum = 0;
 		if (empty($productObj)) $productObj=$this;
 		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) {
-			$pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
+			$pdir = get_exdir($productObj->id, 2, 0, 0, $productObj, 'product') . $productObj->id ."/photos/";
 		} else {
 			$pdir = $productObj->ref.'/';
 		}
@@ -2002,7 +2002,7 @@ class ExtDirectProduct extends Product
 
 		$tdir = $dir. '/temp';
 
-		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) $dir .= '/'. get_exdir($this->id, 2, 0, 0, null, '') . $this->id ."/photos";
+		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) $dir .= '/'. get_exdir($this->id, 2, 0, 0, $this, 'product') . $this->id ."/photos";
 		else $dir .= '/'.dol_sanitizeFileName($this->ref);
 
 		dol_mkdir($tdir);
