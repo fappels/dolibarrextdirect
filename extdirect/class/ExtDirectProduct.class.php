@@ -1255,6 +1255,8 @@ class ExtDirectProduct extends Product
 		$photoSize = '';
 		$multiPriceLevel=1;
 		$categorieFilter = false;
+		$supplierFilter = false;
+		$warehouseFilter = false;
 		$socid = null;
 		$includeTotal = true;
 		$warehouseIds = array();
@@ -1307,7 +1309,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
-		if ($warehouseFilter) {
+		if ($warehouseFilter || $conf->multicompany->enabled) {
 			if (in_array(0, $checkWarehouseIds)) {
 				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
 			} else {
@@ -1315,6 +1317,9 @@ class ExtDirectProduct extends Product
 			}
 			if (count($warehouseIds) > 0) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
+			}
+			if ($conf->multicompany->enabled) {
+				$sqlFrom .= ' AND ps.fk_entrepot IN (SELECT rowid FROM '.MAIN_DB_PREFIX.'entrepot WHERE entity IN ('.getEntity('stock', 1).'))';
 			}
 		}
 		if ($categorieFilter) {
