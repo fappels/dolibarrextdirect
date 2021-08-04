@@ -1084,15 +1084,19 @@ class ExtDirectExpedition extends Expedition
 	 */
 	public function updateShipmentLine($param)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
+		$package = null;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if (($result = $this->fetch($params->origin_id)) < 0) {
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
+			$idArray = explode('_', $params->id);
 			// Add a protection to refuse deleting if shipment is not in draft status
 			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
 				if (ExtDirect::checkDolVersion(0, '9.0', '')) {
@@ -1103,7 +1107,6 @@ class ExtDirectExpedition extends Expedition
 				if (($result = $line->fetch($params->line_id)) < 0) {
 					return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				$idArray = explode('_', $params->id);
 				$line->id = $params->line_id;
 				$line->entrepot_id = $params->warehouse_id;
 				$line->fk_product = $params->product_id;
@@ -1120,6 +1123,33 @@ class ExtDirectExpedition extends Expedition
 				if (($result = $line->update($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
 			} elseif ($params->qty_package > 0) {
 				// add to package
+				if (!empty($conf->package->enabled)) {
+					dol_include_once('/package/class/expeditionpackage.class');
+					if (!isset($this->_user->rights->package->expeditionpackage->write)) return PERMISSIONERROR;
+					// make package
+					if (!isset($package)) {
+						$package = new ExpeditionPackage($this->db);
+						$this->fetch_optionals();
+						$package->fk_soc = $this->socid;
+						$package->array_options = $this->array_options;
+						$package->note_private = $this->getDefaultCreateValueFor('note_private', (!empty($this->note_private) ? $this->note_private : null));
+						$package->note_public = $this->getDefaultCreateValueFor('note_public', (!empty($this->note_public) ? $this->note_public : null));
+						$result = $package->create($this->_user);
+						if ($result > 0) {
+							$result = $package->add_object_linked('shipping', $this->id, $this->_user);
+							if ($result < 0) {
+								return ExtDirect::getDolError($result, $package->errors, $package->error);
+							}
+						} else {
+							return ExtDirect::getDolError($result, $package->errors, $package->error);
+						}
+					}
+					// add line
+					$result = $package->addLine($this->_user, $params->qty_toship, $params->product_id, $params->line_id, $params->batch, $idArray[1]);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $package->errors, $package->error);
+					}
+				}
 			} else {
 				return PARAMETERERROR;
 			}
