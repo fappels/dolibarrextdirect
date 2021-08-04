@@ -1560,7 +1560,6 @@ class ExtDirectCommande extends Commande
 		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
 		$orderLine = new OrderLine($this->db);
 
-		$notrigger=0;
 		$paramArray = ExtDirect::toArray($param);
 		$result = 0;
 
@@ -1569,16 +1568,31 @@ class ExtDirectCommande extends Commande
 			$this->prepareOrderLineFields($params, $orderLine);
 			if (($result = $this->fetch($orderLine->fk_commande)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			$this->fetch_thirdparty();
-			if ((! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) || ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
-				if (!empty($this->thirdparty->tva_assuj)) {
+			if (ExtDirect::checkDolVersion(0, '10.0')) {
+				if (empty($orderLine->fk_product)) {
 					$tva_tx = $orderLine->tva_tx;
+					$tva_npr = 0;
 				} else {
-					$tva_tx = 0;
+					dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+					$myprod = new ExtDirectProduct($this->_user->login);
+					$result = $myprod->fetch($orderLine->fk_product);
+					if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
+					$priceArray = $myprod->getSellPrice($mysoc, $this->thirdparty);
+					$tva_tx = $priceArray['tva_tx'];
+					$tva_npr = $priceArray['tva_npr'];
 				}
-				$tva_npr = 0;
 			} else {
-				$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
-				$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+				if ((! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) || ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
+					if (!empty($this->thirdparty->tva_assuj)) {
+						$tva_tx = $orderLine->tva_tx;
+					} else {
+						$tva_tx = 0;
+					}
+					$tva_npr = 0;
+				} else {
+					$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+					$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+				}
 			}
 
 			// Local Taxes
@@ -1669,16 +1683,31 @@ class ExtDirectCommande extends Commande
 						if ($orderLine->id == $params->origin_line_id) {
 							// update fields
 							$this->prepareOrderLineFields($params, $orderLine);
-							if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) {
-								if (!empty($this->thirdparty->tva_assuj)) {
+							if (ExtDirect::checkDolVersion(0, '10.0')) {
+								if (empty($orderLine->fk_product)) {
 									$tva_tx = $orderLine->tva_tx;
+									$tva_npr = 0;
 								} else {
-									$tva_tx = 0;
+									dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+									$myprod = new ExtDirectProduct($this->_user->login);
+									$result = $myprod->fetch($orderLine->fk_product);
+									if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
+									$priceArray = $myprod->getSellPrice($mysoc, $this->thirdparty);
+									$tva_tx = $priceArray['tva_tx'];
+									$tva_npr = $priceArray['tva_npr'];
 								}
-								$tva_npr = 0;
 							} else {
-								$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
-								$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+								if ((! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($this->thirdparty->price_level)) || ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
+									if (!empty($this->thirdparty->tva_assuj)) {
+										$tva_tx = $orderLine->tva_tx;
+									} else {
+										$tva_tx = 0;
+									}
+									$tva_npr = 0;
+								} else {
+									$tva_tx = get_default_tva($mysoc, $this->thirdparty, $orderLine->fk_product);
+									$tva_npr = get_default_npr($mysoc, $this->thirdparty, $orderLine->fk_product);
+								}
 							}
 
 							// Local Taxes

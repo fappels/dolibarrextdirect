@@ -138,6 +138,10 @@ class ExtDirectProduct extends Product
 		}
 
 		if (($id > 0) || ($ref != '')) {
+			if ($socid > 0) {
+				$customer = new Societe($this->db);
+				if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
+			}
 			if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if ($this->id > 0) {
 				$row->id = $this->id ;
@@ -153,25 +157,46 @@ class ExtDirectProduct extends Product
 				$row->price= $this->price?$this->price:'';              // Price net
 				$row->price_ttc= $this->price_ttc?$this->price_ttc:'';          // Price with tax
 				$row->tva_tx = '';
+				$row->price_min= $this->price_min;         // Minimum price net
+				$row->price_min_ttc= $this->price_min_ttc;     // Minimum price with tax
+				//! French VAT NPR (0 or 1)
+				$row->tva_npr= $this->tva_npr;
+				//! local taxes
+				$row->localtax1_tx = $this->localtax1_tx;
+				$row->localtax2_tx = $this->localtax2_tx;
 				//! Base price ('TTC' for price including tax or 'HT' for net price)
 				$row->price_base_type= $this->price_base_type;
 				if (! empty($conf->global->PRODUIT_MULTIPRICES) && isset($multiprices_index)) {
-					//! Arrays for multiprices
+					// from given price level
 					$row->price=$this->multiprices[$multiprices_index]?$this->multiprices[$multiprices_index]:'';
 					$row->price_ttc=$this->multiprices_ttc[$multiprices_index]?$this->multiprices_ttc[$multiprices_index]:'';
+					$row->price_min=$this->multiprices_min[$multiprices_index]?$this->multiprices_min[$multiprices_index]:'';
 					if (! empty($conf->global->PRODUIT_MULTIPRICES_USE_VAT_PER_LEVEL) || empty($socid)) {
 						// using this option is a bug. kept for backward compatibility
 						$row->tva_tx=$this->multiprices_tva_tx[$multiprices_index]?$this->multiprices_tva_tx[$multiprices_index]:'';
-					} else {
-						$customer = new Societe($this->db);
-						if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
-						if ($result > 0 && $mysoc->id > 0) {
-							$row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
-						}
+					} elseif (!empty($socid)) {
+						$row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
 					}
 					$row->price_base_type=$this->multiprices_base_type[$multiprices_index];
 					$row->multiprices_index=$multiprices_index;
-				} elseif (!empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) { // Price by customer
+				} elseif (ExtDirect::checkDolVersion(0, '10.0') && !empty($socid)) {
+					$priceArray = $this->getSellPrice($mysoc, $customer);
+					$row->price=$priceArray['pu_ht'];
+					$row->price_ttc=$priceArray['pu_ttc'];
+					$row->price_min= $priceArray['price_min'];
+					$row->tva_tx = $priceArray['tva_tx'];
+					$row->tva_npr= $priceArray['tva_npr'];
+					$row->price_base_type=$priceArray['price_base_type'];
+				} elseif (!empty($conf->global->PRODUIT_MULTIPRICES) && !empty($socid)) {
+					// from customer price level
+					$row->multiprices_index=$customer->price_level;
+					$row->price=$this->multiprices[$customer->price_level]?$this->multiprices[$customer->price_level]:'';
+					$row->price_ttc=$this->multiprices_ttc[$customer->price_level]?$this->multiprices_ttc[$customer->price_level]:'';
+					$row->price_min=$this->multiprices_min[$customer->price_level]?$this->multiprices_min[$customer->price_level]:'';
+					$row->tva_tx = get_default_tva($mysoc, $customer, $this->id);
+					$row->price_base_type=$this->multiprices_base_type[$customer->price_level];
+				} elseif (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) {
+					// Price by customer
 					require_once DOL_DOCUMENT_ROOT . '/product/class/productcustomerprice.class.php';
 
 					$prodcustprice = new Productcustomerprice($this->db);
@@ -188,13 +213,6 @@ class ExtDirectProduct extends Product
 				}
 				//! Default VAT rate of product, make sure vat is set if multi/customer vat is not set.
 				if ($row->tva_tx === '') $row->tva_tx = ($this->tva_tx) ? $this->tva_tx : '';
-				$row->price_min= $this->price_min;         // Minimum price net
-				$row->price_min_ttc= $this->price_min_ttc;     // Minimum price with tax
-				//! French VAT NPR (0 or 1)
-				$row->tva_npr= $this->tva_npr;
-				//! local taxes
-				$row->localtax1_tx = $this->localtax1_tx;
-				$row->localtax2_tx = $this->localtax2_tx;
 
 				// batch managed product
 				if (!empty($conf->productbatch->enabled)) $row->has_batch = $this->status_batch;
@@ -215,7 +233,7 @@ class ExtDirectProduct extends Product
 								if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
 									// fetch lot data
 									$productLot = new Productlot($this->db);
-									if (($result = $productLot->fetch(0, $this->id, $productBatch->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+									if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 									if ($productLot->id > 0) {
 										$productLotId = $productLot->id;
 									}
@@ -605,8 +623,11 @@ class ExtDirectProduct extends Product
 	 */
 	public function destroyOptionals($params)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
+		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -839,6 +860,7 @@ class ExtDirectProduct extends Product
 		global $conf, $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		// dolibarr update settings
 		$notrigger=false;
 		$supplierProducts = array();
@@ -1083,12 +1105,25 @@ class ExtDirectProduct extends Product
 						}
 					}
 					if (isset($productBatch->id)) {
+						$currentBatch = $productBatch->batch;
 						isset($param->batch) ? $productBatch->batch = $param->batch : null;
 						isset($param->sellby) ? $productBatch->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
 						isset($param->eatby) ? $productBatch->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
 						isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
 						!empty($batchCorrectQty) ? $productBatch->qty = $productBatch->qty - $batchCorrectQty : null;
 						if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
+						// also update product lot
+						if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+							// fetch lot data
+							$productLot = new Productlot($this->db);
+							if (($result = $productLot->fetch(0, $this->id, $currentBatch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+							if ($productLot->id > 0) {
+								isset($param->batch) ? $productLot->batch = $param->batch : null;
+								isset($param->sellby) ? $productLot->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
+								isset($param->eatby) ? $productLot->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
+								if (($result = $productLot->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+							}
+						}
 					}
 				}
 				if ($updatedSellPrice && (isset($param->price) || isset($param->price_ttc))) {
@@ -1220,9 +1255,12 @@ class ExtDirectProduct extends Product
 		$photoSize = '';
 		$multiPriceLevel=1;
 		$categorieFilter = false;
+		$supplierFilter = false;
+		$warehouseFilter = false;
 		$socid = null;
 		$includeTotal = true;
 		$warehouseIds = array();
+		$checkWarehouseIds = array();
 
 		if (isset($param->limit)) {
 			$limit = $param->limit;
@@ -1242,6 +1280,7 @@ class ExtDirectProduct extends Product
 			elseif ($filter->property == 'warehouse_id') {
 				$warehouseFilter = true;
 				if ($filter->value > 0) $warehouseIds[] = $filter->value;
+				$checkWarehouseIds[] = $filter->value;
 			}
 		}
 
@@ -1270,10 +1309,17 @@ class ExtDirectProduct extends Product
 			}
 		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
-		if ($warehouseFilter) {
-			$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+		if ($warehouseFilter || $conf->multicompany->enabled) {
+			if (in_array(0, $checkWarehouseIds)) {
+				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+			} else {
+				$sqlFrom .= ' INNER JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
+			}
 			if (count($warehouseIds) > 0) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
+			}
+			if ($conf->multicompany->enabled) {
+				$sqlFrom .= ' AND ps.fk_entrepot IN (SELECT rowid FROM '.MAIN_DB_PREFIX.'entrepot WHERE entity IN ('.getEntity('stock', 1).'))';
 			}
 		}
 		if ($categorieFilter) {
@@ -1887,7 +1933,7 @@ class ExtDirectProduct extends Product
 		$maxNum = 0;
 		if (empty($productObj)) $productObj=$this;
 		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) {
-			$pdir = get_exdir($productObj->id, 2, 0, 0, null, '') . $productObj->id ."/photos/";
+			$pdir = get_exdir($productObj->id, 2, 0, 0, $productObj, 'product') . $productObj->id ."/photos/";
 		} else {
 			$pdir = $productObj->ref.'/';
 		}
@@ -1961,7 +2007,7 @@ class ExtDirectProduct extends Product
 
 		$tdir = $dir. '/temp';
 
-		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) $dir .= '/'. get_exdir($this->id, 2, 0, 0, null, '') . $this->id ."/photos";
+		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) $dir .= '/'. get_exdir($this->id, 2, 0, 0, $this, 'product') . $this->id ."/photos";
 		else $dir .= '/'.dol_sanitizeFileName($this->ref);
 
 		dol_mkdir($tdir);
