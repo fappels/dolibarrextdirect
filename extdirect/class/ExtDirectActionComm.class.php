@@ -77,7 +77,7 @@ class ExtDirectActionComm extends ActionComm
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
-				if ($filter->property == 'id') {
+				if ($filter->property == 'id' && !empty($filter->value)) {
 					if (($result = $this->fetch($filter->value)) < 0)   return ExtDirect::getDolError($result, $this->errors, $this->error);
 					if ($result > 0) {
 						$row = new stdClass;
@@ -111,7 +111,7 @@ class ExtDirectActionComm extends ActionComm
 						if (isset($this->contact->id)) {
 							$row->contact_id    = (int) $this->contact->id; // deprecated
 						} else {
-							$row->contact_id    = (int) $this->contactid;
+							$row->contact_id    = (int) $this->contact_id;
 						}
 						$row->project_id        = (int) $this->fk_project;
 
@@ -609,7 +609,7 @@ class ExtDirectActionComm extends ActionComm
 		isset($params->userdone_id) ? $this->userdoneid = $params->userdone_id : null;
 		isset($params->location) ? $this->location = $params->location : null;
 		isset($params->company_id) ? $this->socid=$params->company_id : null;
-		isset($params->contact_id) ? $this->contactid=$params->contact_id : null;
+		isset($params->contact_id) ? $this->contact_id=$params->contact_id : null;
 		isset($params->durationp) ? $this->durationp=$params->durationp : null;
 		isset($params->percentage) ? $this->percentage=$params->percentage : null;
 		isset($params->code) ? $this->code=$params->code : null;
