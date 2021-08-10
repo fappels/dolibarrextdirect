@@ -786,9 +786,9 @@ class ExtDirectExpedition extends Expedition
 					$row->origin_id = $origin_id;
 					$row->qty_asked = $line->qty_asked;
 					$row->qty_shipped = $line->qty_shipped;
-					if (!empty($conf->package->enabled)) {
-						dol_include_once('/package/class/expeditionpackage.class.php');
-						$packageLine = new ExpeditionPackageLine($this->db);
+					if (!empty($conf->shipmentpackage->enabled)) {
+						dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+						$packageLine = new ShipmentPackageLine($this->db);
 						$packagedQty = $packageLine->getQtyPackaged($line->line_id);
 						if ($packagedQty > 0) $row->qty_shipped = $line->qty_shipped - $packagedQty;
 					}
@@ -1129,25 +1129,37 @@ class ExtDirectExpedition extends Expedition
 				if (($result = $line->update($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
 			} elseif ($params->qty_package > 0) {
 				// add to package
-				if (!empty($conf->package->enabled)) {
-					dol_include_once('/package/class/expeditionpackage.class.php');
-					if (!isset($this->_user->rights->package->expeditionpackage->write)) return PERMISSIONERROR;
+				if (!empty($conf->shipmentpackage->enabled)) {
+					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+					if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->write)) return PERMISSIONERROR;
 					// make package
 					if (!isset($package)) {
-						$package = new ExpeditionPackage($this->db);
 						$this->fetch_optionals();
-						$package->fk_soc = $this->socid;
-						$package->array_options = $this->array_options;
-						$package->note_private = $this->getDefaultCreateValueFor('note_private', (!empty($this->note_private) ? $this->note_private : null));
-						$package->note_public = $this->getDefaultCreateValueFor('note_public', (!empty($this->note_public) ? $this->note_public : null));
-						$result = $package->create($this->_user);
-						if ($result > 0) {
-							$result = $package->add_object_linked('shipping', $this->id, $this->_user);
-							if ($result < 0) {
+						$this->fetchObjectLinked($this->id, 'shipping', null, 'shipmentpackage');
+						$shipmentPackages = $this->linkedObjects['shipmentpackage'];
+						// get first draft package for shipment
+						if (count($shipmentPackages) > 0) {
+							foreach ($shipmentPackages as $shipmentPackage) {
+								if ($shipmentPackage->id > 0 && $shipmentPackage->status == ShipmentPackage::STATUS_DRAFT) {
+									$package = $shipmentPackage;
+								}
+							}
+						}
+						if (!isset($package)) {
+							$package = new ShipmentPackage($this->db);
+							$package->fk_soc = $this->socid;
+							$package->array_options = $this->array_options;
+							$package->note_private = $this->getDefaultCreateValueFor('note_private', (!empty($this->note_private) ? $this->note_private : null));
+							$package->note_public = $this->getDefaultCreateValueFor('note_public', (!empty($this->note_public) ? $this->note_public : null));
+							$result = $package->create($this->_user);
+							if ($result > 0) {
+								$result = $package->add_object_linked('shipping', $this->id, $this->_user);
+								if ($result < 0) {
+									return ExtDirect::getDolError($result, $package->errors, $package->error);
+								}
+							} else {
 								return ExtDirect::getDolError($result, $package->errors, $package->error);
 							}
-						} else {
-							return ExtDirect::getDolError($result, $package->errors, $package->error);
 						}
 					}
 					// add line
@@ -1303,9 +1315,9 @@ class ExtDirectExpedition extends Expedition
 				} else {
 					$row->qty_shipped = (float) $batch->qty;
 				}
-				if (!empty($conf->package->enabled)) {
-					dol_include_once('/package/class/expeditionpackage.class.php');
-					$packageLine = new ExpeditionPackageLine($this->db);
+				if (!empty($conf->shipmentpackage->enabled)) {
+					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+					$packageLine = new ShipmentPackageLine($this->db);
 					$packagedQty = $packageLine->getQtyPackaged($lineId, $batch->id);
 					if ($packagedQty > 0) $row->qty_shipped -= $packagedQty;
 				}
