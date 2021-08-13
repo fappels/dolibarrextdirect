@@ -1151,14 +1151,17 @@ class ExtDirectExpedition extends Expedition
 							$package->array_options = $this->array_options;
 							$package->note_private = $this->getDefaultCreateValueFor('note_private', (!empty($this->note_private) ? $this->note_private : null));
 							$package->note_public = $this->getDefaultCreateValueFor('note_public', (!empty($this->note_public) ? $this->note_public : null));
-							$result = $package->create($this->_user);
-							if ($result > 0) {
+							$packageid = $package->create($this->_user);
+							if ($packageid > 0) {
 								$result = $package->add_object_linked('shipping', $this->id, $this->_user);
 								if ($result < 0) {
 									return ExtDirect::getDolError($result, $package->errors, $package->error);
+								} else {
+									// fetch auto created fields
+									$package->fetch($packageid);
 								}
 							} else {
-								return ExtDirect::getDolError($result, $package->errors, $package->error);
+								return ExtDirect::getDolError($packageid, $package->errors, $package->error);
 							}
 						}
 					}
