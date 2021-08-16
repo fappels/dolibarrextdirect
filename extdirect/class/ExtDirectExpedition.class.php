@@ -769,7 +769,7 @@ class ExtDirectExpedition extends Expedition
 			if (($result = $this->fetch_lines()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if (!$this->error) {
 				foreach ($this->lines as $key => $line) {
-					if (!empty($conf->global->PRODUIT_SOUSPRODUITS) || !empty($photoSize)) {
+					if ($line->fk_product > 0 && (!empty($conf->global->PRODUIT_SOUSPRODUITS) || !empty($photoSize))) {
 						$myprod = new ExtDirectProduct($this->_user->login);
 						if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
 						if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) $myprod->get_sousproduits_arbo();
@@ -793,7 +793,7 @@ class ExtDirectExpedition extends Expedition
 						if ($packagedQty > 0) $row->qty_shipped = $line->qty_shipped - $packagedQty;
 					}
 					$row->has_photo = 0;
-					if (!empty($photoSize)) {
+					if ($myprod && !empty($photoSize)) {
 						$myprod->fetchPhoto($row, $photoSize);
 					}
 					if (isset($warehouse_id) && count($line->details_entrepot) > 1) { // line from from multi warehouse
