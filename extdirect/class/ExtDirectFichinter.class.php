@@ -148,7 +148,7 @@ class ExtDirectFichinter extends Fichinter
 				if ($myUser->fetch($this->user_creation)>0) {
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
-				$row->create_date = $this->datec;
+				$row->date_creation = $this->datec;
 				$row->valid_date= $this->datev;
 				if (isset($project) && $this->fk_project > 0) {
 					$project->fetch($this->fk_project);
@@ -605,7 +605,7 @@ class ExtDirectFichinter extends Fichinter
 				if ($myUser->fetch($row->user_id)>0) {
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
-				$row->create_date  = $this->db->jdate($obj->datec);
+				$row->date_creation  = $this->db->jdate($obj->datec);
 				array_push($data, $row);
 			}
 			$this->db->free($resql);

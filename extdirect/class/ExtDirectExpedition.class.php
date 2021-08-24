@@ -160,15 +160,18 @@ class ExtDirectExpedition extends Expedition
 				$row->weight_units = $this->weight_units;
 				$row->weight = $this->weight;
 				$row->size_units = $this->size_units;
-				$row->trueDepth = $this->trueDepth;
-				$row->trueWidth = $this->trueWidth;
-				$row->trueHeight = $this->trueHeight;
+				$row->trueDepth = $this->trueDepth; // deprecated
+				$row->trueWidth = $this->trueWidth; // deprecated
+				$row->trueHeight = $this->trueHeight; // deprecated
+				$row->length = $this->trueDepth;
+				$row->width = $this->trueWidth;
+				$row->height = $this->trueHeight;
 				$row->shipping_method_id = $this->shipping_method_id;
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
 				$row->tracking_number = $this->tracking_number;
 				$row->model_pdf = $this->model_pdf;
-				$row->create_date = $this->date_creation;
+				$row->date_creation = $this->date_creation;
 				$row->delivery_address_id = $this->fk_delivery_address;
 				$row->ref_ext = $this->ref_ext;
 				array_push($results, $row);
@@ -390,6 +393,11 @@ class ExtDirectExpedition extends Expedition
 						}
 						break;
 					case 2:
+						if (ExtDirect::checkDolVersion(0, '4.0', '')) {
+							$result = $this->setClosed();
+						} else {
+							return COMPATIBILITYERROR;
+						}
 						break;
 					default:
 						break;
@@ -489,14 +497,22 @@ class ExtDirectExpedition extends Expedition
 		isset($params->weight_units) ? $this->weight_units = $params->weight_units : (isset($this->weight_units) ? null : $this->weight_units = 0);
 		isset($params->weight) ? $this->weight = $params->weight : (isset($this->weight) ? null : $this->weight = 0);
 		isset($params->size_units) ? $this->size_units = $params->size_units : (isset($this->size_units) ? null : $this->size_units = 0);
-		// sizes for create
+		// deprecated sizes for create
 		isset($params->trueDepth) ? $this->sizeS = $params->trueDepth : (isset($this->sizeS) ? null : $this->sizeS = 0);
 		isset($params->trueWidth) ? $this->sizeW = $params->trueWidth : (isset($this->sizeW) ? null : $this->sizeW = 0);
 		isset($params->trueHeight) ? $this->sizeH = $params->trueHeight : (isset($this->sizeH) ? null : $this->sizeH = 0);
-		// sizes for update
+		// deprecated sizes for update
 		isset($params->trueDepth) ? $this->trueDepth = $params->trueDepth : (isset($this->trueDepth) ? null : $this->trueDepth = 0);
 		isset($params->trueWidth) ? $this->trueWidth = $params->trueWidth : (isset($this->trueWidth) ? null : $this->trueWidth = 0);
 		isset($params->trueHeight) ? $this->trueHeight = $params->trueHeight : (isset($this->trueHeight) ? null : $this->trueHeight = 0);
+		// sizes for create
+		isset($params->length) ? $this->sizeS = $params->length : (isset($this->sizeS) ? null : $this->sizeS = 0);
+		isset($params->width) ? $this->sizeW = $params->width : (isset($this->sizeW) ? null : $this->sizeW = 0);
+		isset($params->height) ? $this->sizeH = $params->height : (isset($this->sizeH) ? null : $this->sizeH = 0);
+		// sizes for update
+		isset($params->length) ? $this->trueDepth = $params->length : (isset($this->trueDepth) ? null : $this->trueDepth = 0);
+		isset($params->width) ? $this->trueWidth = $params->width : (isset($this->trueWidth) ? null : $this->trueWidth = 0);
+		isset($params->height) ? $this->trueHeight = $params->height : (isset($this->trueHeight) ? null : $this->trueHeight = 0);
 		isset($params->shipping_method_id) ? $this->shipping_method_id = $params->shipping_method_id : null;
 		isset($params->incoterms_id) ? $this->fk_incoterms = $params->incoterms_id : null;
 		isset($params->location_incoterms) ? $this->location_incoterms = $params->location_incoterms : null;
@@ -625,8 +641,6 @@ class ExtDirectExpedition extends Expedition
 				$total = $obj->total;
 				$this->db->free($resql);
 			} else {
-				$error = "Error " . $this->db->lasterror();
-				dol_syslog(get_class($this) . "::readShipmentList " . $error, LOG_ERR);
 				return SQLERROR;
 			}
 		}
@@ -663,8 +677,6 @@ class ExtDirectExpedition extends Expedition
 				return $data;
 			}
 		} else {
-			$error = "Error " . $this->db->lasterror();
-			dol_syslog(get_class($this) . "::readShipmentList " . $error, LOG_ERR);
 			return SQLERROR;
 		}
 	}
@@ -1134,6 +1146,7 @@ class ExtDirectExpedition extends Expedition
 					if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->write)) return PERMISSIONERROR;
 					// make package
 					if (!isset($package)) {
+						$packageid = 0;
 						$this->fetch_optionals();
 						$this->fetchObjectLinked($this->id, 'shipping', null, 'shipmentpackage');
 						$shipmentPackages = $this->linkedObjects['shipmentpackage'];
@@ -1170,6 +1183,7 @@ class ExtDirectExpedition extends Expedition
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $package->errors, $package->error);
 					}
+					$params->shipment_package_id = $packageid;
 				}
 			} else {
 				return PARAMETERERROR;
