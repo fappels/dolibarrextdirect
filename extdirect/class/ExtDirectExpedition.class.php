@@ -795,6 +795,11 @@ class ExtDirectExpedition extends Expedition
 					$row->ref = $line->product_ref;
 					$row->product_label = $line->product_label;
 					$row->product_desc = '';
+					if (empty($line->label)) {
+						$row->label = $line->product_label;
+					} else {
+						$row->label = $line->label;
+					}
 					$row->origin_id = $origin_id;
 					$row->qty_asked = $line->qty_asked;
 					$row->qty_shipped = $line->qty_shipped;
