@@ -1556,7 +1556,7 @@ class ExtDirectProduct extends Product
 			foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
 				if ($includeNoBatch) {
 					$row = new stdClass;
-					$row->id = 'X_'.$warehouseId;
+					$row->id = 'X_'.sprintf("%09d", $warehouseId);
 					$row->product_id = $id;
 					$row->batch_id = 0;
 					$row->batch = $langs->transnoentities('BatchDefaultNumber');
@@ -1575,7 +1575,7 @@ class ExtDirectProduct extends Product
 			}
 		} else {
 			if ($includeNoBatch) {
-				$row->id = 'X_'.$warehouseId;
+				$row->id = 'X_'.sprintf("%09d", $warehouseId);
 				$row->product_id = $id;
 				$row->batch_id = 0;
 				$row->batch = $langs->transnoentities('BatchDefaultNumber');
@@ -1858,23 +1858,42 @@ class ExtDirectProduct extends Product
 				$row->eatby = $batch->eatby;
 				$row->batch = $batch->batch;
 				$row->stock_reel= (float) $batch->qty;
-				$row->qty_stock = (int) $batch->qty; //deprecated
 				$row->stock = (float) $batch->qty;
 				$row->batch_info = $batch->import_key;
 				if (empty($batchId)) {
 					if (empty($batchValue)) {
-						$row->id = $id.'_'.$batch->id;
+						$row->id = $id.'_'.sprintf("%09d", $batch->id);
 						$num++;
 						array_push($results, clone $row);
 					} elseif (($batchValue == $batch->batch)) {
 						$row->id = $id;
 						$num++;
 						array_push($results, clone $row);
+						break;
+					} else {
+						// new batch
+						$row->id = $id;
+						$row->batch_id = 0;
+						$row->stock_id = 0;
+						$row->sellby = null;
+						$row->eatby = null;
+						$row->batch = $batchValue;
+						$row->stock_reel= 0;
+						$row->stock = 0;
+						$row->batch_info = null;
+						if ($this->status_batch == 2) {
+							// if unique batch type always receive one by one.
+							$row->qty_toreceive = 1;
+						}
+						$num++;
+						array_push($results, clone $row);
+						break;
 					}
 				} elseif ($batchId == $batch->id) {
 					$row->id = $id;
 					$num++;
 					array_push($results, clone $row);
+					break;
 				}
 				$batchesQty += $batch->qty;
 			}

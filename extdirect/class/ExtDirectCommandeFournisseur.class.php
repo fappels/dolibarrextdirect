@@ -838,9 +838,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *    @param    stdClass    $params     filter with elements:
 	 *                                      Id of order to load lines from
 	 *                                      warehouse_id
-	 *                                      warehouse_id x to get qty_stock of
-	 *                                      warehouse_id -1 will get total qty_stock
-	 *                                      no warehouse_id will split lines in qty_stock by warehouse
+	 *                                      warehouse_id x to get stock of
+	 *                                      warehouse_id -1 will get total stock
+	 *                                      no warehouse_id will split lines in stock by warehouse
 	 *                                      photo_size string with foto size 'mini' or 'small'
 	 *    @return     stdClass result data or error number
 	 */
@@ -961,6 +961,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->date_end = $line->date_end;
 								// qty shipped for product line
 								$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
+								$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 								if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 									$row->is_virtual_stock = true;
 									$row->stock = $myprod->stock_theorique;
@@ -1034,6 +1035,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->date_end = $line->date_end;
 								// qty shipped for product line
 								$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
+								$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 								if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 									if ($warehouse_id) {
 										$row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real;
@@ -1057,6 +1059,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->unit_id = $line->fk_unit;
 								if (empty($batchId)) {
 									if (empty($batch)) {
+										if ($myprod->status_batch == 2) {
+											// if unique batch type always receive one by one.
+											$row->qty_toreceive = 1;
+										}
 										array_push($results, $row);
 									} else {
 										if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res;
@@ -1119,6 +1125,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->date_end = $line->date_end;
 									// qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
 									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse);
+									$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 									$row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
 									if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 										$row->is_virtual_stock = true;
