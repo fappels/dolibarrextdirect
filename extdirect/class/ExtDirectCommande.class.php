@@ -590,10 +590,10 @@ class ExtDirectCommande extends Commande
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value; // add id config in client filter for ExtJs
-				if ($filter->property == 'ref') $ref=$filter->value;
-				if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
-				if ($filter->property == 'contact_id') $contactId = $filter->value;
-				if ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'ref') $ref=$filter->value;
+				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
 			}
 		}
 
@@ -614,7 +614,7 @@ class ExtDirectCommande extends Commande
 		if ($barcode) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON c.rowid = cd.fk_commande";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
-			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product";
+			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
