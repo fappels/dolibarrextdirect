@@ -221,8 +221,8 @@ class ExtDirectProduct extends Product
 				if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
 					$this->load_stock('novirtual, warehouseopen, warehouseinternal');
 					$row->pmp = $this->pmp;
-
 					if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
+						// TODO if warehouse is a parent warehouse get all batches from childs
 						$productBatch = new Productbatch($this->db);
 						if (!empty($batchId)) {
 							$productBatch->fetch($batchId);
@@ -261,6 +261,7 @@ class ExtDirectProduct extends Product
 							$row->stock_reel = (float) $productBatch->qty;
 						}
 					} else {
+						// TODO if warehouse is a parent warehouse (with no stock) and only in one child get child stock
 						$row->stock_reel= (float) $this->stock_warehouse[$warehouse]->real;
 					}
 				} else {
@@ -274,44 +275,55 @@ class ExtDirectProduct extends Product
 						} else {
 							$this->load_stock('novirtual, warehouseopen, warehouseinternal');
 						}
-						$warehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
-						foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
-							if (! empty($this->stock_warehouse[$warehouseId]->id)) {
-								$productBatch = new Productbatch($this->db);
-								$productBatch->find($this->stock_warehouse[$warehouseId]->id, '', '', $batch);
-								if (isset($productBatch->id)) {
-									$row->batch_id = $productBatch->id;
-									$productLotId = 0;
-									if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-										// fetch lot data
-										$productLot = new Productlot($this->db);
-										if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
-										if ($productLot->id > 0) {
-											$productLotId = $productLot->id;
+						$nbrWarehouses = $formProduct->loadWarehouses($this->id, '', 'warehouseopen, warehouseinternal');
+						if ($nbrWarehouses > 0) {
+							foreach ($formProduct->cache_warehouses as $warehouseId => $wh) {
+								if (! empty($this->stock_warehouse[$warehouseId]->id)) {
+									$productBatch = new Productbatch($this->db);
+									$productBatch->find($this->stock_warehouse[$warehouseId]->id, '', '', $batch);
+									if (isset($productBatch->id)) {
+										$row->batch_id = $productBatch->id;
+										$productLotId = 0;
+										if (ExtDirect::checkDolVersion(0, '4.0', '')) {
+											// fetch lot data
+											$productLot = new Productlot($this->db);
+											if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+											if ($productLot->id > 0) {
+												$productLotId = $productLot->id;
+											}
 										}
+										if ($productLotId) {
+											$row->sellby = $productLot->sellby;
+											$row->eatby = $productLot->eatby;
+										} else {
+											$row->sellby = $productBatch->sellby;
+											$row->eatby = $productBatch->eatby;
+										}
+										$row->batch = $productBatch->batch;
+										$row->batch_info = $productBatch->import_key;
+										$row->warehouse_id = $warehouseId;
+										$row->stock_reel = $productBatch->qty;
+										break;
 									}
-									if ($productLotId) {
-										$row->sellby = $productLot->sellby;
-										$row->eatby = $productLot->eatby;
-									} else {
-										$row->sellby = $productBatch->sellby;
-										$row->eatby = $productBatch->eatby;
-									}
-									$row->batch = $productBatch->batch;
-									$row->batch_info = $productBatch->import_key;
-									$row->warehouse_id = $warehouseId;
-									$row->stock_reel = $productBatch->qty;
-									break;
 								}
 							}
 						}
 					} else {
 						if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-							$this->load_stock();
+							$this->load_stock('warehouseopen, warehouseinternal');
 							$row->is_virtual_stock = true;
 							$row->stock_reel = (float) $this->stock_theorique;
 						} else {
-							$row->stock_reel = (float) $this->stock_reel;
+							$this->load_stock('novirtual, warehouseopen, warehouseinternal');
+							if (count($this->stock_warehouse) == 1) {
+								// only in one warehouse
+								foreach ($this->stock_warehouse as $warehouseId => $stock_warehouse) {
+									$row->stock_reel = (float) $stock_warehouse->real;
+									$row->warehouse_id = $warehouseId;
+								}
+							} else {
+								$row->stock_reel = (float) $this->stock_reel;
+							}
 						}
 					}
 				}
