@@ -542,6 +542,7 @@ class ExtDirectExpedition extends Expedition
 		$ref = null;
 		$contactTypeId = 0;
 		$originId = 0;
+		$barcode = null;
 
 		$includeTotal = true;
 
@@ -561,6 +562,7 @@ class ExtDirectExpedition extends Expedition
 				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'origin_id') $originId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
 			}
 		}
 
@@ -570,6 +572,12 @@ class ExtDirectExpedition extends Expedition
 		if ($originId) {
 			$sqlFrom .= " INNER JOIN " . MAIN_DB_PREFIX . "element_element as el ON el.fk_target = e.rowid AND fk_source = " . $originId;
 			$sqlFrom .= " AND el.sourcetype = 'commande' AND el.targettype = '" . $this->db->escape($this->element) . "'";
+		}
+		if ($barcode) {
+			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."expeditiondet as ed ON e.rowid = ed.fk_expedition";
+			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON cd.rowid = ed.fk_origin_line";
+			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
+			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "c_shipment_mode as csm ON e.fk_shipping_method = csm.rowid";
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -598,6 +606,11 @@ class ExtDirectExpedition extends Expedition
 		if ($contactTypeId > 0) {
 			$sqlWhere .= " AND ec.fk_c_type_contact = " . $contactTypeId;
 			$sqlWhere .= " AND ec.fk_socpeople = " . $contactId;
+		}
+		if ($barcode) {
+			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR e.ref = '".$this->db->escape($barcode)."' OR e.ref_customer = '".$this->db->escape($barcode)."'";
+			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
+			$sqlWhere .= ")";
 		}
 
 		$sqlOrder = " ORDER BY ";
@@ -781,9 +794,12 @@ class ExtDirectExpedition extends Expedition
 			if (($result = $this->fetch_lines()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if (!$this->error) {
 				foreach ($this->lines as $key => $line) {
-					if ($line->fk_product > 0 && (!empty($conf->global->PRODUIT_SOUSPRODUITS) || !empty($photoSize))) {
+					if ($line->fk_product > 0) {
 						$myprod = new ExtDirectProduct($this->_user->login);
 						if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+						$row->barcode= $myprod->barcode?$myprod->barcode:'';
+						$row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
+						$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 						if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) $myprod->get_sousproduits_arbo();
 					}
 					$row->id = $line->line_id;
