@@ -1916,6 +1916,20 @@ class ExtDirectProduct extends Product
 			array_push($results, clone $row);
 			$this->fetchSubProducts($results, $row, $photoFormat);
 			$this->fetch($product_id);
+		} elseif (empty($batchId) && !empty($batchValue) && $this->status_batch == 2) {
+			// new first serial number
+			$row->id = $id;
+			$row->batch_id = 0;
+			$row->stock_id = 0;
+			$row->sellby = null;
+			$row->eatby = null;
+			$row->batch = $batchValue;
+			$row->stock_reel= 0;
+			$row->stock = 0;
+			$row->batch_info = null;
+			$row->qty_toreceive = 1;
+			$num++;
+			array_push($results, clone $row);
 		}
 
 		if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
