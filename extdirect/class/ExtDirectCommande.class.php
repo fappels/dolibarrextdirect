@@ -556,14 +556,11 @@ class ExtDirectCommande extends Commande
 	 */
 	public function readOrderList(stdClass $params)
 	{
-		global $conf;
-
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 
-		$myUser = new User($this->db);
 		$statusFilterCount = 0;
 		$ref = null;
 		$contactTypeId = 0;
@@ -608,9 +605,10 @@ class ExtDirectCommande extends Commande
 			$start = 0;
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, u.firstname, u.lastname";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
+		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
 		if ($barcode) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON c.rowid = cd.fk_commande";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
@@ -669,6 +667,8 @@ class ExtDirectCommande extends Commande
 						$sortfield = 'c.ref_client';
 					} elseif ($sort->property == 'customer') {
 						$sortfield = 's.nom';
+					} elseif ($sort->property == 'user_name') {
+						$sortfield = 'u.lastname, u.firstname';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -707,7 +707,6 @@ class ExtDirectCommande extends Commande
 
 		if ($resql) {
 			$num=$this->db->num_rows($resql);
-			$authorName = array();
 			for ($i = 0;$i < $num; $i++) {
 				$obj = $this->db->fetch_object($resql);
 				$row = new stdClass;
@@ -715,7 +714,7 @@ class ExtDirectCommande extends Commande
 				$row->customer      = $obj->nom;
 				$row->customer_id   = (int) $obj->socid;
 				$row->ref           = $obj->ref;
-				$row->ref_ext           = $obj->ref_ext;
+				$row->ref_ext       = $obj->ref_ext;
 				$row->orderstatus_id= (int) $obj->fk_statut;
 				if ($customStatus && $obj->fk_statut > self::STATUS_DRAFT && $obj->fk_statut < self::STATUS_CLOSED) {
 					$this->getShippable($row);
@@ -726,13 +725,10 @@ class ExtDirectCommande extends Commande
 				$row->customer_price_level = ($obj->price_level) ? (int) $obj->price_level : 1;
 				$row->ref_customer  = $obj->ref_client;
 				$row->user_id       = $obj->fk_user_author;
-				if (empty($authorName[$row->user_id]) && $myUser->fetch($row->user_id) > 0) {
-					$authorName[$row->user_id] = $myUser->firstname . ' ' . $myUser->lastname;
-				}
-				$row->user_name = $authorName[$row->user_id];
-				$row->total_inc		= $obj->total_ttc;
+				$row->user_name     = $obj->firstname . ' ' . $obj->lastname;
+				$row->total_inc     = $obj->total_ttc;
 				$row->deliver_date  = $this->db->jdate($obj->date_livraison);
-				$row->order_date  = $this->db->jdate($obj->date_commande);
+				$row->order_date    = $this->db->jdate($obj->date_commande);
 				if ($customStatus) {
 					if (in_array($row->orderstatus_id, $orderstatus_id)) {
 						array_push($data, $row);

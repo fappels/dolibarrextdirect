@@ -540,14 +540,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 */
 	public function readOrderList(stdClass $params)
 	{
-		global $conf, $langs;
+		global $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 
-		$myUser = new User($this->db);
 		$statusFilterCount = 0;
 		$ref = null;
 		$contactTypeId = 0;
@@ -581,9 +580,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			}
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date, u.firstname, u.lastname";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
+		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
 		if ($barcode || $productId) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
 		}
@@ -650,6 +650,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						$sortfield = 'c.ref';
 					} elseif ($sort->property == 'supplier') {
 						$sortfield = 's.nom';
+					} elseif ($sort->property == 'user_name') {
+						$sortfield = 'u.lastname, u.firstname';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -704,11 +706,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				} else {
 					$row->mode      = $obj->mode_label;
 				}
-				$row->user_id 		= $obj->fk_user_author;
-				if ($myUser->fetch($row->user_id)>0) {
-					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
-				}
-				$row->total_inc		= $obj->total_ttc;
+				$row->user_id       = $obj->fk_user_author;
+				$row->user_name     = $obj->firstname . ' ' . $obj->lastname;
+				$row->total_inc     = $obj->total_ttc;
 				$row->order_date    = $this->db->jdate($obj->date_commande);
 				$row->deliver_date  = $this->db->jdate($obj->delivery_date);
 				array_push($data, $row);
