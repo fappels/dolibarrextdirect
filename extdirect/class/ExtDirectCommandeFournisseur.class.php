@@ -935,22 +935,24 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 								}
 								$row->qty_asked = $line->qty;
-								$row->tax_tx = $line->tva_tx;
-								$row->localtax1_tx = $line->localtax1_tx;
-								$row->localtax2_tx = $line->localtax2_tx;
-								$row->total_net = $line->total_ht;
-								$row->total_inc = $line->total_ttc;
-								$row->total_tax = $line->total_tva;
-								$row->total_localtax1 = $line->total_localtax1;
-								$row->total_localtax2 = $line->total_localtax2;
-								$row->subprice = $line->pu_ht;
 								if (isset($line->rang)) {
 									$row->rang = $line->rang;
 								} else {
 									$row->rang = $line->id;
 								}
-								$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-								$row->reduction_percent = $line->remise_percent;
+								if ($this->_user->rights->fournisseur->lire) {
+									$row->tax_tx = $line->tva_tx;
+									$row->localtax1_tx = $line->localtax1_tx;
+									$row->localtax2_tx = $line->localtax2_tx;
+									$row->total_net = $line->total_ht;
+									$row->total_inc = $line->total_ttc;
+									$row->total_tax = $line->total_tva;
+									$row->total_localtax1 = $line->total_localtax1;
+									$row->total_localtax2 = $line->total_localtax2;
+									$row->subprice = $line->pu_ht;
+									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+									$row->reduction_percent = $line->remise_percent;
+								}
 								$row->ref_supplier = $line->ref_supplier;
 								if (!empty($line->fk_fournprice)) {
 									$row->ref_supplier_id = $line->fk_fournprice;
@@ -1009,22 +1011,24 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 								}
 								$row->qty_asked = $line->qty;
-								$row->tax_tx = $line->tva_tx;
-								$row->localtax1_tx = $line->localtax1_tx;
-								$row->localtax2_tx = $line->localtax2_tx;
-								$row->total_net = $line->total_ht;
-								$row->total_inc = $line->total_ttc;
-								$row->total_tax = $line->total_tva;
-								$row->total_localtax1 = $line->total_localtax1;
-								$row->total_localtax2 = $line->total_localtax2;
-								$row->subprice = $line->pu_ht;
 								if (isset($line->rang)) {
 									$row->rang = $line->rang;
 								} else {
 									$row->rang = $line->id;
 								}
-								$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-								$row->reduction_percent = $line->remise_percent;
+								if ($this->_user->rights->fournisseur->lire) {
+									$row->tax_tx = $line->tva_tx;
+									$row->localtax1_tx = $line->localtax1_tx;
+									$row->localtax2_tx = $line->localtax2_tx;
+									$row->total_net = $line->total_ht;
+									$row->total_inc = $line->total_ttc;
+									$row->total_tax = $line->total_tva;
+									$row->total_localtax1 = $line->total_localtax1;
+									$row->total_localtax2 = $line->total_localtax2;
+									$row->subprice = $line->pu_ht;
+									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+									$row->reduction_percent = $line->remise_percent;
+								}
 								$row->ref_supplier = $line->ref_supplier;
 								if (!empty($line->fk_fournprice)) {
 									$row->ref_supplier_id = $line->fk_fournprice;
@@ -1427,7 +1431,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				if (!$this->error) {
 					foreach ($this->lines as $orderLine) {
 						if ($orderLine->id == $params->origin_line_id) {
-							if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer)) {
+							if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer) && isset($this->_user->rights->fournisseur->lire)) {
 								if ($this->statut == 0) {
 									// update fields
 									$tva_tx = get_default_tva($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
@@ -1494,7 +1498,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 
 							// update unit price
-							if (!empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
+							if ($this->_user->rights->fournisseur->lire && !empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
 								$supplier = new Societe($this->db);
 								if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;
 								if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {
