@@ -1212,7 +1212,7 @@ class ExtDirectCommande extends Commande
 								$myprod->fetchPhoto($row, $photoSize);
 							}
 							$row->unit_id = $line->fk_unit;
-							($this->_user->rights->fournisseur->lire) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
+							(!empty($this->_user->rights->fournisseur->lire)) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
 							$row->is_sub_product = false;
 							if ($isService) {
 								$row->warehouse_id = -1; // service is not stocked
@@ -1303,7 +1303,7 @@ class ExtDirectCommande extends Commande
 								$myprod->fetchPhoto($row, $photoSize);
 							}
 							$row->unit_id = $line->fk_unit;
-							($this->_user->rights->fournisseur->lire) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
+							(!empty($this->_user->rights->fournisseur->lire)) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
 							// split orderlines by batch
 							if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
 							$row->is_sub_product = false;
@@ -1373,7 +1373,7 @@ class ExtDirectCommande extends Commande
 									$myprod->fetchPhoto($row, $photoSize);
 								}
 								$row->unit_id = $line->fk_unit;
-								($this->_user->rights->fournisseur->lire) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
+								(!empty($this->_user->rights->fournisseur->lire)) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
 								// split orderlines by batch
 								if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
 								$row->is_sub_product = false;

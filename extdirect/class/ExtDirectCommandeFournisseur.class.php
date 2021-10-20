@@ -940,7 +940,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								} else {
 									$row->rang = $line->id;
 								}
-								if ($this->_user->rights->fournisseur->lire) {
+								if (!empty($this->_user->rights->fournisseur->lire)) {
 									$row->tax_tx = $line->tva_tx;
 									$row->localtax1_tx = $line->localtax1_tx;
 									$row->localtax2_tx = $line->localtax2_tx;
@@ -1016,7 +1016,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								} else {
 									$row->rang = $line->id;
 								}
-								if ($this->_user->rights->fournisseur->lire) {
+								if (!empty($this->_user->rights->fournisseur->lire)) {
 									$row->tax_tx = $line->tva_tx;
 									$row->localtax1_tx = $line->localtax1_tx;
 									$row->localtax2_tx = $line->localtax2_tx;
@@ -1498,7 +1498,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 
 							// update unit price
-							if ($this->_user->rights->fournisseur->lire && !empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
+							if (!empty($this->_user->rights->fournisseur->lire) && !empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
 								$supplier = new Societe($this->db);
 								if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;
 								if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {

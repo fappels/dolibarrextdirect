@@ -418,7 +418,7 @@ class ExtDirectProduct extends Product
 				} else {
 					$row->qty_supplier = 1; //default
 				}
-				if ($this->_user->rights->fournisseur->lire) {
+				if (!empty($this->_user->rights->fournisseur->lire)) {
 					$row->price_supplier = $supplierProduct->fourn_price;
 					$row->reduction_percent_supplier = $supplierProduct->fourn_remise_percent;
 					$row->reduction_supplier = $supplierProduct->fourn_remise;
@@ -746,7 +746,7 @@ class ExtDirectProduct extends Product
 			$this->prepareFields($param);
 			$this->prepareFieldsBarcode($param);
 			$this->prepareFieldsSellPrice($param);
-			if ($this->_user->rights->fournisseur->lire) {
+			if (!empty($this->_user->rights->fournisseur->lire)) {
 				$this->prepareFieldsBuyPrice($param);
 			}
 			if (!empty($this->barcode)) {
@@ -1296,7 +1296,7 @@ class ExtDirectProduct extends Product
 			if ($filter->property == 'multiprices_index' && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
 			elseif ($filter->property == 'customer_id' && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
 			elseif ($filter->property == 'categorie_id') $categorieFilter=true;
-			elseif ($filter->property == 'supplier_id' && $this->_user->rights->fournisseur->lire) $supplierFilter=true;
+			elseif ($filter->property == 'supplier_id' && !empty($this->_user->rights->fournisseur->lire)) $supplierFilter=true;
 			elseif ($filter->property == 'warehouse_id') {
 				$warehouseFilter = true;
 				if ($filter->value > 0) $warehouseIds[] = $filter->value;
@@ -1395,7 +1395,7 @@ class ExtDirectProduct extends Product
 						$sqlWhere .= "p.fk_product_type = ".$value;
 					} elseif ($filter->property == 'categorie_id') {
 						$sqlWhere .= "c.rowid = ".$value;
-					} elseif ($filter->property == 'supplier_id' && $this->_user->rights->fournisseur->lire) {
+					} elseif ($filter->property == 'supplier_id' && !empty($this->_user->rights->fournisseur->lire)) {
 						if ($value > 0) {
 							$sqlWhere .= "sp.fk_soc = ".$value;
 						} else {
@@ -1667,7 +1667,7 @@ class ExtDirectProduct extends Product
 		// has batch
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'has_batch', 'status_batch');
 		// cost price is set with product update
-		if ($this->_user->rights->fournisseur->lire) {
+		if (!empty($this->_user->rights->fournisseur->lire)) {
 			$diff = ExtDirect::prepareField($diff, $param, $this, 'cost_price', 'cost_price');
 		}
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'default_warehouse_id', 'fk_default_warehouse');
