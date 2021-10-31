@@ -39,8 +39,7 @@ class ExtDirectCommande extends Commande
 	private $_user;
 	private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
-		'STOCK_USE_VIRTUAL_STOCK',
-		'MARGIN_TYPE');
+		'STOCK_USE_VIRTUAL_STOCK');
 
 		/**
 	 * Fully shippable status of validated order
@@ -103,9 +102,14 @@ class ExtDirectCommande extends Commande
 	 */
 	public function readConstants(stdClass $params)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
 
+		if (!empty($this->_user->rights->fournisseur->lire) && !empty($conf->margin->enabled) && $this->_user->rights->margins->liretous) {
+			$this->_orderConstants[] = 'MARGIN_TYPE';
+		}
 		$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_orderConstants);
 
 		return $results;
