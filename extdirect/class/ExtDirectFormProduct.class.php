@@ -141,7 +141,7 @@ class ExtDirectFormProduct extends FormProduct
 				$row->is_virtual_stock = true;
 				$row->stock = price2num($product->stock_theorique, 5);
 				array_push($data, $row);
-			} else {
+			} elseif (!empty($fkProduct) || $sumStock) {
 				$sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
 				if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
 				$resql = $this->db->query($sql);
@@ -155,6 +155,8 @@ class ExtDirectFormProduct extends FormProduct
 				} else {
 					$res = SQLERROR;
 				}
+			} else {
+				array_push($data, $row);
 			}
 		}
 
@@ -412,7 +414,7 @@ class ExtDirectFormProduct extends FormProduct
 			$sql.= ", sum(ps.reel) as stock";
 		}
 		$sql.= " FROM ".MAIN_DB_PREFIX."entrepot as e";
-		$sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock as ps on ps.fk_entrepot = e.rowid";
+		if ($sumStock || $fk_product > 0) $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock as ps on ps.fk_entrepot = e.rowid";
 		if (!empty($fk_product)) {
 			$sql.= " AND ps.fk_product = '".$fk_product."'";
 			if (!empty($batch)) {

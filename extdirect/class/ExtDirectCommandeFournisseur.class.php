@@ -540,14 +540,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 */
 	public function readOrderList(stdClass $params)
 	{
-		global $conf, $langs;
+		global $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 
-		$myUser = new User($this->db);
 		$statusFilterCount = 0;
 		$ref = null;
 		$contactTypeId = 0;
@@ -581,9 +580,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			}
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date, u.firstname, u.lastname";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
+		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
 		if ($barcode || $productId) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
 		}
@@ -650,6 +650,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						$sortfield = 'c.ref';
 					} elseif ($sort->property == 'supplier') {
 						$sortfield = 's.nom';
+					} elseif ($sort->property == 'user_name') {
+						$sortfield = 'u.lastname, u.firstname';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -704,11 +706,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				} else {
 					$row->mode      = $obj->mode_label;
 				}
-				$row->user_id 		= $obj->fk_user_author;
-				if ($myUser->fetch($row->user_id)>0) {
-					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
-				}
-				$row->total_inc		= $obj->total_ttc;
+				$row->user_id       = $obj->fk_user_author;
+				$row->user_name     = $obj->firstname . ' ' . $obj->lastname;
+				$row->total_inc     = $obj->total_ttc;
 				$row->order_date    = $this->db->jdate($obj->date_commande);
 				$row->deliver_date  = $this->db->jdate($obj->delivery_date);
 				array_push($data, $row);
@@ -838,9 +838,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *    @param    stdClass    $params     filter with elements:
 	 *                                      Id of order to load lines from
 	 *                                      warehouse_id
-	 *                                      warehouse_id x to get qty_stock of
-	 *                                      warehouse_id -1 will get total qty_stock
-	 *                                      no warehouse_id will split lines in qty_stock by warehouse
+	 *                                      warehouse_id x to get stock of
+	 *                                      warehouse_id -1 will get total stock
+	 *                                      no warehouse_id will split lines in stock by warehouse
 	 *                                      photo_size string with foto size 'mini' or 'small'
 	 *    @return     stdClass result data or error number
 	 */
@@ -935,22 +935,24 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 								}
 								$row->qty_asked = $line->qty;
-								$row->tax_tx = $line->tva_tx;
-								$row->localtax1_tx = $line->localtax1_tx;
-								$row->localtax2_tx = $line->localtax2_tx;
-								$row->total_net = $line->total_ht;
-								$row->total_inc = $line->total_ttc;
-								$row->total_tax = $line->total_tva;
-								$row->total_localtax1 = $line->total_localtax1;
-								$row->total_localtax2 = $line->total_localtax2;
-								$row->subprice = $line->pu_ht;
 								if (isset($line->rang)) {
 									$row->rang = $line->rang;
 								} else {
 									$row->rang = $line->id;
 								}
-								$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-								$row->reduction_percent = $line->remise_percent;
+								if (!empty($this->_user->rights->fournisseur->lire)) {
+									$row->tax_tx = $line->tva_tx;
+									$row->localtax1_tx = $line->localtax1_tx;
+									$row->localtax2_tx = $line->localtax2_tx;
+									$row->total_net = $line->total_ht;
+									$row->total_inc = $line->total_ttc;
+									$row->total_tax = $line->total_tva;
+									$row->total_localtax1 = $line->total_localtax1;
+									$row->total_localtax2 = $line->total_localtax2;
+									$row->subprice = $line->pu_ht;
+									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+									$row->reduction_percent = $line->remise_percent;
+								}
 								$row->ref_supplier = $line->ref_supplier;
 								if (!empty($line->fk_fournprice)) {
 									$row->ref_supplier_id = $line->fk_fournprice;
@@ -961,6 +963,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->date_end = $line->date_end;
 								// qty shipped for product line
 								$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
+								$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 								if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 									$row->is_virtual_stock = true;
 									$row->stock = $myprod->stock_theorique;
@@ -1008,22 +1011,24 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 								}
 								$row->qty_asked = $line->qty;
-								$row->tax_tx = $line->tva_tx;
-								$row->localtax1_tx = $line->localtax1_tx;
-								$row->localtax2_tx = $line->localtax2_tx;
-								$row->total_net = $line->total_ht;
-								$row->total_inc = $line->total_ttc;
-								$row->total_tax = $line->total_tva;
-								$row->total_localtax1 = $line->total_localtax1;
-								$row->total_localtax2 = $line->total_localtax2;
-								$row->subprice = $line->pu_ht;
 								if (isset($line->rang)) {
 									$row->rang = $line->rang;
 								} else {
 									$row->rang = $line->id;
 								}
-								$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-								$row->reduction_percent = $line->remise_percent;
+								if (!empty($this->_user->rights->fournisseur->lire)) {
+									$row->tax_tx = $line->tva_tx;
+									$row->localtax1_tx = $line->localtax1_tx;
+									$row->localtax2_tx = $line->localtax2_tx;
+									$row->total_net = $line->total_ht;
+									$row->total_inc = $line->total_ttc;
+									$row->total_tax = $line->total_tva;
+									$row->total_localtax1 = $line->total_localtax1;
+									$row->total_localtax2 = $line->total_localtax2;
+									$row->subprice = $line->pu_ht;
+									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+									$row->reduction_percent = $line->remise_percent;
+								}
 								$row->ref_supplier = $line->ref_supplier;
 								if (!empty($line->fk_fournprice)) {
 									$row->ref_supplier_id = $line->fk_fournprice;
@@ -1034,6 +1039,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->date_end = $line->date_end;
 								// qty shipped for product line
 								$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
+								$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 								if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 									if ($warehouse_id) {
 										$row->stock = (float) $myprod->stock_warehouse[$warehouse_id]->real;
@@ -1057,6 +1063,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->unit_id = $line->fk_unit;
 								if (empty($batchId)) {
 									if (empty($batch)) {
+										if ($myprod->status_batch == 2) {
+											// if unique batch type always receive one by one.
+											$row->qty_toreceive = 1;
+										}
 										array_push($results, $row);
 									} else {
 										if (($res = $myprod->fetchBatches($results, $row, $line->id, $warehouse_id, $myprod->stock_warehouse[$warehouse_id]->id, false, $batchId, $batch)) < 0) return $res;
@@ -1119,6 +1129,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->date_end = $line->date_end;
 									// qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
 									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse);
+									$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 									$row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
 									if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 										$row->is_virtual_stock = true;
@@ -1420,7 +1431,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				if (!$this->error) {
 					foreach ($this->lines as $orderLine) {
 						if ($orderLine->id == $params->origin_line_id) {
-							if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer)) {
+							if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer) && isset($this->_user->rights->fournisseur->lire)) {
 								if ($this->statut == 0) {
 									// update fields
 									$tva_tx = get_default_tva($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
@@ -1487,7 +1498,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 
 							// update unit price
-							if (!empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
+							if (!empty($this->_user->rights->fournisseur->lire) && !empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
 								$supplier = new Societe($this->db);
 								if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;
 								if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {

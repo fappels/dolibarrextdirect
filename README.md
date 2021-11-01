@@ -163,6 +163,7 @@ For client File uploads create an upload fieldset like below, set extTID field v
 - Agenda
 - Supplier orders
 - Interventions
+- https://github.com/fappels/dolibarr-shipmentpackage
 
 
 > New classes will be added.
@@ -187,4 +188,4 @@ Demo data from dev/initdemo should work. Add two multiprice levels and a string 
 **Supported Dolibarr Versions:**
 
 - Min version:	3.8
-- Max version:	13.0
+- Max version:	14.0
