@@ -113,6 +113,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->read)) return PERMISSIONERROR;
 		$results = array();
 		$id = 0;
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		if (isset($param->filter)) {
 			foreach ($param->filter as $key => $filter) {
@@ -122,11 +123,11 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 
 		if ($id > 0) {
 			$extraFields = new ExtraFields($this->db);
-			if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-			if (!$this->error) {
+			if (($result = $shipmentPackage->fetch($id)) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
+			if (!$shipmentPackage->error) {
 				$extraFields->fetch_name_optionals_label($this->table_element);
 				$index = 1;
-				if (empty($this->array_options)) {
+				if (empty($shipmentPackage->array_options)) {
 					// create empty optionals to be able to add optionals
 					$optionsArray = (!empty($extraFields->attributes[$this->table_element]['label']) ? $extraFields->attributes[$this->table_element]['label'] : null);
 					if (is_array($optionsArray) && count($optionsArray) > 0) {
@@ -135,20 +136,20 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 							$row->id = $index++;
 							$row->name = $name;
 							$row->value = '';
-							$row->object_id = $this->id;
+							$row->object_id = $shipmentPackage->id;
 							$row->object_element = $this->element;
 							$row->raw_value = null;
 							$results[] = $row;
 						}
 					}
 				} else {
-					foreach ($this->array_options as $key => $value) {
+					foreach ($shipmentPackage->array_options as $key => $value) {
 						$row = new stdClass;
 						$name = substr($key, 8); // strip options_
 						$row->id = $index++; // ExtJs needs id to be able to destroy records
 						$row->name = $name;
 						$row->value = $extraFields->showOutputField($name, $value);
-						$row->object_id = $this->id;
+						$row->object_id = $shipmentPackage->id;
 						$row->object_element = $this->element;
 						$row->raw_value = $value;
 						$results[] = $row;
@@ -171,12 +172,17 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$param) {
-			if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-			$this->array_options['options_' . $param->name] = $param->raw_value;
+			$result = $shipmentPackage->fetch($param->object_id);
+			if ($result > 0 && $shipmentPackage->id == $param->object_id) {
+				$shipmentPackage->array_options['options_' . $param->name] = $param->raw_value;
+				$result = $shipmentPackage->insertExtraFields();
+				if ($result < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
+			}
 		}
-		if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
@@ -209,11 +215,12 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$param) {
-			if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if ($this->id != $param->object_id && ($result = $shipmentPackage->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 		}
-		if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+		if (($result = $shipmentPackage->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
@@ -232,13 +239,14 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			$this->prepareFields($params);
 
-			if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-			$params->id = $this->id;
+			if (($result = $shipmentPackage->create($this->_user)) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
+			$params->id = $shipmentPackage->id;
 		}
 
 		if (is_array($param)) {
@@ -266,6 +274,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$row = new stdClass;
 		$id = 0;
 		$ref = '';
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
@@ -275,10 +284,10 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		}
 
 		if (($id > 0) || ($ref != '')) {
-			$result = $this->fetch($id, $ref);
-			if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			$result = $shipmentPackage->fetch($id, $ref);
+			if ($result < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 			if ($result > 0) {
-				$row = $this->getShipmentPackageData($this);
+				$row = $this->getShipmentPackageData($shipmentPackage);
 				array_push($results, $row);
 			} else {
 				return 0;
@@ -303,13 +312,14 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->db)) return CONNECTERROR;
 
 		$paramArray = ExtDirect::toArray($param);
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if ($params->id) {
 				$id = $params->id;
-				$result = $this->fetch($id);
-				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				$result = $shipmentPackage->fetch($id);
+				if ($result < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 				if ($result > 0) {
 					$this->prepareFields($params);
 					// update
@@ -319,7 +329,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 						case 0:
 							break;
 						case 1:
-							$result = $this->validate($this->_user);
+							$result = $shipmentPackage->validate($this->_user);
 							// PDF generating
 							if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
 								$hidedetails = (!empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0);
@@ -327,12 +337,12 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 								$hideref = (!empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0);
 								$outputlangs = $langs;
 								if ($conf->global->MAIN_MULTILANGS) {
-									$this->fetch_thirdparty();
-									$newlang = $this->thirdparty->default_lang;
+									$shipmentPackage->fetch_thirdparty();
+									$newlang = $shipmentPackage->thirdparty->default_lang;
 									$outputlangs = new Translate("", $conf);
 									$outputlangs->setDefaultLang($newlang);
 								}
-								$this->generateDocument($this->model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+								$shipmentPackage->generateDocument($shipmentPackage->model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
 							}
 							break;
 						case 2:
@@ -341,7 +351,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 							break;
 					}
 				}
-				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if ($result < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 			} else {
 				return PARAMETERERROR;
 			}
@@ -364,14 +374,15 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->delete)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if ($params->id) {
-				$this->id = $params->id;
-				if (($result = $this->fetch($this->id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				$shipmentPackage->id = $params->id;
+				if (($result = $shipmentPackage->fetch($shipmentPackage->id)) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 				// delete
-				if (($result = $this->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if (($result = $shipmentPackage->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 			} else {
 				return PARAMETERERROR;
 			}
@@ -397,13 +408,14 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
+		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
 				$id = $param['extTID'];
-				if ($this->fetch($id)) {
-					$this->fetch_thirdparty();
-					$dir = $conf->shipmentpackage->dir_output . "/shipmentpackage/" . dol_sanitizeFileName($this->ref);
+				if ($shipmentPackage->fetch($id)) {
+					$shipmentPackage->fetch_thirdparty();
+					$dir = $conf->shipmentpackage->dir_output . "/shipmentpackage/" . dol_sanitizeFileName($shipmentPackage->ref);
 				} else {
 					$response = PARAMETERERROR;
 					break;
@@ -700,229 +712,6 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 			} else {
 				isset($params->{$field}) ? $this->{$field} = $params->{$field} : (isset($this->{$field}) ? null : $this->{$field} = null);
 			}
-		}
-	}
-}
-
-/** ExtDirectExpeditionLine class
- * Class to access shipments lines with CRUD methods
- *
- * deprecated for 9.0
- */
-class ExtDirectExpeditionLine extends ExpeditionLigne
-{
-	/**
-	 * Id of warehouse
-	 * @var int
-	 */
-	public $entrepot_id;
-
-	/**
-	 * 	Delete shipment line.
-	 *
-	 *  @param      Object	$user	    Id of line to delete
-	 *  @param      int		$notrigger	no run trigger
-	 * 	@return	int		>0 if OK, <0 if KO
-	 */
-	public function delete($user = null, $notrigger = 0)
-	{
-		global $conf;
-
-		$this->db->begin();
-
-		// delete batch expedition line
-		if ($conf->productbatch->enabled) {
-			$sql = "DELETE FROM " . MAIN_DB_PREFIX . "expeditiondet_batch";
-			$sql .= " WHERE fk_expeditiondet = " . $this->id;
-
-			if (!$this->db->query($sql)) {
-				$this->errors[] = $this->db->lasterror() . " - sql=$sql";
-				$this->db->rollback();
-				return -2;
-			}
-		}
-
-		$sql = "DELETE FROM " . MAIN_DB_PREFIX . "expeditiondet";
-		$sql .= " WHERE rowid = " . $this->id;
-
-		if ($this->db->query($sql)) {
-			// Remove extrafields
-			if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) {
-				// For avoid conflicts if trigger used
-				$result = $this->deleteExtraFields();
-				if ($result < 0) {
-					$this->errors[] = $this->error;
-					$this->db->rollback();
-					return -4;
-				} else {
-					$this->db->commit();
-					return 1;
-				}
-			} else {
-				$this->db->commit();
-				return 1;
-			}
-		} else {
-			$this->errors[] = $this->db->lasterror() . " - sql=$sql";
-			$this->db->rollback();
-			return -3;
-		}
-	}
-
-	/**
-	 *  Update a line in database
-	 *
-	 *  @param      Object	$user	    Id of line to delete
-	 *  @param      int		$notrigger	no run trigger
-	 *
-	 *  @return		int					< 0 if KO, > 0 if OK
-	 */
-	public function update($user = null, $notrigger = 0)
-	{
-		global $conf;
-
-		dol_syslog(get_class($this) . "::update id=$this->id, entrepot_id=$this->entrepot_id, product_id=$this->fk_product, qty=$this->qty");
-
-
-		$this->db->begin();
-
-		// Clean parameters
-		if (empty($this->qty)) $this->qty = 0;
-		$qty = price2num($this->qty);
-		$remainingQty = 0;
-		$batch = null;
-		$batch_id = null;
-		$expedition_batch_id = null;
-
-		if (is_array($this->detail_batch)) {
-			if (count($this->detail_batch) > 1) {
-				dol_syslog(get_class($this) . '::update only possible for one batch', LOG_ERR);
-				$this->errors[] = 'ErrorBadParameters';
-				return -7;
-			} else {
-				$batch = $this->detail_batch[0]->batch;
-				$batch_id = $this->detail_batch[0]->fk_origin_stock;
-				$expedition_batch_id = $this->detail_batch[0]->id;
-				if ($this->entrepot_id != $this->detail_batch[0]->entrepot_id) {
-					dol_syslog(get_class($this) . '::update only possible for batch of same warehouse', LOG_ERR);
-					$this->errors[] = 'ErrorBadParameters';
-					return -10;
-				}
-				$qty = price2num($this->detail_batch[0]->dluo_qty);
-			}
-		} else {
-			$batch = $this->detail_batch->batch;
-			$batch_id = $this->detail_batch->fk_origin_stock;
-			$expedition_batch_id = $this->detail_batch->id;
-			if ($this->entrepot_id != $this->detail_batch->entrepot_id) {
-				dol_syslog(get_class($this) . '::update only possible for batch of same warehouse', LOG_ERR);
-				$this->errors[] = 'ErrorBadParameters';
-				return -9;
-			}
-			$qty = price2num($this->detail_batch->dluo_qty);
-		}
-		if (!isset($this->id) || !isset($this->entrepot_id)) {
-			dol_syslog(get_class($this) . '::update missing line id and/or warehouse id', LOG_ERR);
-			$this->errors[] = 'ErrorBadParameters';
-			return -1;
-		}
-
-		// update lot
-
-		if (!empty($batch) && $conf->productbatch->enabled) {
-			if (empty($batch_id) || empty($this->fk_product)) {
-				dol_syslog(get_class($this) . '::update missing fk_origin_stock (batch_id) and/or fk_product', LOG_ERR);
-				$this->errors[] = 'ErrorBadParameters';
-				return -8;
-			}
-
-			// fetch remaining lot qty
-			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
-			if (($lotArray = ExpeditionLineBatch::fetchAll($this->db, $this->id)) < 0) {
-				$this->errors[] = $this->db->lasterror() . " - ExpeditionLineBatch::fetchAll";
-				$this->db->rollback();
-				return -4;
-			}
-			foreach ($lotArray as $lot) {
-				if ($batch != $lot->batch) {
-					$remainingQty += $lot->dluo_qty;
-				}
-			}
-			$qty += $remainingQty;
-			//fetch lot details
-
-			if (ExtDirect::checkDolVersion() >= 4.0) {
-				// fetch from product_lot
-				require_once DOL_DOCUMENT_ROOT . '/product/stock/class/productlot.class.php';
-				$lot = new Productlot($this->db);
-				if ($lot->fetch(0, $this->fk_product, $batch) < 0) {
-					$this->errors[] = $lot->errors;
-					return -3;
-				}
-			} else {
-				// fetch from product batch
-				require_once DOL_DOCUMENT_ROOT . '/product/class/productbatch.class.php';
-				$lot = new Productbatch($this->db);
-				if ($lot->fetch($batch_id) < 0) {
-					$this->errors[] = $lot->error;
-					return -3;
-				}
-			}
-			if (!empty($expedition_batch_id)) {
-				// delete lot expedition line
-				$sql = "DELETE FROM " . MAIN_DB_PREFIX . "expeditiondet_batch";
-				$sql .= " WHERE fk_expeditiondet = " . $this->id;
-				$sql .= " AND rowid = " . $expedition_batch_id;
-				if (!$this->db->query($sql)) {
-					$this->errors[] = $this->db->lasterror() . " - sql=$sql";
-					$this->db->rollback();
-					return -2;
-				}
-			}
-			if ($this->detail_batch->dluo_qty > 0) {
-				if (isset($lot->id)) {
-					$shipmentLot = new ExpeditionLineBatch($this->db);
-					$shipmentLot->batch = $lot->batch;
-					$shipmentLot->eatby = $lot->eatby;
-					$shipmentLot->sellby = $lot->sellby;
-					$shipmentLot->entrepot_id = $this->entrepot_id;
-					$shipmentLot->dluo_qty = $this->detail_batch->dluo_qty;
-					$shipmentLot->fk_origin_stock = $batch_id;
-					if ($shipmentLot->create($this->id) < 0) {
-						$this->errors[] = $shipmentLot->errors;
-						$this->db->rollback();
-						return -6;
-					}
-				}
-			}
-		}
-
-		// update line
-		$sql = "UPDATE " . MAIN_DB_PREFIX . $this->table_element . " SET";
-		$sql .= " fk_entrepot = " . $this->entrepot_id;
-		$sql .= " , qty = " . $qty;
-		$sql .= " WHERE rowid = " . $this->id;
-
-		if (!$this->db->query($sql)) {
-			$this->errors[] = $this->db->lasterror() . " - sql=$sql";
-			$this->db->rollback();
-			return -5;
-		}
-
-		if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) {
-			// For avoid conflicts if trigger used
-			$result = $this->insertExtraFields();
-			if ($result < 0) {
-				$this->errors[] = $this->error;
-				$this->db->rollback();
-				return -4;
-			} else {
-				$this->db->commit();
-				return 1;
-			}
-		} else {
-			$this->db->commit();
-			return 1;
 		}
 	}
 }
