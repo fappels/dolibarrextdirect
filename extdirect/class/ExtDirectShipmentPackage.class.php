@@ -175,14 +175,10 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$shipmentPackage = new ShipmentPackage($this->db);
 
 		foreach ($paramArray as &$param) {
-			$result = $shipmentPackage->fetch($param->object_id);
-			if ($result > 0 && $shipmentPackage->id == $param->object_id) {
-				$shipmentPackage->array_options['options_' . $param->name] = $param->raw_value;
-				$result = $shipmentPackage->insertExtraFields();
-				if ($result < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
-			}
+			if ($shipmentPackage->id != $param->object_id && ($result = $shipmentPackage->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
+			$shipmentPackage->array_options['options_' . $param->name] = $param->raw_value;
 		}
-
+		if (($result = $shipmentPackage->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $shipmentPackage->errors, $shipmentPackage->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {

@@ -604,7 +604,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 		if (isset($productLot)) {
-			if (($result = $productLot->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if (($result = $productLot->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 		} else {
 			if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		}
