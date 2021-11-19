@@ -794,6 +794,13 @@ class ExtDirectExpedition extends Expedition
 			if (($result = $this->fetch_lines()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if (!$this->error) {
 				foreach ($this->lines as $key => $line) {
+					if (!empty($conf->shipmentpackage->enabled)) {
+						dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+						$packageLine = new ShipmentPackageLine($this->db);
+						$packagedQty = $packageLine->getQtyPackaged($line->line_id);
+					} else {
+						$packagedQty = 0;
+					}
 					if ($line->fk_product > 0) {
 						$myprod = new ExtDirectProduct($this->_user->login);
 						if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
@@ -823,12 +830,6 @@ class ExtDirectExpedition extends Expedition
 					$row->origin_id = $origin_id;
 					$row->qty_asked = $line->qty_asked;
 					$row->qty_shipped = $line->qty_shipped;
-					if (!empty($conf->shipmentpackage->enabled)) {
-						dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
-						$packageLine = new ShipmentPackageLine($this->db);
-						$packagedQty = $packageLine->getQtyPackaged($line->line_id);
-						if ($packagedQty > 0) $row->qty_shipped = $line->qty_shipped - $packagedQty;
-					}
 					$row->has_photo = 0;
 					if ($myprod && !empty($photoSize)) {
 						$myprod->fetchPhoto($row, $photoSize);
@@ -844,10 +845,11 @@ class ExtDirectExpedition extends Expedition
 									$row->line_id =  $details_entrepot->line_id;
 									// return line for each warehouse
 									if (empty($conf->productbatch->enabled)) {
+										$row->qty_toship = $packagedQty;
 										array_push($results, clone $row);
 										if ($myprod) $myprod->fetchSubProducts($results, clone $row, $photoSize);
 									} else {
-										if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize)) < 0) return $res;
+										if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize, $packageLine)) < 0) return $res;
 									}
 								}
 							}
@@ -860,10 +862,17 @@ class ExtDirectExpedition extends Expedition
 								$row->line_id =  $details_entrepot->line_id;
 								// return line for each warehouse
 								if (empty($conf->productbatch->enabled)) {
+									if ($packagedQty <= $row->qty_shipped) {
+										$row->qty_toship = $packagedQty;
+										$packagedQty = 0;
+									} else {
+										$row->qty_toship = $row->qty_shipped;
+										$packagedQty -= $row->qty_shipped;
+									}
 									array_push($results, clone $row);
 									if ($myprod) $myprod->fetchSubProducts($results, clone $row, $photoSize);
 								} else {
-									if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize)) < 0) return $res;
+									if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize, $packageLine)) < 0) return $res;
 								}
 							}
 						}
@@ -871,10 +880,11 @@ class ExtDirectExpedition extends Expedition
 						// return line from single warehouse
 						$row->warehouse_id = $line->entrepot_id;
 						if (empty($conf->productbatch->enabled)) {
+							$row->qty_toship = $packagedQty;
 							array_push($results, clone $row);
 							if ($myprod) $myprod->fetchSubProducts($results, clone $row, $photoSize);
 						} else {
-							if (($res = $this->fetchBatches($results, $row, $line->line_id, $line->fk_product, $myprod, $photoSize)) < 0) return $res;
+							if (($res = $this->fetchBatches($results, $row, $line->line_id, $line->fk_product, $myprod, $photoSize, $packageLine)) < 0) return $res;
 						}
 					}
 				}
@@ -1133,6 +1143,7 @@ class ExtDirectExpedition extends Expedition
 		if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
 		$package = null;
+		$batch_id = null;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -1140,6 +1151,7 @@ class ExtDirectExpedition extends Expedition
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 			$idArray = explode('_', $params->id);
+			if ($idArray[1] > 0) $batch_id = $idArray[1];
 			// Add a protection to refuse deleting if shipment is not in draft status
 			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
 				if (ExtDirect::checkDolVersion(0, '9.0', '')) {
@@ -1156,7 +1168,7 @@ class ExtDirectExpedition extends Expedition
 				$line->qty = $params->qty_toship;
 				if (!empty($params->batch)) {
 					$line->detail_batch = new stdClass;
-					$line->detail_batch->id = $idArray[1];
+					$line->detail_batch->id = $batch_id;
 					$line->detail_batch->batch = $params->batch;
 					$line->detail_batch->entrepot_id = $params->warehouse_id;
 					$line->detail_batch->dluo_qty = $params->qty_toship; // deprecated for 9.0
@@ -1203,8 +1215,12 @@ class ExtDirectExpedition extends Expedition
 							}
 						}
 					}
+					$packageLine = new ShipmentPackageLine($this->db);
+					$packagedQty = $params->qty_package - $packageLine->getQtyPackaged($params->line_id, $batch_id);
 					// add line
-					$result = $package->addLine($this->_user, $params->qty_package, $params->product_id, $params->line_id, $params->batch, $idArray[1]);
+					if ($packagedQty > 0) {
+						$result = $package->addLine($this->_user, $packagedQty, $params->product_id, $params->line_id, $params->batch, $batch_id);
+					}
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $package->errors, $package->error);
 					}
@@ -1332,9 +1348,10 @@ class ExtDirectExpedition extends Expedition
 	 * @param int $fk_product product id
 	 * @param object $myprod product object
 	 * @param string $photoFormat small or mini
+	 * @param Object $packageLine already packaged line
 	 * @return int < 0 if error > 0 if OK
 	 */
-	private function fetchBatches(&$results, $row, $lineId, $fk_product, $myprod, $photoFormat)
+	private function fetchBatches(&$results, $row, $lineId, $fk_product, $myprod, $photoFormat, $packageLine)
 	{
 		global $conf;
 
@@ -1345,7 +1362,8 @@ class ExtDirectExpedition extends Expedition
 
 		if (!empty($batches)) {
 			foreach ($batches as $batch) {
-				$row->id = $row->id . '_' . $batch->id;
+				if (isset($packageLine)) $packagedQty = $packageLine->getQtyPackaged($lineId, $batch->id);
+				$row->id = $lineId . '_' . $batch->id;
 				$row->line_id = $lineId;
 				$row->has_batch = 1;
 				$row->batch_id = $batch->fk_origin_stock;
@@ -1357,16 +1375,13 @@ class ExtDirectExpedition extends Expedition
 				} else {
 					$row->qty_shipped = (float) $batch->qty;
 				}
-				if (!empty($conf->shipmentpackage->enabled)) {
-					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
-					$packageLine = new ShipmentPackageLine($this->db);
-					$packagedQty = $packageLine->getQtyPackaged($lineId, $batch->id);
-					if ($packagedQty > 0) $row->qty_shipped -= $packagedQty;
-				}
+				$row->qty_toship = $packagedQty;
 				array_push($results, clone $row);
 			}
 		} else {
 			// no batch
+			if (isset($packageLine)) $packagedQty = $packageLine->getQtyPackaged($lineId);
+			$row->qty_toship = $packagedQty;
 			array_push($results, clone $row);
 			if ($myprod) $myprod->fetchSubProducts($results, $row, $photoFormat);
 		}
