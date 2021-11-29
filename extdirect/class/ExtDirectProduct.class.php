@@ -1758,7 +1758,7 @@ class ExtDirectProduct extends Product
 	 * @param string $table table to search 'product' or 'product_fournisseur_price'
 	 * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 10+)
 	 */
-	private function fetchIdFromBarcode($barcode, $table = 'product')
+	public function fetchIdFromBarcode($barcode, $table = 'product')
 	{
 		global $conf;
 

@@ -389,7 +389,8 @@ class ExtDirectExpedition extends Expedition
 								$outputlangs = new Translate("", $conf);
 								$outputlangs->setDefaultLang($newlang);
 							}
-							$this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+							(property_exists($this, 'model_pdf')) ? $model_pdf = $this->model_pdf : $model_pdf = $this->modelpdf; // For backward compatibility
+							$this->generateDocument($model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
 						}
 						break;
 					case 2:
@@ -566,6 +567,18 @@ class ExtDirectExpedition extends Expedition
 			}
 		}
 
+		if ($barcode && !empty($conf->shipmentpackage->enabled)) {
+			$extProduct = new ExtDirectProduct($this->db);
+			$fk_product = null;
+			$batch = null;
+			$idArray = $extProduct->fetchIdFromBarcode($barcode);
+			if ($idArray['product'] > 0) {
+				$fk_product = $idArray['product'];
+			} else {
+				$batch = $barcode;
+			}
+		}
+
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode, e.date_delivery";
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "societe as s, " . MAIN_DB_PREFIX . "expedition as e";
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec ON e.rowid = ec.element_id";
@@ -679,6 +692,14 @@ class ExtDirectExpedition extends Expedition
 				$row->status        = $obj->status;
 				$row->mode          = $obj->mode;
 				$row->deliver_date  = $this->db->jdate($obj->date_delivery);
+				if ($barcode && !empty($conf->shipmentpackage->enabled)) {
+					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+					$shipmentPackage = new ShipmentPackage($this->db);
+					if (method_exists($shipmentPackage, 'getQtyPackaged')) { // backwards compatible
+						$row->qty_packaged = $shipmentPackage->getQtyPackaged($row->id, $fk_product, $batch);
+						$row->qty_toship = $shipmentPackage->getQtyToShip($row->id, $fk_product, $batch);
+					}
+				}
 				array_push($data, $row);
 			}
 			$this->db->free($resql);
