@@ -71,13 +71,13 @@ class ExtDirectAuthenticate extends ExtDirect
 			if (!empty($param->ack_id)) return PARAMETERERROR;
 			$this->prepareAuthenticationFields($param);
 			dol_syslog(get_class($this)."::create webview name= ". $param->webview_name ." webview version= ". $param->webview_version, LOG_DEBUG);
-			// check if already acknowledged, return PARAMETERERROR if so
-			if (($resql = $this->fetch(0, $this->app_id)) < 0) return $resql;
-			if (!empty($this->ack_id)) return PARAMETERERROR;
+			// check if already acknowledged, return DUPLICATEERROR if so
+			if (($res = $this->fetch(0, $this->app_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
+			if (!empty($this->ack_id)) return DUPLICATEERROR;
 			if (empty($this->id)) {
 				// create user app record
 				$this->fk_user=null;
-				if (($resql = $this->create($this->_user)) < 0) return $resql;
+				if (($res = $this->create($this->_user)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 				$param->id= (int) $this->id;
 			}
 		}
@@ -116,7 +116,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			}
 		}
 		// check if server user is set, if not return empty result
-		if (($resql = $this->fetch(0, $app_id, $ack_id)) < 0) return $resql;
+		if (($res = $this->fetch(0, $app_id, $ack_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 		if (empty($this->fk_user) || ($this->fk_user < 0)) {
 			return $result; //empty result
 		} else {
@@ -128,8 +128,8 @@ class ExtDirectAuthenticate extends ExtDirect
 		// update last connect date
 		$this->date_last_connect=dol_now();
 		$this->_user->fetch($this->fk_user);
-		if (($resql = $this->update($this->_user)) < 0) {
-			return $resql;
+		if (($res = $this->update($this->_user)) < 0) {
+			return ExtDirect::getDolError($res, $this->errors, $this->error);
 		} else {
 			// only login with valid access key
 			if ($ack_id == $this->ack_id) {
@@ -187,12 +187,14 @@ class ExtDirectAuthenticate extends ExtDirect
 			// prepare fields
 			if ($param->id && !empty($param->ack_id)) {
 				$id = $param->id;
-				$this->id = $id;
-				if (($result = $this->fetch($id)) < 0)    return $result;
+				if (($res = $this->fetch($id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
+				// check if new app_id already used, return DUPLICATEERROR if so
+				if (($res = $this->fetch(0, $param->app_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
+				if ($this->id != $id) return DUPLICATEERROR;
 				if ($this->prepareAuthenticationFields($param)) {
 					// update
 					$this->date_last_connect=dol_now();
-					if (($result = $this->update($this->_user)) < 0)   return $result;
+					if (($res = $this->update($this->_user)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 				};
 			} else {
 				return PARAMETERERROR;
@@ -216,12 +218,12 @@ class ExtDirectAuthenticate extends ExtDirect
 		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			// fetch id
-			if (($resql = $this->fetch($param->id, $param->app_id)) < 0) return $resql;
+			if (($res = $this->fetch($param->id, $param->app_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 			// if found delete
 			if ($this->id) {
 				$this->_user->fetch($this->fk_user);
 				// delete id, if not deleted return error
-				if (($resql = $this->delete($this->_user)) < 0) return $resql;
+				if (($res = $this->delete($this->_user)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 			}
 		}
 

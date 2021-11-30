@@ -135,6 +135,9 @@ function doRpc($cdata)
                     case COMPATIBILITYERROR:
                         $error->message = "Compatibility Error: $method on action $action";
                         break;
+                    case DUPLICATEERROR:
+                        $error->message = "Duplicate Error: $method on action $action";
+                        break;
                     default:
                         $error->message = "Error $result from dolibarr: $method on action $action";
                         break;

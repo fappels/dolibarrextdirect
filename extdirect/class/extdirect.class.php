@@ -58,6 +58,10 @@ if (!defined("VULNERABILITYERROR")) define("VULNERABILITYERROR", -1005);
  * Constant to return when there a dolibarr version conflict
  */
 if (!defined("COMPATIBILITYERROR")) define("COMPATIBILITYERROR", -1006);
+/**
+ * Constant to return when there are missing or invalid parameters
+ */
+if (!defined("DUPLICATEERROR"))     define("DUPLICATEERROR", -1007);
 
 /**
  *  ExtDirect table CRUD and some common static functions
