@@ -70,7 +70,6 @@ class ExtDirectAuthenticate extends ExtDirect
 		foreach ($paramArray as &$param) {
 			if (!empty($param->ack_id)) return PARAMETERERROR;
 			$this->prepareAuthenticationFields($param);
-			dol_syslog(get_class($this)."::create webview name= ". $param->webview_name ." webview version= ". $param->webview_version, LOG_DEBUG);
 			// check if already acknowledged, return DUPLICATEERROR if so
 			if (($res = $this->fetch(0, $this->app_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 			if (!empty($this->ack_id)) return DUPLICATEERROR;
@@ -106,6 +105,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		$result = new stdClass;
 		$ack_id = '';
 		$app_id = '';
+		$app_version = '';
 
 		$moduleInfo = new modExtDirect($this->db);
 
@@ -113,6 +113,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			foreach ($param->filter as $key => $filter) {
 				if ($filter->property == 'ack_id') $ack_id=$filter->value;
 				elseif ($filter->property == 'app_id') $app_id=$filter->value;
+				elseif ($filter->property == 'app_version') $app_version=$filter->value;
 			}
 		}
 		// check if server user is set, if not return empty result
@@ -125,10 +126,15 @@ class ExtDirectAuthenticate extends ExtDirect
 				$this->ack_id = uniqid('llx', true);
 			}
 		}
-		// update last connect date
-		$this->date_last_connect=dol_now();
 		$this->_user->fetch($this->fk_user);
-		if (($res = $this->update($this->_user)) < 0) {
+		// update last connect date only for old app version
+		$this->date_last_connect=dol_now();
+		if (empty($app_version)) {
+			$res = $this->update($this->_user);
+		} else {
+			$res = 0;
+		}
+		if ($res < 0) {
 			return ExtDirect::getDolError($res, $this->errors, $this->error);
 		} else {
 			// only login with valid access key
@@ -166,6 +172,9 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->home_localtax2_assuj = $mysoc->localtax2_assuj;
 			$result->timezone_offset = getServerTimeZoneInt('now');
 			$result->timezone = getServerTimeZoneString();
+			$result->webview_name = $this->webview_name;
+			$result->webview_version = $this->webview_version;
+			$result->identify = $this->identify;
 			return $result;
 		}
 	}
@@ -179,6 +188,8 @@ class ExtDirectAuthenticate extends ExtDirect
 	 */
 	public function updateAuthentication($param)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		// dolibarr update settings
 
@@ -196,6 +207,18 @@ class ExtDirectAuthenticate extends ExtDirect
 					$this->date_last_connect=dol_now();
 					if (($res = $this->update($this->_user)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 				};
+				// only login with valid access key
+				$this->_user->fetch($this->fk_user);
+				if ($param->ack_id == $this->ack_id) {
+					$_SESSION['dol_login'] = $this->_user->login;
+				}
+				if (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+					$_SESSION['dol_entity'] = $this->_user->entity;
+					$conf->entity = $this->_user->entity;
+				} else {
+					$_SESSION['dol_entity'] = 1;
+					$conf->entity = 1;
+				}
 			} else {
 				return PARAMETERERROR;
 			}
@@ -246,8 +269,12 @@ class ExtDirectAuthenticate extends ExtDirect
 		$diff = self::prepareField($diff, $param, $this, 'requestid', 'requestid');
 		$diff = self::prepareField($diff, $param, $this, 'app_id', 'app_id');
 		$diff = self::prepareField($diff, $param, $this, 'app_name', 'app_name');
+		$diff = self::prepareField($diff, $param, $this, 'date_last_connect', 'date_last_connect');
 		$diff = self::prepareField($diff, $param, $this, 'dev_platform', 'dev_platform');
 		$diff = self::prepareField($diff, $param, $this, 'dev_type', 'dev_type');
+		$diff = self::prepareField($diff, $param, $this, 'webview_name', 'webview_name');
+		$diff = self::prepareField($diff, $param, $this, 'webview_version', 'webview_version');
+		$diff = self::prepareField($diff, $param, $this, 'identify', 'identify');
 
 		return $diff;
 	}

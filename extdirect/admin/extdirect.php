@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2012-2014  Francis Appels       <francis.appels@z-application.com>
+ * Copyright (C) 2012-2021  Francis Appels       <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,19 +100,17 @@ if (!$error) {
 					$res = $extDirect->delete($user);
 				} else {
 					//update
-					$extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
-					$extDirect->app_id = $user_app['app_id'];
-					$extDirect->ack_id = $user_app['ack_id'];
-					$extDirect->requestid = $user_app['requestid'];
-					$extDirect->app_name = $user_app['app_name'];
-					$extDirect->date_last_connect = $db->jdate($user_app['date_last_connect']);
-					$extDirect->datec = $db->jdate($user_app['datec']);
-					$extDirect->dev_platform = $user_app['dev_platform'];
-					$extDirect->dev_type = $user_app['dev_type'];
-					$res = $extDirect->update($user, 1);
+					if ($extDirect->fk_user != GETPOST('userid'.$i, 'alpha') ||
+						$extDirect->identify != GETPOST('identify'.$i, 'int')
+					) {
+						$extDirect->fetch($extDirect->id);
+						$extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
+						$extDirect->identify = GETPOST('identify'.$i, 'int');
+						$res = $extDirect->update($user, 1);
+					}
 				}
 				$i++;
-				if (! $res > 0) $error++;
+				if ($res < 0) $error++;
 			}
 		}
 		$extDirect->fetchList('', 'date_last_connect ASC');
@@ -222,10 +220,9 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<td>'.$langs->trans("AppName").'</td>';
 	print '<td>'.$langs->trans("DateC").'</td>';
 	print '<td>'.$langs->trans("DateLastConnect").'</td>';
-	print '<td>'.$langs->trans("DevPlatform").'</td>';
-	print '<td>'.$langs->trans("DevType").'</td>';
 	print '<td>'.$langs->trans("User").'</td>';
 	print '<td>'.$langs->trans("Ack").'</td>';
+	print '<td>'.$langs->trans("Identify").'</td>';
 	print '<td><a href="'.$_SERVER['PHP_SELF'].'?action=selectall">'.$langs->trans("removeAll");
 	print '</a>/<a href="'.$_SERVER['PHP_SELF'].'?action=selectnone">'.$langs->trans("None").'</a>';
 	print '</tr>'."\n";
@@ -234,19 +231,27 @@ if ($mode == $tabs['tab1']->mode) {
 		foreach ($extDirect->dataset as $user_app) {
 			$var=!$var;
 			$userId = ($user_app['fk_user']?$user_app['fk_user']:-1);
+			$extDirectStatic = new ExtDirect($db);
+			$extDirectStatic->requestid = $user_app['requestid'];
+			$extDirectStatic->dev_platform = $user_app['dev_platform'];
+			$extDirectStatic->dev_type = $user_app['dev_type'];
+			$extDirectStatic->webview_name = $user_app['webview_name'];
+			$extDirectStatic->webview_version = $user_app['webview_version'];
 			print '<tr '.$bc[$var].'>';
-			print '<td>'.$user_app['requestid'].'</td>';
+			print '<td>'.$extDirectStatic->getNomUrl($extDirectStatic).'</td>';
 			print '<td>'.$user_app['app_name'].'</td>';
 			print '<td>'.$user_app['datec'].'</td>';
 			print '<td>'.$user_app['date_last_connect'].'</td>';
-			print '<td>'.$user_app['dev_platform'].'</td>';
-			print '<td>'.$user_app['dev_type'].'</td>';
 			print '<td align="right" width="60">';
 			print $form->select_dolusers($userId, 'userid'.$i, 1, $userExclude, 0, '', '');
 			print '</td>';
 			print '<td align="right" width="40">';
 			print '<input '.$bc[$var].' type="checkbox" name="ACK" value="1"';
 			print ((!empty($user_app['ack_id']))?' checked="checked"':'').' disabled="disabled">';
+			print '</td>';
+			print '<td align="right" width="40">';
+			print '<input '.$bc[$var].' type="checkbox" name="identify'.$i.'" value="1"';
+			print ((!empty($user_app['identify']))?' checked="checked"':'').'>';
 			print '</td>';
 			print '<td align="right" width="40">';
 			$key='REMOVE_'.$user_app['app_id'].$i;

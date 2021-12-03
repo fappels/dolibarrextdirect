@@ -83,6 +83,9 @@ class ExtDirect
 	public $date_last_connect='';
 	public $dev_platform;
 	public $dev_type;
+	public $webview_name;
+	public $webview_version;
+	public $identify;
 	// array with multiple records
 	public $dataset=array();
 
@@ -123,6 +126,8 @@ class ExtDirect
 		if (isset($this->requestid)) $this->requestid=trim($this->requestid);
 		if (isset($this->dev_platform)) $this->dev_platform=trim($this->dev_platform);
 		if (isset($this->dev_type)) $this->dev_type=trim($this->dev_type);
+		if (isset($this->webview_name)) $this->dev_type=trim($this->webview_name);
+		if (isset($this->webview_version)) $this->dev_type=trim($this->webview_version);
 
 		// Check parameters
 		// Put here code to add control on parameters values
@@ -137,9 +142,12 @@ class ExtDirect
 		$sql.= "datec,";
 		$sql.= "date_last_connect,";
 		$sql.= "dev_platform,";
-		$sql.= "dev_type";
+		$sql.= "dev_type,";
+		$sql.= "webview_name,";
+		$sql.= "webview_version,";
+		$sql.= "identify";
 		$sql.= ") VALUES (";
-		$sql.= " ".(! isset($this->fk_user)?'NULL':"'".$this->fk_user."'").",";
+		$sql.= " ".(! isset($this->fk_user)?'NULL':"'".(int) $this->fk_user."'").",";
 		$sql.= " ".(! isset($this->app_id)?'NULL':"'".$this->db->escape($this->app_id)."'").",";
 		$sql.= " ".(! isset($this->app_name)?'NULL':"'".$this->db->escape($this->app_name)."'").",";
 		$sql.= " ".(! isset($this->ack_id)?'NULL':"'".$this->db->escape($this->ack_id)."'").",";
@@ -147,7 +155,10 @@ class ExtDirect
 		$sql.= " '".$this->db->idate(dol_now())."',";
 		$sql.= " '".$this->db->idate(dol_now())."',";
 		$sql.= " ".(! isset($this->dev_platform)?'NULL':"'".$this->db->escape($this->dev_platform)."'").",";
-		$sql.= " ".(! isset($this->dev_type)?'NULL':"'".$this->db->escape($this->dev_type)."'")."";
+		$sql.= " ".(! isset($this->dev_type)?'NULL':"'".$this->db->escape($this->dev_type)."'").",";
+		$sql.= " ".(! isset($this->webview_name)?'NULL':"'".$this->db->escape($this->webview_name)."'").",";
+		$sql.= " ".(! isset($this->webview_version)?'NULL':"'".$this->db->escape($this->webview_version)."'").",";
+		$sql.= " ".(! isset($this->identify)?'NULL':"'".(int) $this->identify."'")."";
 		$sql.= ")";
 
 		$this->db->begin();
@@ -209,7 +220,10 @@ class ExtDirect
 		$sql.= " t.datec,";
 		$sql.= " t.date_last_connect,";
 		$sql.= " t.dev_platform,";
-		$sql.= " t.dev_type";
+		$sql.= " t.dev_type,";
+		$sql.= " t.webview_name,";
+		$sql.= " t.webview_version,";
+		$sql.= " t.identify";
 
 		$sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
 		if (!empty($filter)) {
@@ -236,6 +250,9 @@ class ExtDirect
 				$this->dataset[$i]['date_last_connect'] = $obj->date_last_connect;
 				$this->dataset[$i]['dev_platform']  = $obj->dev_platform;
 				$this->dataset[$i]['dev_type']  = $obj->dev_type;
+				$this->dataset[$i]['webview_name']  = $obj->webview_name;
+				$this->dataset[$i]['webview_version']  = $obj->webview_version;
+				$this->dataset[$i]['identify']  = $obj->identify;
 				$i++;
 			}
 			$this->db->free($resql);
@@ -269,7 +286,10 @@ class ExtDirect
 		$sql.= " t.datec,";
 		$sql.= " t.date_last_connect,";
 		$sql.= " t.dev_platform,";
-		$sql.= " t.dev_type";
+		$sql.= " t.dev_type,";
+		$sql.= " t.webview_name,";
+		$sql.= " t.webview_version,";
+		$sql.= " t.identify";
 
 		$sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
 		if ($id) {
@@ -299,6 +319,9 @@ class ExtDirect
 				$this->date_last_connect = $this->db->jdate($obj->date_last_connect);
 				$this->dev_platform = $obj->dev_platform;
 				$this->dev_type = $obj->dev_type;
+				$this->webview_name = $obj->webview_name;
+				$this->webview_version = $obj->webview_version;
+				$this->identify = $obj->identify;
 
 				return 1;
 			} else {
@@ -333,13 +356,15 @@ class ExtDirect
 		if (isset($this->requestid)) $this->requestid=trim($this->requestid);
 		if (isset($this->dev_platform)) $this->dev_platform=trim($this->dev_platform);
 		if (isset($this->dev_type)) $this->dev_type=trim($this->dev_type);
+		if (isset($this->webview_name)) $this->webview_name=trim($this->webview_name);
+		if (isset($this->webview_version)) $this->webview_version=trim($this->webview_version);
 
 		// Check parameters
 		// Put here code to add control on parameters values
 
 		// Update request
 		$sql = "UPDATE ".MAIN_DB_PREFIX."extdirect_user SET";
-		$sql.= " fk_user=".(isset($this->fk_user)?$this->fk_user:"null").",";
+		$sql.= " fk_user=".(isset($this->fk_user)?(int) $this->fk_user:"null").",";
 		$sql.= " app_id=".(isset($this->app_id)?"'".$this->db->escape($this->app_id)."'":"null").",";
 		$sql.= " app_name=".(isset($this->app_name)?"'".$this->db->escape($this->app_name)."'":"null").",";
 		$sql.= " ack_id=".(isset($this->ack_id)?"'".$this->db->escape($this->ack_id)."'":"null").",";
@@ -347,7 +372,10 @@ class ExtDirect
 		$sql.= " datec=".(dol_strlen($this->datec)!=0 ? "'".$this->db->idate($this->datec)."'" : 'null').",";
 		$sql.= " date_last_connect=".(dol_strlen($this->date_last_connect)!=0 ? "'".$this->db->idate($this->date_last_connect)."'" : 'null').",";
 		$sql.= " dev_platform=".(isset($this->dev_platform)?"'".$this->db->escape($this->dev_platform)."'":"null").",";
-		$sql.= " dev_type=".(isset($this->dev_type)?"'".$this->db->escape($this->dev_type)."'":"null")."";
+		$sql.= " dev_type=".(isset($this->dev_type)?"'".$this->db->escape($this->dev_type)."'":"null").",";
+		$sql.= " webview_name=".(isset($this->webview_name)?"'".$this->db->escape($this->webview_name)."'":"null").",";
+		$sql.= " webview_version=".(isset($this->webview_version)?"'".$this->db->escape($this->webview_version)."'":"null").",";
+		$sql.= " identify=".(isset($this->identify)?"'".(int) $this->identify."'":"null")."";
 
 		$sql.= " WHERE rowid=".$this->id;
 
@@ -435,6 +463,61 @@ class ExtDirect
 			$this->db->commit();
 			return 1;
 		}
+	}
+
+	/**
+	 *  Create a tooltip with connection details
+	 *
+	 *	@param	ExtDirect	$object						ExtDirect object
+	 *	@param	string		$option						No options available
+	 *  @param	int  		$notooltip					1=Disable tooltip
+	 *  @param  string  	$morecss            		Add more css on link
+	 *	@return	string								String with URL
+	 */
+	public function getNomUrl(ExtDirect $object, $option = '', $notooltip = 0, $morecss = '')
+	{
+		global $conf, $langs, $hookmanager;
+
+		if (! empty($conf->dol_no_mouse_hover)) $notooltip=1;   // Force disable tooltips
+
+		$result = '';
+
+		$label = '<u>' . $langs->trans("ConnectionDetails") . '</u>';
+		$label.= '<br>';
+		$label.= '<b>' . $langs->trans('DevPlatform') . ':</b> ' . $object->dev_platform;
+		$label.= '<br>';
+		$label.= '<b>' . $langs->trans('DevType') . ':</b> ' . $object->dev_type;
+		$label.= '<br>';
+		$label.= '<b>' . $langs->trans('WebviewName') . ':</b> ' . $object->webview_name;
+		$label.= '<br>';
+		$label.= '<b>' . $langs->trans('WebviewVersion') . ':</b> ' . $object->webview_version;
+
+		$linkclose='';
+		if (empty($notooltip)) {
+			if (! empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) {
+				$label=$langs->trans("ConnectionDetails");
+				$linkclose.=' alt="'.dol_escape_htmltag($label, 1).'"';
+			}
+			$linkclose.=' title="'.dol_escape_htmltag($label, 1).'"';
+			$linkclose.=' class="classfortooltip'.($morecss?' '.$morecss:'').'"';
+		} else $linkclose = ($morecss?' class="'.$morecss.'"':'');
+
+		$linkstart = '<a' . $linkclose . '>';
+		$linkend='</a>';
+
+		$result .= $linkstart;
+		$result .= $object->requestid;
+
+		$result .= $linkend;
+
+		global $action;
+		$hookmanager->initHooks(array('extdirectdao'));
+		$parameters=array('id'=>$this->id, 'getnomurl'=>$result);
+		$reshook=$hookmanager->executeHooks('getNomUrl', $parameters, $this, $action);    // Note that $action and $object may have been modified by some hooks
+		if ($reshook > 0) $result = $hookmanager->resPrint;
+		else $result .= $hookmanager->resPrint;
+
+		return $result;
 	}
 
 	/**
