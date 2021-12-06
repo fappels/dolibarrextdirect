@@ -529,7 +529,7 @@ class ExtDirectProduct extends Product
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value); // display value
+							$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element); // display value
 							$row->object_id = $this->id;
 							$row->object_element = $this->element;
 							$row->raw_value = $value;
@@ -564,7 +564,7 @@ class ExtDirectProduct extends Product
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++;
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $productLot->table_element);
 							$row->object_id = $productLot->id;
 							$row->object_element = $productLot->element;
 							$row->raw_value = $value;

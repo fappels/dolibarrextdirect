@@ -296,7 +296,7 @@ class ExtDirectCommande extends Commande
 						$name = substr($key, 8); // strip options_
 						$row->id = $index++; // ExtJs needs id to be able to destroy records
 						$row->name = $name;
-						$row->value = $extraFields->showOutputField($name, $value);
+						$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element);
 						$row->object_id = $this->id;
 						$row->object_element = $this->element;
 						$row->raw_value = $value;
@@ -1464,7 +1464,7 @@ class ExtDirectCommande extends Commande
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
 							$row->object_id = $orderLine->id;
 							$row->object_element = $orderLine->element;
 							$row->raw_value = $value;

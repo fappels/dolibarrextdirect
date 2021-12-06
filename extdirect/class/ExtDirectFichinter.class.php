@@ -238,7 +238,7 @@ class ExtDirectFichinter extends Fichinter
 						$name = substr($key, 8); // strip options_
 						$row->id = $index++; // ExtJs needs id to be able to destroy records
 						$row->name = $name;
-						$row->value = $extraFields->showOutputField($name, $value);
+						$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element);
 						$row->object_id = $this->id;
 						$row->object_element = $this->element;
 						$row->raw_value = $value;
@@ -782,7 +782,7 @@ class ExtDirectFichinter extends Fichinter
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $line->table_element);
 							$row->object_id = $line->id;
 							$row->object_element = $line->element;
 							$row->raw_value = $value;
