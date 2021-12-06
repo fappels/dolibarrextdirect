@@ -1270,7 +1270,11 @@ class ExtDirectExpedition extends Expedition
 	private function finishBatches($batches)
 	{
 		// write related batch info
-		require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+		if (ExtDirect::checkDolVersion(0, '15.0', '')) {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';
+		} else {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+		}
 
 		$stockLocationQty = array(); // associated array with batch qty in stock location
 		$stockLocationOriginLineId = array(); // associated array with OriginLineId's
@@ -1376,12 +1380,20 @@ class ExtDirectExpedition extends Expedition
 	{
 		global $conf;
 
-		require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
 		$batches = array();
 
-		if (($batches = ExpeditionLineBatch::FetchAll($this->db, $lineId, $fk_product)) < 0) return $batches;
+		if (ExtDirect::checkDolVersion(0, '15.0', '')) {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';
+			$shipmentLineBatch = new ExpeditionLineBatch($this->db);
+			$batches = $shipmentLineBatch->fetchAll($lineId, $fk_product);
+		} else {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+			$shipmentLineBatch = new ExpeditionLineBatch($this->db);
+			$batches = $shipmentLineBatch->fetchAll($this->db, $lineId, $fk_product);
+		}
+		if ($batches < 0) return $batches;
 
-		if (!empty($batches)) {
+		if (is_array($batches) && count($batches) > 0) {
 			foreach ($batches as $batch) {
 				if (isset($packageLine)) $packagedQty = $packageLine->getQtyPackaged($lineId, $batch->id);
 				$row->id = $lineId . '_' . $batch->id;
@@ -1543,8 +1555,16 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
 			}
 
 			// fetch remaining lot qty
-			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
-			if (($lotArray = ExpeditionLineBatch::fetchAll($this->db, $this->id)) < 0) {
+			if (ExtDirect::checkDolVersion(0, '15.0', '')) {
+				require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';
+				$expeditionLineBatch = new ExpeditionLineBatch($this->db);
+				$lotArray = $expeditionLineBatch->fetchAll($this->id);
+			} else {
+				require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+				$expeditionLineBatch = new ExpeditionLineBatch($this->db);
+				$lotArray = $expeditionLineBatch->fetchAll($this->db, $this->id);
+			}
+			if ($lotArray < 0) {
 				$this->errors[] = $this->db->lasterror() . " - ExpeditionLineBatch::fetchAll";
 				$this->db->rollback();
 				return -4;
