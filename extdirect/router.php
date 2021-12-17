@@ -8,8 +8,13 @@ if (!defined('NOCSRFCHECK'))        define('NOCSRFCHECK', '1');
 if (!defined('NOREQUIREMENU'))      define('NOREQUIREMENU', '1');    // If there is no menu to show
 if (!defined('NOREQUIREHTML'))      define('NOREQUIREHTML', '1');    // If we don't need to load the html.form.class.php
 if (!defined('NOREQUIREAJAX'))      define('NOREQUIREAJAX', '1');
-if (!defined("NOLOGIN"))            define("NOLOGIN", '1');
-// If this page is public (can be called outside logged session)
+if (!defined("NOLOGIN"))            define("NOLOGIN", '1');          // If this page is public (can be called outside logged session)
+
+// a non CSRF cookie should be created but cookie needs to be secured
+if (requestIsHTTPS() && version_compare(phpversion(), '7.3', '>=')) {
+	$site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
+	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
+}
 
 // Change this following line to use the correct relative path (../, ../../, etc)
 $res=0;
@@ -213,6 +218,25 @@ function object_analyse_sql_and_script(&$var, $type)
 			return (testSqlAndScriptInject($var, $type) <= 0);
 		}
 	}
+}
+
+/**
+ * Return if we are using a HTTPS connexion
+ * Check HTTPS (no way to be modified by user but may be empty or wrong if user is using a proxy)
+ * Take HTTP_X_FORWARDED_PROTO (defined when using proxy)
+ * Then HTTP_X_FORWARDED_SSL
+ *
+ * @return	boolean		True if user is using HTTPS
+ */
+function requestIsHTTPS()
+{
+	$isSecure = false;
+	if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
+		$isSecure = true;
+	} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https' || !empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on') {
+		$isSecure = true;
+	}
+	return $isSecure;
 }
 
 $response = null;

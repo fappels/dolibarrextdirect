@@ -98,7 +98,7 @@ class ExtDirectAuthenticate extends ExtDirect
 	 */
 	public function readAuthentication(stdClass $param)
 	{
-		global $conf, $mysoc;
+		global $conf, $mysoc, $site_cookie_samesite, $site_cookie_secure;
 
 		if (!isset($this->db)) return CONNECTERROR;
 
@@ -175,6 +175,12 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->webview_name = $this->webview_name;
 			$result->webview_version = $this->webview_version;
 			$result->identify = $this->identify;
+			// debug info can be removed for production
+			$result->site_cookie_samesite = $site_cookie_samesite;
+			$result->site_cookie_secure = $site_cookie_secure;
+			$cookieParams = session_get_cookie_params();
+			$result->session_cookie_samesite = $cookieParams['samesite'];
+			$result->session_cookie_secure =  $cookieParams['secure'];
 			return $result;
 		}
 	}
