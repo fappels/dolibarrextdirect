@@ -100,10 +100,10 @@ if (!$error) {
 					$res = $extDirect->delete($user);
 				} else {
 					//update
+                    $extDirect->fetch($extDirect->id);
 					if ($extDirect->fk_user != GETPOST('userid'.$i, 'alpha') ||
 						$extDirect->identify != GETPOST('identify'.$i, 'int')
 					) {
-						$extDirect->fetch($extDirect->id);
 						$extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
 						$extDirect->identify = GETPOST('identify'.$i, 'int');
 						$res = $extDirect->update($user, 1);
