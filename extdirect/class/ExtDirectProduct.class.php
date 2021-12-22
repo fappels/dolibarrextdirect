@@ -1484,7 +1484,16 @@ class ExtDirectProduct extends Product
 				} else {
 					$row->stock = (float) $obj->stock;
 				}
-				$row->total_stock = (float) $obj->total_stock;
+				if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO) && !$warehouseFilter) {
+					$product = new Product($this->db);
+					$product->fetch($row->product_id);
+					$product->load_stock('warehouseopen, warehouseinternal');
+					$row->is_virtual_stock = true;
+					$row->total_stock = (float) $product->stock_theorique;
+				} else {
+					$row->is_virtual_stock = false;
+					$row->total_stock = (float) $obj->total_stock;
+				}
 				$row->seuil_stock_alerte = $obj->seuil_stock_alerte;
 				$row->has_photo = 0;
 				if (!empty($photoSize)) {
