@@ -39,7 +39,7 @@ class ExtDirectCommande extends Commande
 	private $_user;
 	private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
-		'STOCK_USE_VIRTUAL_STOCK');
+		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO');
 
 		/**
 	 * Fully shippable status of validated order
