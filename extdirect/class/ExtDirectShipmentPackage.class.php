@@ -434,8 +434,6 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	 */
 	public function extList(stdClass $params)
 	{
-		global $conf;
-
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->read)) return PERMISSIONERROR;
 		$result = new stdClass;
@@ -446,6 +444,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$contactTypeId = 0;
 		$originId = 0;
 		$status_id = array();
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -464,6 +463,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'origin_id') $originId = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
 
@@ -500,6 +500,11 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if ($contactTypeId > 0) {
 			$sqlWhere .= " AND ec.fk_c_type_contact = " . $contactTypeId;
 			$sqlWhere .= " AND ec.fk_socpeople = " . $contactId;
+		}
+
+		if ($contentFilter) {
+			$fields = array('ep.ref', 'ep.ref_supplier', 's.nom');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
 		$sqlOrder = " ORDER BY ";

@@ -498,18 +498,16 @@ class ExtDirectFichinter extends Fichinter
 	 */
 	public function readList(stdClass $params)
 	{
-		global $conf;
-
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 
-		$myUser = new User($this->db);
 		$statusFilterCount = 0;
 		$ref = null;
 		$contactTypeId = 0;
 		$barcode = null;
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -524,16 +522,18 @@ class ExtDirectFichinter extends Fichinter
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'status_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
-				if ($filter->property == 'ref') $ref=$filter->value;
-				if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
-				if ($filter->property == 'contact_id') $contactId = $filter->value;
-				if ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'ref') $ref=$filter->value;
+				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec, u.firstname, u.lastname";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."fichinter as i";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
+		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON i.fk_user_author = u.rowid";
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON i.rowid = ec.element_id";
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
 		$sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
@@ -564,6 +564,12 @@ class ExtDirectFichinter extends Fichinter
 		if ($barcode) {
 			$sqlWhere .= " AND (i.ref = '".$this->db->escape($barcode)."' OR i.ref_ext = '".$this->db->escape($barcode)."')";
 		}
+
+		if ($contentFilter) {
+			$fields = array('i.ref', 'i.description', 's.nom', 'u.firstname', 'u.lastname');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
 		$sqlOrder = " ORDER BY i.datec DESC";
 
 		if ($limit) {
@@ -602,9 +608,7 @@ class ExtDirectFichinter extends Fichinter
 				$row->status_id= (int) $obj->fk_statut;
 				$row->status   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
 				$row->user_id 		= $obj->fk_user_author;
-				if ($myUser->fetch($row->user_id)>0) {
-					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
-				}
+				$row->user_name     = $obj->firstname . ' ' . $obj->lastname;
 				$row->date_creation  = $this->db->jdate($obj->datec);
 				array_push($data, $row);
 			}

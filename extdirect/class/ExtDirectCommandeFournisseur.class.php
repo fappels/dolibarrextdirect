@@ -553,6 +553,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$barcode = null;
 		$productId = null;
 		$supplierId = null;
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -571,12 +572,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value; // add id config in client filter for ExtJs
-				if ($filter->property == 'ref') $ref=$filter->value;
-				if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
-				if ($filter->property == 'contact_id') $contactId = $filter->value;
-				if ($filter->property == 'barcode') $barcode = $filter->value;
-				if ($filter->property == 'product_id') $productId = $filter->value;
-				if ($filter->property == 'supplier_id') $supplierId = $filter->value;
+				elseif ($filter->property == 'ref') $ref=$filter->value;
+				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'product_id') $productId = $filter->value;
+				elseif ($filter->property == 'supplier_id') $supplierId = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
 
@@ -633,6 +635,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		}
 		if ($supplierId) {
 			$sqlWhere .= " AND c.fk_soc = ".$supplierId;
+		}
+
+		if ($contentFilter) {
+			$fields = array('c.ref', 'c.ref_supplier', 's.nom', 'u.firstname', 'u.lastname');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
 		$sqlOrder = " ORDER BY ";

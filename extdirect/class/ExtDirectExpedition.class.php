@@ -544,6 +544,7 @@ class ExtDirectExpedition extends Expedition
 		$contactTypeId = 0;
 		$originId = 0;
 		$barcode = null;
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -564,6 +565,7 @@ class ExtDirectExpedition extends Expedition
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'origin_id') $originId = $filter->value;
 				elseif ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
 
@@ -624,6 +626,11 @@ class ExtDirectExpedition extends Expedition
 			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR e.ref = '".$this->db->escape($barcode)."' OR e.ref_customer = '".$this->db->escape($barcode)."'";
 			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
 			$sqlWhere .= ")";
+		}
+
+		if ($contentFilter) {
+			$fields = array('e.ref', 'e.ref_ext', 's.nom');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
 		$sqlOrder = " ORDER BY ";
