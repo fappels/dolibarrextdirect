@@ -1263,7 +1263,7 @@ class ExtDirectProduct extends Product
 	 */
 	public function readProductList(stdClass $param)
 	{
-		global $conf;
+		global $conf, $langs;
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
@@ -1313,7 +1313,16 @@ class ExtDirectProduct extends Product
 		}
 
 		$sqlFields = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
-		if ($warehouseFilter) $sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
+		if ($warehouseFilter) {
+			$sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
+			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+				$sqlFields .= ", COALESCE(e.ref,'|0| Stock') as warehouse";
+			} else {
+				$sqlFields .= ", COALESCE(e.label,'|0| Stock') as warehouse";
+			}
+		} else {
+			$sqlFields .= ", '". $langs->trans(ExtDirectFormProduct::ALLWAREHOUSE_LABEL). "' as warehouse";
+		}
 		if ($supplierFilter) {
 			$sqlFields .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
 			if (ExtDirect::checkDolVersion(0, '5.0', '')) $sqlFields .= ', sp.supplier_reputation';
@@ -1479,6 +1488,7 @@ class ExtDirectProduct extends Product
 				} else {
 					$row->warehouse_id = $obj->fk_entrepot;
 				}
+				$row->warehouse = $obj->warehouse;
 				if (empty($obj->stock)) {
 					$row->stock = 0;
 				} else {
