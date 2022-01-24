@@ -1,4 +1,4 @@
-# Dolibarr language file - en_US - extdirect
+# Dolibarr language file - ro_RO - extdirect
 CHARSET = UTF-8
 DirectConnect = Conector Ext.direct
 Module202002Name = Conector Ext.direct
@@ -32,3 +32,12 @@ Clear=clar
 DolibarrCompatibilityError=Versiunea Dolibarr nu a fost încă testată pentru compatibilitate
 AllLocationsDesc=Toate locațiile
 ActivitiesFromUser=Activități ale utilizatorului
+StatusOrderValidatedFullyShippableShort=Validat expediabil
+StatusOrderValidatedPartlyShippableShort=Validat parțial expediabil
+StatusOrderOnprocessFullyShippableShort=În proces expediabil
+StatusOrderOnprocessPartlyShippableShort=În proces parțial expediabil
+ShippableQtyInfo=%d Expedibil - %d Nu se poate expedia
+ConnectionDetails=Detalii de conectare
+WebviewName=Webview (navigator)
+WebviewVersion=Versiunea Webview
+Identify=Identificarea necesară
