@@ -40,4 +40,4 @@ ShippableQtyInfo=%d Shippable - %d Not shippable
 ConnectionDetails=Connection details
 WebviewName=Webview (navigator)
 WebviewVersion=Webview version
-Identify=Identify required
+Identify=Identification required
