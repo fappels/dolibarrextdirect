@@ -39,7 +39,7 @@ class ExtDirectCommande extends Commande
 	private $_user;
 	private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
-		'STOCK_USE_VIRTUAL_STOCK');
+		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO');
 
 		/**
 	 * Fully shippable status of validated order
@@ -296,7 +296,7 @@ class ExtDirectCommande extends Commande
 						$name = substr($key, 8); // strip options_
 						$row->id = $index++; // ExtJs needs id to be able to destroy records
 						$row->name = $name;
-						$row->value = $extraFields->showOutputField($name, $value);
+						$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element);
 						$row->object_id = $this->id;
 						$row->object_element = $this->element;
 						$row->raw_value = $value;
@@ -569,6 +569,7 @@ class ExtDirectCommande extends Commande
 		$ref = null;
 		$contactTypeId = 0;
 		$barcode = null;
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -595,6 +596,7 @@ class ExtDirectCommande extends Commande
 				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
 
@@ -652,6 +654,11 @@ class ExtDirectCommande extends Commande
 			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR c.ref = '".$this->db->escape($barcode)."' OR c.ref_client = '".$this->db->escape($barcode)."'";
 			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
 			$sqlWhere .= ")";
+		}
+
+		if ($contentFilter) {
+			$fields = array('c.ref', 'c.ref_client', 's.nom', 'u.firstname', 'u.lastname');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
 		$sqlOrder = " ORDER BY ";
@@ -1464,7 +1471,7 @@ class ExtDirectCommande extends Commande
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
 							$row->object_id = $orderLine->id;
 							$row->object_element = $orderLine->element;
 							$row->raw_value = $value;

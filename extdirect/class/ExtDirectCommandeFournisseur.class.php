@@ -50,7 +50,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		'STOCK_CALCULATE_ON_SUPPLIER_VALIDATE_ORDER',
 		'STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER',
 		'SUPPLIER_ORDER_USE_DISPATCH_STATUS',
-		'STOCK_USE_VIRTUAL_STOCK',
+		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO',
 		'STOCK_ALLOW_NEGATIVE_TRANSFER',
 		'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE',
 		'MAIN_MODULE_RECEPTION');
@@ -258,7 +258,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						$name = substr($key, 8); // strip options_
 						$row->id = $index++; // ExtJs needs id to be able to destroy records
 						$row->name = $name;
-						$row->value = $extraFields->showOutputField($name, $value);
+						$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element);
 						$row->object_id = $this->id;
 						$row->object_element = $this->element;
 						$row->raw_value = $value;
@@ -553,6 +553,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$barcode = null;
 		$productId = null;
 		$supplierId = null;
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -571,12 +572,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value; // add id config in client filter for ExtJs
-				if ($filter->property == 'ref') $ref=$filter->value;
-				if ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
-				if ($filter->property == 'contact_id') $contactId = $filter->value;
-				if ($filter->property == 'barcode') $barcode = $filter->value;
-				if ($filter->property == 'product_id') $productId = $filter->value;
-				if ($filter->property == 'supplier_id') $supplierId = $filter->value;
+				elseif ($filter->property == 'ref') $ref=$filter->value;
+				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
+				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'product_id') $productId = $filter->value;
+				elseif ($filter->property == 'supplier_id') $supplierId = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
 
@@ -633,6 +635,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		}
 		if ($supplierId) {
 			$sqlWhere .= " AND c.fk_soc = ".$supplierId;
+		}
+
+		if ($contentFilter) {
+			$fields = array('c.ref', 'c.ref_supplier', 's.nom', 'u.firstname', 'u.lastname');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
 		$sqlOrder = " ORDER BY ";
@@ -1237,7 +1244,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
 							$row->object_id = $orderLine->id;
 							$row->object_element = $orderLine->element;
 							$row->raw_value = $value;

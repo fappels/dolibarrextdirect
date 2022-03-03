@@ -1,4 +1,4 @@
-# Dolibarr language file - en_US - extdirect
+# Dolibarr language file - en_GB - extdirect
 CHARSET = UTF-8
 DirectConnect = Ext.direct connector
 Module202002Name = Ext.direct connector
@@ -32,3 +32,12 @@ Clear=Clear
 DolibarrCompatibilityError=This version has not been tested for compatibility
 AllLocationsDesc=All Locations
 ActivitiesFromUser=Show activities from user
+StatusOrderValidatedFullyShippableShort=Validated shippable
+StatusOrderValidatedPartlyShippableShort=Validated partly shippable
+StatusOrderOnprocessFullyShippableShort=In process shippable
+StatusOrderOnprocessPartlyShippableShort=In process partly shippable
+ShippableQtyInfo=%d Shippable - %d Not shippable
+ConnectionDetails=Connection details
+WebviewName=Webview (navigator)
+WebviewVersion=Webview version
+Identify=Identification required

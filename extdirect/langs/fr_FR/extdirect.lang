@@ -1,10 +1,10 @@
 # Dolibarr language file - fr_FR - extdirect
 CHARSET = UTF-8
 DirectConnect = Ext.direct connecteur
-Module202002Name = Ext.direct connecteur
-Module202002Desc = Connectez-vous à des applications externes qui utilisent l'interface de données Ext.direct
+Module202002Name = Connecteur Ext.direct
+Module202002Desc = Connectez-vous à des applications externes qui utilisent l&#39;interface de données Ext.direct
 Applications=Applications
-DirectConnectSetup=Ext.direct connecteur configuration
+DirectConnectSetup=Configuration du connecteur direct externe
 Parameters=Paramètre
 Value=Valeur
 AutoAsignAbility=Activer affectation de l'utilisateur automatique , soyez prudent! tout le monde qui a accès à votre URL a accès à vos données.
@@ -32,3 +32,12 @@ Clear=Vider
 DolibarrCompatibilityError=La version de Dolibarr pas encore testé pour la compatibilité
 AllLocationsDesc=Toute emplacements
 ActivitiesFromUser=Activités de Utilisateur
+StatusOrderValidatedFullyShippableShort=Validé et expédiable
+StatusOrderValidatedPartlyShippableShort=Validé et partiellement expédiable
+StatusOrderOnprocessFullyShippableShort=En cours et expédiable
+StatusOrderOnprocessPartlyShippableShort=En cours et partiellement expédiable
+ShippableQtyInfo=%d Livrable - %d Non livrable
+ConnectionDetails=Détails de connexion
+WebviewName=Webview (navigateur)
+WebviewVersion=Version Webview
+Identify=Identification requise

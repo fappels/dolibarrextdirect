@@ -243,7 +243,7 @@ class ExtDirectExpedition extends Expedition
 						$name = substr($key, 8); // strip options_
 						$row->id = $index++; // ExtJs needs id to be able to destroy records
 						$row->name = $name;
-						$row->value = $extraFields->showOutputField($name, $value);
+						$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element);
 						$row->object_id = $this->id;
 						$row->object_element = $this->element;
 						$row->raw_value = $value;
@@ -389,7 +389,8 @@ class ExtDirectExpedition extends Expedition
 								$outputlangs = new Translate("", $conf);
 								$outputlangs->setDefaultLang($newlang);
 							}
-							$this->generateDocument($this->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+							(property_exists($this, 'model_pdf')) ? $model_pdf = $this->model_pdf : $model_pdf = $this->modelpdf; // For backward compatibility
+							$this->generateDocument($model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
 						}
 						break;
 					case 2:
@@ -543,6 +544,7 @@ class ExtDirectExpedition extends Expedition
 		$contactTypeId = 0;
 		$originId = 0;
 		$barcode = null;
+		$contentFilter = null;
 
 		$includeTotal = true;
 
@@ -563,6 +565,19 @@ class ExtDirectExpedition extends Expedition
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'origin_id') $originId = $filter->value;
 				elseif ($filter->property == 'barcode') $barcode = $filter->value;
+				elseif ($filter->property == 'content') $contentFilter = $filter->value;
+			}
+		}
+
+		if ($barcode && !empty($conf->shipmentpackage->enabled)) {
+			$extProduct = new ExtDirectProduct($this->db);
+			$fk_product = null;
+			$batch = null;
+			$idArray = $extProduct->fetchIdFromBarcode($barcode);
+			if ($idArray['product'] > 0) {
+				$fk_product = $idArray['product'];
+			} else {
+				$batch = $barcode;
 			}
 		}
 
@@ -611,6 +626,11 @@ class ExtDirectExpedition extends Expedition
 			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR e.ref = '".$this->db->escape($barcode)."' OR e.ref_customer = '".$this->db->escape($barcode)."'";
 			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
 			$sqlWhere .= ")";
+		}
+
+		if ($contentFilter) {
+			$fields = array('e.ref', 'e.ref_ext', 's.nom');
+			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
 		$sqlOrder = " ORDER BY ";
@@ -679,6 +699,14 @@ class ExtDirectExpedition extends Expedition
 				$row->status        = $obj->status;
 				$row->mode          = $obj->mode;
 				$row->deliver_date  = $this->db->jdate($obj->date_delivery);
+				if ($barcode && !empty($conf->shipmentpackage->enabled)) {
+					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+					$shipmentPackage = new ShipmentPackage($this->db);
+					if (method_exists($shipmentPackage, 'getQtyPackaged')) { // backwards compatible
+						$row->qty_packaged = $shipmentPackage->getQtyPackaged($row->id, $fk_product, $batch);
+						$row->qty_toship = $shipmentPackage->getQtyToShip($row->id, $fk_product, $batch);
+					}
+				}
 				array_push($data, $row);
 			}
 			$this->db->free($resql);
@@ -794,6 +822,13 @@ class ExtDirectExpedition extends Expedition
 			if (($result = $this->fetch_lines()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if (!$this->error) {
 				foreach ($this->lines as $key => $line) {
+					if (!empty($conf->shipmentpackage->enabled)) {
+						dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
+						$packageLine = new ShipmentPackageLine($this->db);
+						$packagedQty = $packageLine->getQtyPackaged($line->line_id);
+					} else {
+						$packagedQty = 0;
+					}
 					if ($line->fk_product > 0) {
 						$myprod = new ExtDirectProduct($this->_user->login);
 						if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
@@ -812,19 +847,17 @@ class ExtDirectExpedition extends Expedition
 					$row->product_label = $line->product_label;
 					$row->product_desc = '';
 					if (empty($line->label)) {
-						$row->label = $line->product_label;
+						if (empty($line->product_label)) {
+							$row->label = $line->description;
+						} else {
+							$row->label = $line->product_label;
+						}
 					} else {
 						$row->label = $line->label;
 					}
 					$row->origin_id = $origin_id;
 					$row->qty_asked = $line->qty_asked;
 					$row->qty_shipped = $line->qty_shipped;
-					if (!empty($conf->shipmentpackage->enabled)) {
-						dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
-						$packageLine = new ShipmentPackageLine($this->db);
-						$packagedQty = $packageLine->getQtyPackaged($line->line_id);
-						if ($packagedQty > 0) $row->qty_shipped = $line->qty_shipped - $packagedQty;
-					}
 					$row->has_photo = 0;
 					if ($myprod && !empty($photoSize)) {
 						$myprod->fetchPhoto($row, $photoSize);
@@ -840,10 +873,11 @@ class ExtDirectExpedition extends Expedition
 									$row->line_id =  $details_entrepot->line_id;
 									// return line for each warehouse
 									if (empty($conf->productbatch->enabled)) {
+										$row->qty_toship = $packagedQty;
 										array_push($results, clone $row);
 										if ($myprod) $myprod->fetchSubProducts($results, clone $row, $photoSize);
 									} else {
-										if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize)) < 0) return $res;
+										if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize, $packageLine)) < 0) return $res;
 									}
 								}
 							}
@@ -856,10 +890,17 @@ class ExtDirectExpedition extends Expedition
 								$row->line_id =  $details_entrepot->line_id;
 								// return line for each warehouse
 								if (empty($conf->productbatch->enabled)) {
+									if ($packagedQty <= $row->qty_shipped) {
+										$row->qty_toship = $packagedQty;
+										$packagedQty = 0;
+									} else {
+										$row->qty_toship = $row->qty_shipped;
+										$packagedQty -= $row->qty_shipped;
+									}
 									array_push($results, clone $row);
 									if ($myprod) $myprod->fetchSubProducts($results, clone $row, $photoSize);
 								} else {
-									if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize)) < 0) return $res;
+									if (($res = $this->fetchBatches($results, $row, $details_entrepot->line_id, $line->fk_product, $myprod, $photoSize, $packageLine)) < 0) return $res;
 								}
 							}
 						}
@@ -867,10 +908,11 @@ class ExtDirectExpedition extends Expedition
 						// return line from single warehouse
 						$row->warehouse_id = $line->entrepot_id;
 						if (empty($conf->productbatch->enabled)) {
+							$row->qty_toship = $packagedQty;
 							array_push($results, clone $row);
 							if ($myprod) $myprod->fetchSubProducts($results, clone $row, $photoSize);
 						} else {
-							if (($res = $this->fetchBatches($results, $row, $line->line_id, $line->fk_product, $myprod, $photoSize)) < 0) return $res;
+							if (($res = $this->fetchBatches($results, $row, $line->line_id, $line->fk_product, $myprod, $photoSize, $packageLine)) < 0) return $res;
 						}
 					}
 				}
@@ -954,7 +996,7 @@ class ExtDirectExpedition extends Expedition
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $line->table_element);
 							$row->object_id = $line->id;
 							$row->object_element = $line->element;
 							$row->raw_value = $value;
@@ -1129,6 +1171,7 @@ class ExtDirectExpedition extends Expedition
 		if (!isset($this->_user->rights->expedition->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
 		$package = null;
+		$batch_id = null;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -1136,6 +1179,7 @@ class ExtDirectExpedition extends Expedition
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 			$idArray = explode('_', $params->id);
+			if ($idArray[1] > 0) $batch_id = $idArray[1];
 			// Add a protection to refuse deleting if shipment is not in draft status
 			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
 				if (ExtDirect::checkDolVersion(0, '9.0', '')) {
@@ -1152,7 +1196,7 @@ class ExtDirectExpedition extends Expedition
 				$line->qty = $params->qty_toship;
 				if (!empty($params->batch)) {
 					$line->detail_batch = new stdClass;
-					$line->detail_batch->id = $idArray[1];
+					$line->detail_batch->id = $batch_id;
 					$line->detail_batch->batch = $params->batch;
 					$line->detail_batch->entrepot_id = $params->warehouse_id;
 					$line->detail_batch->dluo_qty = $params->qty_toship; // deprecated for 9.0
@@ -1199,8 +1243,12 @@ class ExtDirectExpedition extends Expedition
 							}
 						}
 					}
+					$packageLine = new ShipmentPackageLine($this->db);
+					$packagedQty = $params->qty_package - $packageLine->getQtyPackaged($params->line_id, $batch_id);
 					// add line
-					$result = $package->addLine($this->_user, $params->qty_package, $params->product_id, $params->line_id, $params->batch, $idArray[1]);
+					if ($packagedQty > 0) {
+						$result = $package->addLine($this->_user, $packagedQty, $params->product_id, $params->line_id, $params->batch, $batch_id);
+					}
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $package->errors, $package->error);
 					}
@@ -1229,7 +1277,11 @@ class ExtDirectExpedition extends Expedition
 	private function finishBatches($batches)
 	{
 		// write related batch info
-		require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+		if (ExtDirect::checkDolVersion(0, '15.0', '')) {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';
+		} else {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+		}
 
 		$stockLocationQty = array(); // associated array with batch qty in stock location
 		$stockLocationOriginLineId = array(); // associated array with OriginLineId's
@@ -1328,20 +1380,30 @@ class ExtDirectExpedition extends Expedition
 	 * @param int $fk_product product id
 	 * @param object $myprod product object
 	 * @param string $photoFormat small or mini
+	 * @param Object $packageLine already packaged line
 	 * @return int < 0 if error > 0 if OK
 	 */
-	private function fetchBatches(&$results, $row, $lineId, $fk_product, $myprod, $photoFormat)
+	private function fetchBatches(&$results, $row, $lineId, $fk_product, $myprod, $photoFormat, $packageLine)
 	{
 		global $conf;
 
-		require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
 		$batches = array();
 
-		if (($batches = ExpeditionLineBatch::FetchAll($this->db, $lineId, $fk_product)) < 0) return $batches;
+		if (ExtDirect::checkDolVersion(0, '15.0', '')) {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';
+			$shipmentLineBatch = new ExpeditionLineBatch($this->db);
+			$batches = $shipmentLineBatch->fetchAll($lineId, $fk_product);
+		} else {
+			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+			$shipmentLineBatch = new ExpeditionLineBatch($this->db);
+			$batches = $shipmentLineBatch->fetchAll($this->db, $lineId, $fk_product);
+		}
+		if ($batches < 0) return $batches;
 
-		if (!empty($batches)) {
+		if (is_array($batches) && count($batches) > 0) {
 			foreach ($batches as $batch) {
-				$row->id = $row->id . '_' . $batch->id;
+				if (isset($packageLine)) $packagedQty = $packageLine->getQtyPackaged($lineId, $batch->id);
+				$row->id = $lineId . '_' . $batch->id;
 				$row->line_id = $lineId;
 				$row->has_batch = 1;
 				$row->batch_id = $batch->fk_origin_stock;
@@ -1353,16 +1415,13 @@ class ExtDirectExpedition extends Expedition
 				} else {
 					$row->qty_shipped = (float) $batch->qty;
 				}
-				if (!empty($conf->shipmentpackage->enabled)) {
-					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
-					$packageLine = new ShipmentPackageLine($this->db);
-					$packagedQty = $packageLine->getQtyPackaged($lineId, $batch->id);
-					if ($packagedQty > 0) $row->qty_shipped -= $packagedQty;
-				}
+				$row->qty_toship = $packagedQty;
 				array_push($results, clone $row);
 			}
 		} else {
 			// no batch
+			if (isset($packageLine)) $packagedQty = $packageLine->getQtyPackaged($lineId);
+			$row->qty_toship = $packagedQty;
 			array_push($results, clone $row);
 			if ($myprod) $myprod->fetchSubProducts($results, $row, $photoFormat);
 		}
@@ -1503,8 +1562,16 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
 			}
 
 			// fetch remaining lot qty
-			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
-			if (($lotArray = ExpeditionLineBatch::fetchAll($this->db, $this->id)) < 0) {
+			if (ExtDirect::checkDolVersion(0, '15.0', '')) {
+				require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';
+				$expeditionLineBatch = new ExpeditionLineBatch($this->db);
+				$lotArray = $expeditionLineBatch->fetchAll($this->id);
+			} else {
+				require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionbatch.class.php';
+				$expeditionLineBatch = new ExpeditionLineBatch($this->db);
+				$lotArray = $expeditionLineBatch->fetchAll($this->db, $this->id);
+			}
+			if ($lotArray < 0) {
 				$this->errors[] = $this->db->lasterror() . " - ExpeditionLineBatch::fetchAll";
 				$this->db->rollback();
 				return -4;

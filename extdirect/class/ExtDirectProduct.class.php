@@ -529,7 +529,7 @@ class ExtDirectProduct extends Product
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value); // display value
+							$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element); // display value
 							$row->object_id = $this->id;
 							$row->object_element = $this->element;
 							$row->raw_value = $value;
@@ -564,7 +564,7 @@ class ExtDirectProduct extends Product
 							$name = substr($key, 8); // strip options_
 							$row->id = $index++;
 							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value);
+							$row->value = $extraFields->showOutputField($name, $value, '', $productLot->table_element);
 							$row->object_id = $productLot->id;
 							$row->object_element = $productLot->element;
 							$row->raw_value = $value;
@@ -604,7 +604,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 		if (isset($productLot)) {
-			if (($result = $productLot->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if (($result = $productLot->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 		} else {
 			if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		}
@@ -1263,7 +1263,7 @@ class ExtDirectProduct extends Product
 	 */
 	public function readProductList(stdClass $param)
 	{
-		global $conf;
+		global $conf, $langs;
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
@@ -1313,7 +1313,16 @@ class ExtDirectProduct extends Product
 		}
 
 		$sqlFields = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
-		if ($warehouseFilter) $sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
+		if ($warehouseFilter) {
+			$sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
+			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+				$sqlFields .= ", COALESCE(e.ref,'|0| Stock') as warehouse";
+			} else {
+				$sqlFields .= ", COALESCE(e.label,'|0| Stock') as warehouse";
+			}
+		} else {
+			$sqlFields .= ", '". $langs->trans(ExtDirectFormProduct::ALLWAREHOUSE_LABEL). "' as warehouse";
+		}
 		if ($supplierFilter) {
 			$sqlFields .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
 			if (ExtDirect::checkDolVersion(0, '5.0', '')) $sqlFields .= ', sp.supplier_reputation';
@@ -1479,12 +1488,22 @@ class ExtDirectProduct extends Product
 				} else {
 					$row->warehouse_id = $obj->fk_entrepot;
 				}
+				$row->warehouse = $obj->warehouse;
 				if (empty($obj->stock)) {
 					$row->stock = 0;
 				} else {
 					$row->stock = (float) $obj->stock;
 				}
-				$row->total_stock = (float) $obj->total_stock;
+				if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO) && !$warehouseFilter) {
+					$product = new Product($this->db);
+					$product->fetch($row->product_id);
+					$product->load_stock('warehouseopen, warehouseinternal');
+					$row->is_virtual_stock = true;
+					$row->total_stock = (float) $product->stock_theorique;
+				} else {
+					$row->is_virtual_stock = false;
+					$row->total_stock = (float) $obj->total_stock;
+				}
 				$row->seuil_stock_alerte = $obj->seuil_stock_alerte;
 				$row->has_photo = 0;
 				if (!empty($photoSize)) {
@@ -1758,7 +1777,7 @@ class ExtDirectProduct extends Product
 	 * @param string $table table to search 'product' or 'product_fournisseur_price'
 	 * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 10+)
 	 */
-	private function fetchIdFromBarcode($barcode, $table = 'product')
+	public function fetchIdFromBarcode($barcode, $table = 'product')
 	{
 		global $conf;
 

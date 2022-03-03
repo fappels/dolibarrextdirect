@@ -1,10 +1,10 @@
-# Dolibarr language file - en_US - extdirect
+# Dolibarr language file - de_DE - extdirect
 CHARSET = UTF-8
 DirectConnect = Mobilid-Anschluss
-Module202002Name = Mobilid-Anschluss
-Module202002Desc = Stellen Sie eine Verbindung zu externen Anwendungen her, die die Datenschnittstelle Ext.direct verwenden
+Module202002Name = Ext.direct anschluss
+Module202002Desc = Stellen Sie eine Verbindung zu externen Anwendungen her, die die Ext.direct-Datenschnittstelle verwenden
 Applications=Anwendungen
-DirectConnectSetup=Ext.direct Connector-Setup
+DirectConnectSetup=Einrichtung des Ext.direct anschlusses
 Parameters=Parameter
 Value=Wert
 AutoAsignAbility=Aktivieren Sie die automatische Zuweisung von Benutzernamen, seien Sie vorsichtig! Jeder, der Zugriff auf Ihre URL hat, hat Zugriff auf Ihre Daten.
@@ -32,3 +32,12 @@ Clear=Leerung
 DolibarrCompatibilityError=Dolibarr-Version noch nicht auf Kompatibilität geprüft
 AllLocationsDesc=Alle Orte
 ActivitiesFromUser=Aktivitäten vom Benutzer
+StatusOrderValidatedFullyShippableShort=Validiert versandbereit
+StatusOrderValidatedPartlyShippableShort=Validiert Teilweise versandbereit
+StatusOrderOnprocessFullyShippableShort=In Bearbeitung versandbereit
+StatusOrderOnprocessPartlyShippableShort=In Bearbeitung teilweise versandbereit
+ShippableQtyInfo=%d Versandfähig - %d Nicht Versandfähig
+ConnectionDetails=Verbindungsdetails
+WebviewName=Webview (Navigator)
+WebviewVersion=Webview-Version
+Identify=Ausweis erforderlich
