@@ -183,7 +183,7 @@ class ExtDirectCommande extends Commande
 				$row->note_private = $this->note_private;
 				$row->note_public = $this->note_public;
 				$row->user_id = $this->user_author_id;
-				if ($myUser->fetch($this->user_author_id)>0) {
+				if ($this->user_author_id > 0 && $myUser->fetch($this->user_author_id) > 0) {
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
 				$row->order_date = $this->date;
