@@ -44,6 +44,13 @@ class ExtDirectProduct extends Product
 {
 	private $_user;
 
+	/**
+	 * parameters received from client
+	 *
+	 * @var stdClass
+	 */
+	public $extParam;
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -742,6 +749,7 @@ class ExtDirectProduct extends Product
 		$supplier = new Societe($this->db);
 
 		foreach ($paramArray as &$param) {
+			if ($param->notrigger) $notrigger = $param->notrigger;
 			// prepare fields
 			$this->prepareFields($param);
 			$this->prepareFieldsBarcode($param);
@@ -856,6 +864,15 @@ class ExtDirectProduct extends Product
 				if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 			$param->id=$this->id;
+			if (!$notrigger) {
+				// Call trigger
+				$this->extParam = $param; // pass client parameters to trigger
+				$result = $this->call_trigger('EXTDIRECTPRODUCT_CREATE', $this->_user);
+				if ($result < 0) {
+					return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				// End call triggers
+			}
 		}
 
 		if (is_array($params)) {
@@ -885,6 +902,7 @@ class ExtDirectProduct extends Product
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
+				if ($param->notrigger) $notrigger = $param->notrigger;
 				$id = $param->id;
 				if (($result = $this->fetch($id, '', '')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				// supplier fields
@@ -1198,6 +1216,15 @@ class ExtDirectProduct extends Product
 				if ($param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
 					if (($result = $this->addBase64Jpeg($param->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
+				if (!$notrigger) {
+					// Call trigger
+					$this->extParam = $param; // pass client parameters to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_MODIFY', $this->_user);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $this->errors, $this->error);
+					}
+					// End call triggers
+				}
 			} else {
 				return PARAMETERERROR;
 			}
@@ -1220,16 +1247,27 @@ class ExtDirectProduct extends Product
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->supprimer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
+		$notrigger = 0;
 
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
+				if ($param->notrigger) $notrigger = $param->notrigger;
 				$id = $param->id;
 				$this->id = $id;
 				$this->ref = $param->ref;
+				if (!$notrigger) {
+					// Call trigger
+					$this->extParam = $param; // pass client parameters to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_DELETE', $this->_user);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $this->errors, $this->error);
+					}
+					// End call triggers
+				}
 				// delete product
 				if (ExtDirect::checkDolVersion(0, '6.0', '')) {
-					if (($result = $this->delete($this->_user)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (($result = $this->delete($this->_user, $notrigger)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				} else {
 					if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
