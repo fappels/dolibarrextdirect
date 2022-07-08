@@ -413,12 +413,12 @@ class ExtDirectProduct extends Product
 				} else {
 					$supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
 					foreach ($supplierProducts as $prodsupplier) {
-						if ($prodsupplier->fourn_ref == $refSupplier) {
+						if ($prodsupplier->ref_supplier == $refSupplier) {
 							$supplierProduct = $prodsupplier;
 						}
 					}
 				}
-				$row->ref_supplier = $supplierProduct->fourn_ref;
+				$row->ref_supplier = $supplierProduct->ref_supplier;
 				$row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
 				if (!empty($supplierProduct->fourn_qty)) {
 					$row->qty_supplier = $supplierProduct->fourn_qty;
@@ -831,7 +831,7 @@ class ExtDirectProduct extends Product
 				$supplier = new Societe($this->db);
 				if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
 				$supplierProduct->id = $this->id;
-				if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->ref_supplier, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				$supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
 				if (($result = $supplierProduct->update_buyprice(
 								$this->fourn_qty,
@@ -840,7 +840,7 @@ class ExtDirectProduct extends Product
 								$param->price_base_type_supplier ? $param->price_base_type_supplier : 'HT',
 								$supplier,
 								0,
-								$this->fourn_ref,
+								$this->ref_supplier,
 								$this->fourn_tva_tx ? $this->fourn_tva_tx : 0,
 								0,
 								$this->fourn_remise_percent,
@@ -910,7 +910,7 @@ class ExtDirectProduct extends Product
 				if (($supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id)) < 0) return ExtDirect::getDolError($supplierProducts, $supplierProduct->errors, $supplierProduct->error);
 				foreach ($supplierProducts as $prodsupplier) {
 					if ($prodsupplier->product_fourn_price_id == $param->ref_supplier_id) {
-						$this->fourn_ref = $prodsupplier->fourn_ref;
+						$this->ref_supplier = $prodsupplier->ref_supplier;
 						$this->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
 						$this->fourn_price = $prodsupplier->fourn_price;
 						$this->fourn_qty = $prodsupplier->fourn_qty;
@@ -918,11 +918,20 @@ class ExtDirectProduct extends Product
 						$this->fourn_remise = $prodsupplier->fourn_remise;
 						$this->fourn_unitprice = $prodsupplier->fourn_unitprice;
 						$this->fourn_id = $prodsupplier->fourn_id;
+						$this->fk_availability = $prodsupplier->fk_availability;
 						if (isset($prodsupplier->fourn_tva_tx)) { // workaround
 							$this->fourn_tva_tx = $prodsupplier->fourn_tva_tx;
 						} else {
 							$this->fourn_tva_tx = $prodsupplier->tva_tx;
 						}
+						$this->fourn_charges = $prodsupplier->fourn_charges;
+						$this->fourn_tva_npr = $prodsupplier->fourn_tva_npr;
+						$this->delivery_time_days = $prodsupplier->delivery_time_days;
+						$this->supplier_reputation = $prodsupplier->supplier_reputation;
+						$this->fourn_multicurrency_price = $prodsupplier->fourn_multicurrency_price;
+						$this->fourn_multicurrency_tx = $prodsupplier->fourn_multicurrency_tx;
+						$this->fourn_multicurrency_code = $prodsupplier->fourn_multicurrency_code;
+						$this->desc_supplier = $prodsupplier->desc_supplier;
 					}
 				}
 				$updated = $this->prepareFields($param);
@@ -1174,37 +1183,37 @@ class ExtDirectProduct extends Product
 					if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				// supplier fields
-				if ($updatedBuyPrice && isset($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id) && !empty($this->fourn_qty)) {
+				if ($updatedBuyPrice && isset($this->fourn_price) && !empty($this->ref_supplier) && !empty($this->fourn_id) && !empty($this->fourn_qty)) {
 					$supplierProduct = new ProductFournisseur($this->db);
 					$supplier = new Societe($this->db);
 					if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
 					$supplierProduct->id = $this->id;
 					if (empty($this->product_fourn_price_id)) {
-						if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+						if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->ref_supplier, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
-					$supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
+					$supplierProduct->product_fourn_price_id = $this->product_fourn_price_id;
 					if (($result = $supplierProduct->update_buyprice(
 									$this->fourn_qty,
 									$this->fourn_price,
 									$this->_user,
 									$param->price_base_type_supplier ? $param->price_base_type_supplier : 'HT',
 									$supplier,
-									0,
-									$this->fourn_ref,
+									$this->fk_availability,
+									$this->ref_supplier,
 									$this->fourn_tva_tx ? $this->fourn_tva_tx : 0,
-									0,
+									$this->fourn_charges,
 									$this->fourn_remise_percent,
-									0,
-									0,
-									0,
+									$this->fourn_remise,
+									$this->fourn_tva_npr,
+									$this->delivery_time_days,
 									$this->supplier_reputation,
 									array(),
 									'',
-									0,
+									$this->fourn_multicurrency_price,
 									'HT',
-									1,
-									'',
-									'',
+									$this->fourn_multicurrency_tx,
+									$this->fourn_multicurrency_code,
+									$this->desc_supplier,
 									$this->barcode,
 									$this->barcode_type
 					)) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
@@ -1794,7 +1803,7 @@ class ExtDirectProduct extends Product
 	private function prepareFieldsBuyPrice($param)
 	{
 		$diff = false; // difference flag, set to true if a param element diff detected
-		$diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier', 'fourn_ref');
+		$diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier', 'ref_supplier');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier_id', 'product_fourn_price_id');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'price_supplier', 'fourn_price');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'qty_supplier', 'fourn_qty');
