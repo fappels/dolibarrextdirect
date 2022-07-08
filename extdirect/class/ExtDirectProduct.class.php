@@ -101,7 +101,7 @@ class ExtDirectProduct extends Product
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		if (! empty($conf->productbatch->enabled)) {
 			require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
-			if (ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+			require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		}
 		$results = array();
 		$row = new stdClass;
@@ -237,7 +237,7 @@ class ExtDirectProduct extends Product
 							if (!empty($batch) && !empty($this->stock_warehouse[$warehouse]->id)) {
 								$productBatch->find($this->stock_warehouse[$warehouse]->id, '', '', $batch);
 								$productLotId = 0;
-								if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+								if ($productBatch->id) {
 									// fetch lot data
 									$productLot = new Productlot($this->db);
 									if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
@@ -291,13 +291,11 @@ class ExtDirectProduct extends Product
 									if (isset($productBatch->id)) {
 										$row->batch_id = $productBatch->id;
 										$productLotId = 0;
-										if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-											// fetch lot data
-											$productLot = new Productlot($this->db);
-											if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
-											if ($productLot->id > 0) {
-												$productLotId = $productLot->id;
-											}
+										// fetch lot data
+										$productLot = new Productlot($this->db);
+										if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+										if ($productLot->id > 0) {
+											$productLotId = $productLot->id;
 										}
 										if ($productLotId) {
 											$row->sellby = $productLot->sellby;
@@ -400,16 +398,7 @@ class ExtDirectProduct extends Product
 				if (empty($refSupplier) && empty($refSupplierId)) {
 					$supplierProduct->find_min_price_product_fournisseur($this->id);
 				} elseif ($refSupplierId > 0) {
-					if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-						$supplierProduct->fetch_product_fournisseur_price($refSupplierId);
-					} else {
-						$supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
-						foreach ($supplierProducts as $prodsupplier) {
-							if ($prodsupplier->product_fourn_price_id == $refSupplierId) {
-								$supplierProduct = $prodsupplier;
-							}
-						}
-					}
+					$supplierProduct->fetch_product_fournisseur_price($refSupplierId);
 				} else {
 					$supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
 					foreach ($supplierProducts as $prodsupplier) {
@@ -496,7 +485,7 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$results = array();
 		$id = 0;
 		$batch = '';
@@ -544,7 +533,7 @@ class ExtDirectProduct extends Product
 						}
 					}
 				}
-			} elseif (ExtDirect::checkDolVersion(0, '4.0', '')) {
+			} else {
 				$productLot = new Productlot($this->db);
 				if (($result = $productLot->fetch(0, $id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 				if (! $productLot->error) {
@@ -597,7 +586,7 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -648,7 +637,7 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -893,7 +882,7 @@ class ExtDirectProduct extends Product
 		global $conf, $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		// dolibarr update settings
 		$notrigger=false;
 		$supplierProducts = array();
@@ -1160,7 +1149,7 @@ class ExtDirectProduct extends Product
 						!empty($batchCorrectQty) ? $productBatch->qty = $productBatch->qty - $batchCorrectQty : null;
 						if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
 						// also update product lot
-						if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+						if ($productBatch->id) {
 							// fetch lot data
 							$productLot = new Productlot($this->db);
 							if (($result = $productLot->fetch(0, $this->id, $currentBatch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
@@ -2143,11 +2132,7 @@ class ExtDirectProduct extends Product
 					dol_move($tdir.$filename, $dir.'/'.$filename);
 					if (file_exists(dol_osencode($dir.'/'.$filename))) {
 						// Cree fichier en taille vignette
-						if (ExtDirect::checkDolVersion() <= 3.9) {
-							$this->add_thumb($dir.'/'.$filename);
-						} else {
-							$this->addThumbs($dir.'/'.$filename);
-						}
+						$this->addThumbs($dir.'/'.$filename);
 						return 1;
 						@rmdir($tdir);
 					} else {

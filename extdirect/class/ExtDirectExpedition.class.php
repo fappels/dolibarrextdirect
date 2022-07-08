@@ -394,11 +394,7 @@ class ExtDirectExpedition extends Expedition
 						}
 						break;
 					case 2:
-						if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-							$result = $this->setClosed();
-						} else {
-							return COMPATIBILITYERROR;
-						}
+						$result = $this->setClosed();
 						break;
 					default:
 						break;
@@ -592,7 +588,7 @@ class ExtDirectExpedition extends Expedition
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."expeditiondet as ed ON e.rowid = ed.fk_expedition";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON cd.rowid = ed.fk_origin_line";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
-			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
+			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "c_shipment_mode as csm ON e.fk_shipping_method = csm.rowid";
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -624,7 +620,7 @@ class ExtDirectExpedition extends Expedition
 		}
 		if ($barcode) {
 			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR e.ref = '".$this->db->escape($barcode)."' OR e.ref_customer = '".$this->db->escape($barcode)."'";
-			if (ExtDirect::checkDolVersion(0, '4.0', '')) $sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
+			$sqlWhere .= " OR pl.batch = '".$this->db->escape($barcode)."'";
 			$sqlWhere .= ")";
 		}
 
@@ -1297,11 +1293,7 @@ class ExtDirectExpedition extends Expedition
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			} else {
 				// create shipment batch lines for stockLocation
-				if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-					$shipmentLineId = $result;
-				} else {
-					$shipmentLineId = $this->db->last_insert_id(MAIN_DB_PREFIX . "expeditiondet");
-				}
+				$shipmentLineId = $result;
 				dol_syslog(get_class($this) . '::' . __FUNCTION__ . " stock location = " . $stockLocation . " qty = " . $qty . " shipmentLineId = " . $shipmentLineId, LOG_DEBUG);
 				// store colleted batches
 				foreach ($batches as $batch) {
@@ -1584,22 +1576,12 @@ class ExtDirectExpeditionLine extends ExpeditionLigne
 			$qty += $remainingQty;
 			//fetch lot details
 
-			if (ExtDirect::checkDolVersion() >= 4.0) {
-				// fetch from product_lot
-				require_once DOL_DOCUMENT_ROOT . '/product/stock/class/productlot.class.php';
-				$lot = new Productlot($this->db);
-				if ($lot->fetch(0, $this->fk_product, $batch) < 0) {
-					$this->errors[] = $lot->errors;
-					return -3;
-				}
-			} else {
-				// fetch from product batch
-				require_once DOL_DOCUMENT_ROOT . '/product/class/productbatch.class.php';
-				$lot = new Productbatch($this->db);
-				if ($lot->fetch($batch_id) < 0) {
-					$this->errors[] = $lot->error;
-					return -3;
-				}
+			// fetch from product_lot
+			require_once DOL_DOCUMENT_ROOT . '/product/stock/class/productlot.class.php';
+			$lot = new Productlot($this->db);
+			if ($lot->fetch(0, $this->fk_product, $batch) < 0) {
+				$this->errors[] = $lot->errors;
+				return -3;
 			}
 			if (!empty($expedition_batch_id)) {
 				// delete lot expedition line

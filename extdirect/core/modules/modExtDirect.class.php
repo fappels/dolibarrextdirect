@@ -43,11 +43,7 @@ class modExtDirect extends DolibarrModules
 
 		// Id for module (must be unique).
 		// Use here a free id (See in Home -> System information -> Dolibarr for list of used modules id).
-		if (ExtDirect::checkDolVersion(0, '', '3.8')) {
-			$this->numero = 605002;
-		} else {
-			$this->numero = 202002;
-		}
+		$this->numero = 202002;
 		// Key text used to identify module (for permissions, menus, etc...)
 		$this->rights_class = 'extdirect';
 
