@@ -1227,10 +1227,13 @@ class ExtDirectExpedition extends Expedition
 							$package->note_public = $this->getDefaultCreateValueFor('note_public', (!empty($this->note_public) ? $this->note_public : null));
 							$packageid = $package->create($this->_user);
 							if ($packageid > 0) {
+								$object_module = $package->module;
+								$package->module = null; //avoid to have add module name to element, because module name is same as element name
 								$result = $package->add_object_linked('shipping', $this->id, $this->_user);
 								if ($result < 0) {
 									return ExtDirect::getDolError($result, $package->errors, $package->error);
 								} else {
+									$package->module = $object_module;
 									// fetch auto created fields
 									$package->fetch($packageid);
 								}
