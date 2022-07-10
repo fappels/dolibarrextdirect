@@ -553,14 +553,14 @@ class ExtDirect
 		$dolMajorMinorVersion = $dolVersion[0].'.'.$dolVersion[1];
 
 		if ($validate) {
-			$minVersion = '3.8';
-			$maxVersion = '15.0'; // tested version
+			$minVersion = '4.0';
+			$maxVersion = '16.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
 		} else {
-			if (empty($minVersion)) $minVersion = '3.8';
-			if (empty($maxVersion)) $maxVersion = '15.0'; // debugging version
+			if (empty($minVersion)) $minVersion = '4.0';
+			if (empty($maxVersion)) $maxVersion = '16.0'; // debugging version
 			if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
 				return 1;
 			} else {

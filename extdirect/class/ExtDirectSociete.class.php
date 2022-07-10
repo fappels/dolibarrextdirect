@@ -496,11 +496,13 @@ class ExtDirectSociete extends Societe
 					$dir = $conf->societe->multidir_output[(int) $obj->entity]."/".$obj->rowid."/logos/thumbs";
 					$logo_parts = pathinfo($obj->logo);
 					$filename=$dir.'/'.$logo_parts['filename'].'_mini.'.$logo_parts['extension'];
-					// Read image path, convert to base64 encoding
-					$imgData = base64_encode(file_get_contents($filename));
-					// Format the image SRC:  data:{mime};base64,{data};
-					if ($imgData) {
-						$row->logo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+					if (dol_is_file($filename)) {
+						// Read image path, convert to base64 encoding
+						$imgData = base64_encode(file_get_contents($filename));
+						// Format the image SRC:  data:{mime};base64,{data};
+						if ($imgData) {
+							$row->logo_small = 'data: '.dol_mimetype($filename).';base64,'.$imgData;
+						}
 					}
 				}
 				array_push($data, $row);

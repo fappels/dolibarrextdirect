@@ -110,6 +110,7 @@ function doRpc($cdata)
 			if (ExtDirect::checkDolVersion() < 0) {
 				$result = COMPATIBILITYERROR;
 			} else {
+				dol_syslog(get_class($o) . '::' . $method, LOG_DEBUG);
 				$result = call_user_func_array(array($o, $method), $params);
 			}
 		}

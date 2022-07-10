@@ -896,14 +896,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$result = $myprod->load_stock('novirtual, warehouseopen');
 								if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
 							}
-							if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-								// supplier product for supplier barcode
-								$supplierProduct = new ProductFournisseur($this->db);
-								$supplierProducts = $supplierProduct->list_product_fournisseur_price($line->fk_product);
-								foreach ($supplierProducts as $prodsupplier) {
-									if ($prodsupplier->ref_supplier == $line->ref_supplier) {
-										$supplierProduct = $prodsupplier;
-									}
+							// supplier product for supplier barcode
+							$supplierProduct = new ProductFournisseur($this->db);
+							$supplierProducts = $supplierProduct->list_product_fournisseur_price($line->fk_product);
+							foreach ($supplierProducts as $prodsupplier) {
+								if ($prodsupplier->ref_supplier == $line->ref_supplier) {
+									$supplierProduct = $prodsupplier;
 								}
 							}
 							if (empty($myprod->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
@@ -1515,22 +1513,22 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 													$this->_user,
 													$params->price_base_type,
 													$supplier,
-													0,
+													$supplierProduct->fk_availability,
 													$supplierProduct->ref_supplier,
 													$supplierProduct->fourn_tva_tx,
-													0,
+													$supplierProduct->fourn_charges,
 													$supplierProduct->fourn_remise_percent,
-													0,
-													0,
-													0,
+													$supplierProduct->fourn_remise,
+													$supplierProduct->fourn_tva_npr,
+													$supplierProduct->delivery_time_days,
 													$supplierProduct->supplier_reputation,
 													array(),
-													'',
-													0,
+													$supplierProduct->default_vat_code,
+													$supplierProduct->fourn_multicurrency_price,
 													'HT',
-													1,
-													'',
-													'',
+													$supplierProduct->fourn_multicurrency_tx,
+													$supplierProduct->fourn_multicurrency_code,
+													$supplierProduct->desc_supplier,
 													$supplierProduct->supplier_barcode ? $supplierProduct->supplier_barcode : $supplierProduct->fourn_barcode,
 													$supplierProduct->supplier_fk_barcode_type ? $supplierProduct->supplier_fk_barcode_type : $supplierProduct->fourn_fk_barcode_type
 									)) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
@@ -1726,7 +1724,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'product_price', 'fourn_unitprice');
 		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'ref_supplier', 'ref_supplier');
 		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'ref_supplier_id', 'product_fourn_price_id');
-		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'product_id', 'product_fourn_id');
+		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'product_id', 'fk_product');
 		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'barcode', 'supplier_barcode');
 		$diff = ExtDirect::prepareField($diff, $params, $prodSupplier, 'barcode_type', 'supplier_fk_barcode_type');
 		return $diff;

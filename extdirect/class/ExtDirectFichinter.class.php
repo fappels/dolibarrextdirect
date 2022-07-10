@@ -145,7 +145,7 @@ class ExtDirectFichinter extends Fichinter
 				$row->note_public = $this->note_public;
 				$row->model_pdf = $this->modelpdf;
 				$row->user_id = $this->user_creation;
-				if ($myUser->fetch($this->user_creation)>0) {
+				if ($this->user_creation > 0 && $myUser->fetch($this->user_creation)>0) {
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
 				$row->date_creation = $this->datec;

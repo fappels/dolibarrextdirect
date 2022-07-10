@@ -669,7 +669,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 				}
 			} elseif ($field == 'fk_user_creat') {
 				$data->user_id = (int) $object->{$field};
-				if ($myUser->fetch($data->user_id) > 0) {
+				if ($data->user_id > 0 && $myUser->fetch($data->user_id) > 0) {
 					$data->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
 			} elseif ($field == 'status') {

@@ -43,11 +43,7 @@ class modExtDirect extends DolibarrModules
 
 		// Id for module (must be unique).
 		// Use here a free id (See in Home -> System information -> Dolibarr for list of used modules id).
-		if (ExtDirect::checkDolVersion(0, '', '3.8')) {
-			$this->numero = 605002;
-		} else {
-			$this->numero = 202002;
-		}
+		$this->numero = 202002;
 		// Key text used to identify module (for permissions, menus, etc...)
 		$this->rights_class = 'extdirect';
 
@@ -61,7 +57,7 @@ class modExtDirect extends DolibarrModules
 		// not found (where XXX is value of numeric property 'numero' of module)
 		$this->description = "Connect to external applications which use Sencha Ext.direct";
 		// Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-		$this->version = '1.0.68';
+		$this->version = '1.0.69';
 		// Key used in llx_const table to save module status enabled/disabled
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		// Where to store the module in setup page (0=common,1=interface,2=others,3=very specific)

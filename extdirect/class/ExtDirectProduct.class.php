@@ -44,6 +44,13 @@ class ExtDirectProduct extends Product
 {
 	private $_user;
 
+	/**
+	 * parameters received from client
+	 *
+	 * @var stdClass
+	 */
+	public $extParam;
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -94,7 +101,7 @@ class ExtDirectProduct extends Product
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		if (! empty($conf->productbatch->enabled)) {
 			require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
-			if (ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+			require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		}
 		$results = array();
 		$row = new stdClass;
@@ -230,7 +237,7 @@ class ExtDirectProduct extends Product
 							if (!empty($batch) && !empty($this->stock_warehouse[$warehouse]->id)) {
 								$productBatch->find($this->stock_warehouse[$warehouse]->id, '', '', $batch);
 								$productLotId = 0;
-								if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+								if ($productBatch->id) {
 									// fetch lot data
 									$productLot = new Productlot($this->db);
 									if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
@@ -284,13 +291,11 @@ class ExtDirectProduct extends Product
 									if (isset($productBatch->id)) {
 										$row->batch_id = $productBatch->id;
 										$productLotId = 0;
-										if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-											// fetch lot data
-											$productLot = new Productlot($this->db);
-											if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
-											if ($productLot->id > 0) {
-												$productLotId = $productLot->id;
-											}
+										// fetch lot data
+										$productLot = new Productlot($this->db);
+										if (($result = $productLot->fetch(0, $this->id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+										if ($productLot->id > 0) {
+											$productLotId = $productLot->id;
 										}
 										if ($productLotId) {
 											$row->sellby = $productLot->sellby;
@@ -393,25 +398,16 @@ class ExtDirectProduct extends Product
 				if (empty($refSupplier) && empty($refSupplierId)) {
 					$supplierProduct->find_min_price_product_fournisseur($this->id);
 				} elseif ($refSupplierId > 0) {
-					if (ExtDirect::checkDolVersion(0, '4.0', '')) {
-						$supplierProduct->fetch_product_fournisseur_price($refSupplierId);
-					} else {
-						$supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
-						foreach ($supplierProducts as $prodsupplier) {
-							if ($prodsupplier->product_fourn_price_id == $refSupplierId) {
-								$supplierProduct = $prodsupplier;
-							}
-						}
-					}
+					$supplierProduct->fetch_product_fournisseur_price($refSupplierId);
 				} else {
 					$supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id);
 					foreach ($supplierProducts as $prodsupplier) {
-						if ($prodsupplier->fourn_ref == $refSupplier) {
+						if ($prodsupplier->ref_supplier == $refSupplier) {
 							$supplierProduct = $prodsupplier;
 						}
 					}
 				}
-				$row->ref_supplier = $supplierProduct->fourn_ref;
+				$row->ref_supplier = $supplierProduct->ref_supplier;
 				$row->ref_supplier_id = $supplierProduct->product_fourn_price_id;
 				if (!empty($supplierProduct->fourn_qty)) {
 					$row->qty_supplier = $supplierProduct->fourn_qty;
@@ -489,7 +485,7 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$results = array();
 		$id = 0;
 		$batch = '';
@@ -537,7 +533,7 @@ class ExtDirectProduct extends Product
 						}
 					}
 				}
-			} elseif (ExtDirect::checkDolVersion(0, '4.0', '')) {
+			} else {
 				$productLot = new Productlot($this->db);
 				if (($result = $productLot->fetch(0, $id, $batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 				if (! $productLot->error) {
@@ -590,7 +586,7 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -641,7 +637,7 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
@@ -742,6 +738,7 @@ class ExtDirectProduct extends Product
 		$supplier = new Societe($this->db);
 
 		foreach ($paramArray as &$param) {
+			if ($param->notrigger) $notrigger = $param->notrigger;
 			// prepare fields
 			$this->prepareFields($param);
 			$this->prepareFieldsBarcode($param);
@@ -823,7 +820,7 @@ class ExtDirectProduct extends Product
 				$supplier = new Societe($this->db);
 				if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
 				$supplierProduct->id = $this->id;
-				if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->ref_supplier, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				$supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
 				if (($result = $supplierProduct->update_buyprice(
 								$this->fourn_qty,
@@ -832,7 +829,7 @@ class ExtDirectProduct extends Product
 								$param->price_base_type_supplier ? $param->price_base_type_supplier : 'HT',
 								$supplier,
 								0,
-								$this->fourn_ref,
+								$this->ref_supplier,
 								$this->fourn_tva_tx ? $this->fourn_tva_tx : 0,
 								0,
 								$this->fourn_remise_percent,
@@ -856,6 +853,15 @@ class ExtDirectProduct extends Product
 				if (($result = $this->addBase64Jpeg($param->photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 			$param->id=$this->id;
+			if (!$notrigger) {
+				// Call trigger
+				$this->extParam = $param; // pass client parameters to trigger
+				$result = $this->call_trigger('EXTDIRECTPRODUCT_CREATE', $this->_user);
+				if ($result < 0) {
+					return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				// End call triggers
+			}
 		}
 
 		if (is_array($params)) {
@@ -876,7 +882,7 @@ class ExtDirectProduct extends Product
 		global $conf, $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (! empty($conf->productbatch->enabled) && ExtDirect::checkDolVersion(0, '4.0', '')) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
+		if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		// dolibarr update settings
 		$notrigger=false;
 		$supplierProducts = array();
@@ -885,6 +891,7 @@ class ExtDirectProduct extends Product
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
+				if ($param->notrigger) $notrigger = $param->notrigger;
 				$id = $param->id;
 				if (($result = $this->fetch($id, '', '')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				// supplier fields
@@ -892,7 +899,7 @@ class ExtDirectProduct extends Product
 				if (($supplierProducts = $supplierProduct->list_product_fournisseur_price($this->id)) < 0) return ExtDirect::getDolError($supplierProducts, $supplierProduct->errors, $supplierProduct->error);
 				foreach ($supplierProducts as $prodsupplier) {
 					if ($prodsupplier->product_fourn_price_id == $param->ref_supplier_id) {
-						$this->fourn_ref = $prodsupplier->fourn_ref;
+						$this->ref_supplier = $prodsupplier->ref_supplier;
 						$this->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
 						$this->fourn_price = $prodsupplier->fourn_price;
 						$this->fourn_qty = $prodsupplier->fourn_qty;
@@ -900,11 +907,20 @@ class ExtDirectProduct extends Product
 						$this->fourn_remise = $prodsupplier->fourn_remise;
 						$this->fourn_unitprice = $prodsupplier->fourn_unitprice;
 						$this->fourn_id = $prodsupplier->fourn_id;
+						$this->fk_availability = $prodsupplier->fk_availability;
 						if (isset($prodsupplier->fourn_tva_tx)) { // workaround
 							$this->fourn_tva_tx = $prodsupplier->fourn_tva_tx;
 						} else {
 							$this->fourn_tva_tx = $prodsupplier->tva_tx;
 						}
+						$this->fourn_charges = $prodsupplier->fourn_charges;
+						$this->fourn_tva_npr = $prodsupplier->fourn_tva_npr;
+						$this->delivery_time_days = $prodsupplier->delivery_time_days;
+						$this->supplier_reputation = $prodsupplier->supplier_reputation;
+						$this->fourn_multicurrency_price = $prodsupplier->fourn_multicurrency_price;
+						$this->fourn_multicurrency_tx = $prodsupplier->fourn_multicurrency_tx;
+						$this->fourn_multicurrency_code = $prodsupplier->fourn_multicurrency_code;
+						$this->desc_supplier = $prodsupplier->desc_supplier;
 					}
 				}
 				$updated = $this->prepareFields($param);
@@ -1133,7 +1149,7 @@ class ExtDirectProduct extends Product
 						!empty($batchCorrectQty) ? $productBatch->qty = $productBatch->qty - $batchCorrectQty : null;
 						if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
 						// also update product lot
-						if ($productBatch->id && ExtDirect::checkDolVersion(0, '4.0', '')) {
+						if ($productBatch->id) {
 							// fetch lot data
 							$productLot = new Productlot($this->db);
 							if (($result = $productLot->fetch(0, $this->id, $currentBatch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
@@ -1156,37 +1172,37 @@ class ExtDirectProduct extends Product
 					if (($result = $this->updatePrice($newSellPrice, $this->price_base_type, $this->_user, $this->tva_tx, $this->price_min, $param->multiprices_index, $this->tva_npr)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				// supplier fields
-				if ($updatedBuyPrice && isset($this->fourn_price) && !empty($this->fourn_ref) && !empty($this->fourn_id) && !empty($this->fourn_qty)) {
+				if ($updatedBuyPrice && isset($this->fourn_price) && !empty($this->ref_supplier) && !empty($this->fourn_id) && !empty($this->fourn_qty)) {
 					$supplierProduct = new ProductFournisseur($this->db);
 					$supplier = new Societe($this->db);
 					if (($result = $supplier->fetch($this->fourn_id)) < 0) return ExtDirect::getDolError($result, $supplier->errors, $supplier->error);
 					$supplierProduct->id = $this->id;
 					if (empty($this->product_fourn_price_id)) {
-						if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->fourn_ref, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+						if (($result = $this->add_fournisseur($this->_user, $this->fourn_id, $this->ref_supplier, $this->fourn_qty)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
-					$supplierProduct->product_fourn_price_id = $this->product_fourn_price_id; // 3.3 comptibility
+					$supplierProduct->product_fourn_price_id = $this->product_fourn_price_id;
 					if (($result = $supplierProduct->update_buyprice(
 									$this->fourn_qty,
 									$this->fourn_price,
 									$this->_user,
 									$param->price_base_type_supplier ? $param->price_base_type_supplier : 'HT',
 									$supplier,
-									0,
-									$this->fourn_ref,
+									$this->fk_availability,
+									$this->ref_supplier,
 									$this->fourn_tva_tx ? $this->fourn_tva_tx : 0,
-									0,
+									$this->fourn_charges,
 									$this->fourn_remise_percent,
-									0,
-									0,
-									0,
+									$this->fourn_remise,
+									$this->fourn_tva_npr,
+									$this->delivery_time_days,
 									$this->supplier_reputation,
 									array(),
 									'',
-									0,
+									$this->fourn_multicurrency_price,
 									'HT',
-									1,
-									'',
-									'',
+									$this->fourn_multicurrency_tx,
+									$this->fourn_multicurrency_code,
+									$this->desc_supplier,
 									$this->barcode,
 									$this->barcode_type
 					)) < 0) return ExtDirect::getDolError($result, $supplierProduct->errors, $supplierProduct->error);
@@ -1197,6 +1213,15 @@ class ExtDirectProduct extends Product
 				$this->fetchPhoto($photo);
 				if ($param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
 					if (($result = $this->addBase64Jpeg($param->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				if (!$notrigger) {
+					// Call trigger
+					$this->extParam = $param; // pass client parameters to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_MODIFY', $this->_user);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $this->errors, $this->error);
+					}
+					// End call triggers
 				}
 			} else {
 				return PARAMETERERROR;
@@ -1220,16 +1245,27 @@ class ExtDirectProduct extends Product
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->supprimer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
+		$notrigger = 0;
 
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
+				if ($param->notrigger) $notrigger = $param->notrigger;
 				$id = $param->id;
 				$this->id = $id;
 				$this->ref = $param->ref;
+				if (!$notrigger) {
+					// Call trigger
+					$this->extParam = $param; // pass client parameters to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_DELETE', $this->_user);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $this->errors, $this->error);
+					}
+					// End call triggers
+				}
 				// delete product
 				if (ExtDirect::checkDolVersion(0, '6.0', '')) {
-					if (($result = $this->delete($this->_user)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (($result = $this->delete($this->_user, $notrigger)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				} else {
 					if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
@@ -1756,7 +1792,7 @@ class ExtDirectProduct extends Product
 	private function prepareFieldsBuyPrice($param)
 	{
 		$diff = false; // difference flag, set to true if a param element diff detected
-		$diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier', 'fourn_ref');
+		$diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier', 'ref_supplier');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'ref_supplier_id', 'product_fourn_price_id');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'price_supplier', 'fourn_price');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'qty_supplier', 'fourn_qty');
@@ -2096,11 +2132,7 @@ class ExtDirectProduct extends Product
 					dol_move($tdir.$filename, $dir.'/'.$filename);
 					if (file_exists(dol_osencode($dir.'/'.$filename))) {
 						// Cree fichier en taille vignette
-						if (ExtDirect::checkDolVersion() <= 3.9) {
-							$this->add_thumb($dir.'/'.$filename);
-						} else {
-							$this->addThumbs($dir.'/'.$filename);
-						}
+						$this->addThumbs($dir.'/'.$filename);
 						return 1;
 						@rmdir($tdir);
 					} else {
