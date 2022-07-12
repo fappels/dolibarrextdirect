@@ -164,6 +164,7 @@ llxHeader('', $title);
 $linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
 print load_fiche_titre($title, $linkback, 'setup');
 $form=new Form($db);
+$userExclude[0]=0; // no user exclude
 if ($mode == $tabs['tab1']->mode) {
 	//tab1
 	print dol_get_fiche_head($head, 'tab1', $tabsTitle, 0);
@@ -189,8 +190,6 @@ if ($mode == $tabs['tab1']->mode) {
 	print '</td>';
 	print '</tr>';
 	print '</form>';
-
-	$userExclude[0]=0; //exclude admin
 
 	if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
 		// select auto asigned user
