@@ -1184,7 +1184,7 @@ class ExtDirectExpedition extends Expedition
 					$line = new ExtDirectExpeditionLine($this->db);
 				}
 				if (($result = $line->fetch($params->line_id)) < 0) {
-					return ExtDirect::getDolError($result, $this->errors, $this->error);
+					return ExtDirect::getDolError($result, $line->errors, $line->error);
 				}
 				$line->id = $params->line_id;
 				$line->entrepot_id = $params->warehouse_id;
