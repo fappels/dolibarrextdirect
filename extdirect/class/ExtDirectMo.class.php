@@ -806,6 +806,7 @@ class ExtDirectMo extends Mo
 								}
 							} else {
 								foreach ($product->stock_warehouse as $warehouse=>$stock_warehouse) {
+									$row = $this->getLineData($line, $object, $product, $photoSize);
 									$row->warehouse_id = $warehouse;
 									$row->id = $row->line_id . '_' . $warehouse;
 									$row->stock = (float) $stock_warehouse->real;
@@ -826,7 +827,9 @@ class ExtDirectMo extends Mo
 						} elseif ($result < 0) {
 							return ExtDirect::getDolError($result, $object->errors, $object->error);
 						} else {
+							// free line
 							$row = $this->getLineData($line, $object);
+							array_push($results, $row);
 						}
 					}
 				}
