@@ -40,7 +40,7 @@ dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 class ExtDirectMo extends Mo
 {
 	private $_user;
-	private $_moConstants = array();
+	private $_moConstants = array('STOCK_ALLOW_NEGATIVE_TRANSFER');
 
 	/** Constructor
 	 *
@@ -1075,6 +1075,7 @@ class ExtDirectMo extends Mo
 					$data->ref_product = $product->ref;
 					$data->product_label = $product->label;
 					$data->product_desc = $product->description;
+					$data->product_type = $product->type;
 					$data->barcode = $product->barcode ? $product->barcode : '';
 					$data->barcode_type = $product->barcode_type ? $product->barcode_type : 0;
 					$data->barcode_with_checksum = $product->barcode ? $product->fetchBarcodeWithChecksum($product) : '';
