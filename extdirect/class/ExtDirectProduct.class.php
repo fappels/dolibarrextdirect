@@ -2184,6 +2184,13 @@ class ExtDirectProduct extends Product
 			$barcodeType = 'UPCA';
 		}
 
+		// if barcode is full ean13 and first char in '0', we strip 0 and return stripped value, 
+		// because barcode readers interprete ean13 with leading 0 as a UPC code.
+		if (substr($barcode, 0, 1) === '0' && $barcodeType == 'EAN13' && strlen($barcode) == 13) {
+			$barcodeType = '';
+			$barcode = substr($barcode, 1);
+		}
+
 		if (in_array($barcodeType, array('EAN8', 'EAN13', 'UPCA')) && !empty($barcode)) {
 			include_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
 			$barcodeObj = new TCPDFBarcode($barcode, $barcodeType);
