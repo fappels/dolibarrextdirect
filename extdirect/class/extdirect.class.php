@@ -733,11 +733,34 @@ class ExtDirect
 		$optionalLabel = $extraFields->fetch_name_optionals_label($object->table_element);
 		if (count($optionalLabel) > 0) {
 			foreach ($optionalLabel as $name => $label) {
+				// check if visible for form view
+				$enabled = 1;
+				if ($enabled && isset($extraFields->attributes[$object->table_element]['enabled'][$name])) {
+					$enabled = dol_eval($extraFields->attributes[$object->table_element]['enabled'][$name], 1);
+				}
+				if ($enabled && isset($extraFields->attributes[$object->table_element]['list'][$name])) {
+					$enabled = dol_eval($extraFields->attributes[$object->table_element]['list'][$name], 1);
+				}
+
+				$perms = 1;
+				if ($perms && isset($extraFields->attributes[$object->table_element]['perms'][$name])) {
+					$perms = dol_eval($extraFields->attributes[$object->table_element]['perms'][$name], 1);
+				}
+				if (empty($enabled)) {
+					continue; // 0 = Never visible field
+				}
+				if (abs($enabled) != 1 && abs($enabled) != 3 && abs($enabled) != 5 && abs($enabled) != 4) {
+					continue; // <> 1 and <> 3 = not visible on list, only on forms <> 4 = not visible at the creation <> 5 only view
+				}
+				if (empty($perms)) {
+					continue; // 0 = Not visible
+				}
 				$row = new stdClass;
 				$row->name = $name;
 				$row->label = $label;
 				$row->type = $extraFields->attributes[$object->table_element]['type'][$name];
 				$row->default = $extraFields->attributes[$object->table_element]['default'][$name];
+				$row->readonly = (abs($enabled) == 5) ? 1 : 0;
 				$results[] = $row;
 			}
 		}
