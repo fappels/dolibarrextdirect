@@ -512,7 +512,7 @@ class ExtDirectMo extends Mo
 		}
 
 		if ($contentFilter) {
-			$fields = array('mo.ref', 'mo.ref_supplier', 's.nom');
+			$fields = array('mo.ref', 'p.ref', 's.nom');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
