@@ -84,6 +84,9 @@ class ExtDirectCommande extends Commande
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("orders");
 				$langs->load("sendings"); // for shipment methods
 				$langs->load("extdirect@extdirect"); // for custom order status

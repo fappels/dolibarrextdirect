@@ -8,7 +8,8 @@ if (!defined('NOCSRFCHECK'))        define('NOCSRFCHECK', '1');
 if (!defined('NOREQUIREMENU'))      define('NOREQUIREMENU', '1');    // If there is no menu to show
 if (!defined('NOREQUIREHTML'))      define('NOREQUIREHTML', '1');    // If we don't need to load the html.form.class.php
 if (!defined('NOREQUIREAJAX'))      define('NOREQUIREAJAX', '1');
-if (!defined("NOLOGIN"))            define("NOLOGIN", '1');          // If this page is public (can be called outside logged session)
+if (!defined('NOLOGIN'))            define('NOLOGIN', '1');          // If this page is public (can be called outside logged session)
+if (!defined('NOREQUIRETRAN'))      define('NOREQUIRETRAN', '1');    // no load of main translations, because we do not know user lang yet
 
 // a non CSRF cookie should be created but cookie needs to be secured
 if (requestIsHTTPS() && version_compare(phpversion(), '7.3', '>=')) {
@@ -22,9 +23,11 @@ if (! $res && file_exists("../main.inc.php")) $res=@include "../main.inc.php";
 if (! $res && file_exists("../../main.inc.php")) $res=@include "../../main.inc.php" ;
 if (! $res && file_exists("../../../main.inc.php")) $res=@include "../../../main.inc.php";
 if (! $res) die("Include of main fails");
+dol_include_once("/core/class/translate.class.php");
 dol_include_once("/extdirect/class/extdirect.class.php");
 require 'config.php';
 $debugData = '[]';
+$langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 /** Action class
  * class to execute extdirect functions

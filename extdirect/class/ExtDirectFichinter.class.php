@@ -63,6 +63,9 @@ class ExtDirectFichinter extends Fichinter
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("interventions");
 				parent::__construct($db);
 			}

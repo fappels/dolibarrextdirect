@@ -53,6 +53,9 @@ class ExtDirectActionComm extends ActionComm
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				parent::__construct($db);
 				$this->_societe = new Societe($db);
 			}

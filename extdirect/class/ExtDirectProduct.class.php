@@ -69,6 +69,8 @@ class ExtDirectProduct extends Product
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
 				$langs->load("products");
 				$langs->load("stocks");
 				$langs->load("errors");

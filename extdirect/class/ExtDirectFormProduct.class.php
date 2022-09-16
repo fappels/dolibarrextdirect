@@ -54,6 +54,9 @@ class ExtDirectFormProduct extends FormProduct
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("products");
 				$langs->load("extdirect@extdirect");
 				parent::__construct($db);

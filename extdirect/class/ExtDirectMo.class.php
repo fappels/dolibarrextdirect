@@ -60,6 +60,10 @@ class ExtDirectMo extends Mo
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
+				$langs->load("ticket");
 				$langs->load("mrp");
 				$langs->load("products");
 				$langs->load("stocks");
@@ -607,7 +611,7 @@ class ExtDirectMo extends Mo
 		$results = array();
 		$statut = 0;
 		$row = new stdClass;
-		while (($result = $this->LibStatut($statut, 1)) !== null) {
+		while (($result = $this->LibStatut($statut, 0)) !== null) {
 			if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
 			$row = new stdClass;
 			$row->id = $statut;

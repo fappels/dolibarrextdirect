@@ -62,6 +62,9 @@ class ExtDirectExpedition extends Expedition
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("sendings");
 				$langs->load("products");
 				$langs->load("stocks");

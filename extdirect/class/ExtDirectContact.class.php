@@ -51,6 +51,9 @@ class ExtDirectContact extends Contact
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("companies");
 				parent::__construct($db);
 			}

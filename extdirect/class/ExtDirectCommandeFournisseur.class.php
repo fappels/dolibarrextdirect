@@ -81,6 +81,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("orders");
 				parent::__construct($db);
 			}
