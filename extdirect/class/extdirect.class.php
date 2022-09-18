@@ -59,9 +59,13 @@ if (!defined("VULNERABILITYERROR")) define("VULNERABILITYERROR", -1005);
  */
 if (!defined("COMPATIBILITYERROR")) define("COMPATIBILITYERROR", -1006);
 /**
- * Constant to return when there are missing or invalid parameters
+ * Constant to return when there is a unique field constraint error
  */
 if (!defined("DUPLICATEERROR"))     define("DUPLICATEERROR", -1007);
+/**
+ * Constant to return when there is a dolibarr module not enabled
+ */
+if (!defined("NOTENABLEDERROR"))     define("NOTENABLEDERROR", -1008);
 
 /**
  *  ExtDirect table CRUD and some common static functions

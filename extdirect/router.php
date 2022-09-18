@@ -147,6 +147,9 @@ function doRpc($cdata)
 					case DUPLICATEERROR:
 						$error->message = "Duplicate Error: $method on action $action";
 						break;
+					case NOTENABLEDERROR:
+						$error->message = "Not enabled Error: $method on action $action";
+						break;
 					default:
 						$error->message = "Error $result from dolibarr: $method on action $action";
 						break;

@@ -41,6 +41,7 @@ class ExtDirectMo extends Mo
 {
 	private $_user;
 	private $_moConstants = array('STOCK_ALLOW_NEGATIVE_TRANSFER');
+	private $_enabled = false;
 
 	/** Constructor
 	 *
@@ -53,6 +54,7 @@ class ExtDirectMo extends Mo
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->mrp->enabled);
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -439,6 +441,7 @@ class ExtDirectMo extends Mo
 	public function extList(stdClass $params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->mrp->read)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
