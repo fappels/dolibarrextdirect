@@ -40,6 +40,7 @@ class ExtDirectCommande extends Commande
 	private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
 		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO');
+	private $_enabled = false;
 
 		/**
 	 * Fully shippable status of validated order
@@ -77,6 +78,7 @@ class ExtDirectCommande extends Commande
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->commande->enabled) && $user->rights->commande->lire;
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -564,6 +566,7 @@ class ExtDirectCommande extends Commande
 	public function readOrderList(stdClass $params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();

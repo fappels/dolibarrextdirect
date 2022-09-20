@@ -40,6 +40,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 {
 	private $_user;
 	private $_shipmentPackageConstants = array();
+	private $_enabled = false;
 
 	/** Constructor
 	 *
@@ -52,6 +53,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->shipmentpackage->enabled) && $user->rights->shipmentpackage->shipmentpackage->read;
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -438,6 +440,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	public function extList(stdClass $params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->read)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();

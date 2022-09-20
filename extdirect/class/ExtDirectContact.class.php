@@ -33,6 +33,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 class ExtDirectContact extends Contact
 {
 	private $_user;
+	private $_enabled = false;
 
 	/**
 	 * constructor
@@ -42,11 +43,12 @@ class ExtDirectContact extends Contact
 	 */
 	public function __construct($login)
 	{
-		global $user,$db,$langs;
+		global $user, $conf, $db, $langs;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->societe->enabled) && $user->rights->societe->contact->lire;
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -69,6 +71,7 @@ class ExtDirectContact extends Contact
 	public function readContact(stdClass $params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 
 		$results = array();
 		$result = 0;
@@ -291,6 +294,7 @@ class ExtDirectContact extends Contact
 		global $conf,$langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();

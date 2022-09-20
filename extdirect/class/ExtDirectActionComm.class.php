@@ -35,6 +35,7 @@ class ExtDirectActionComm extends ActionComm
 {
 	private $_user;
 	private $_societe;
+	private $_enabled = false;
 
 	/**
 	 * constructor
@@ -44,11 +45,12 @@ class ExtDirectActionComm extends ActionComm
 	 */
 	public function __construct($login)
 	{
-		global $langs,$db,$user;
+		global $conf, $langs, $db, $user;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->agenda->enabled) && $user->rights->agenda->allactions->read;
 				$this->_user = $user;
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -290,6 +292,7 @@ class ExtDirectActionComm extends ActionComm
 		global $conf,$langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
