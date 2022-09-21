@@ -49,7 +49,7 @@ class ExtDirectSociete extends Societe
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
-				$this->_enabled = !empty($conf->societe->enabled) && $user->rights->societe->lire;
+				$this->_enabled = !empty($conf->societe->enabled) && isset($user->rights->societe->lire);
 				$this->_user = $user;
 				if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);

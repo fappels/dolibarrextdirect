@@ -78,7 +78,7 @@ class ExtDirectCommande extends Commande
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
-				$this->_enabled = !empty($conf->commande->enabled) && $user->rights->commande->lire;
+				$this->_enabled = !empty($conf->commande->enabled) && isset($user->rights->commande->lire);
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);

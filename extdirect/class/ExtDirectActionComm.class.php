@@ -50,7 +50,7 @@ class ExtDirectActionComm extends ActionComm
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
-				$this->_enabled = !empty($conf->agenda->enabled) && $user->rights->agenda->allactions->read;
+				$this->_enabled = !empty($conf->agenda->enabled) && isset($user->rights->agenda->allactions->read);
 				$this->_user = $user;
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
