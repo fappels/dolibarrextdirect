@@ -98,26 +98,10 @@ class ExtDirectActionComm extends ActionComm
 						$row->transparency      = (int) $this->transparency;
 						$row->priority          = $this->priority;
 						$row->note              = $this->note;
-						if (isset($this->usertodo->id)) {
-							$row->usertodo_id   = (int) $this->usertodo->id; // deprecated
-						} else {
-							$row->usertodo_id   = (int) $this->userownerid;
-						}
-						if (isset($this->userdone->id)) {
-							$row->userdone_id   = (int) $this->userdone->id; // deprecated
-						} else {
-							$row->userdone_id   = (int) $this->userdoneid;
-						}
-						if (isset($this->societe->id)) {
-							$row->company_id    = (int) $this->societe->id; // deprecated
-						} else {
-							$row->company_id    = (int) $this->socid;
-						}
-						if (isset($this->contact->id)) {
-							$row->contact_id    = (int) $this->contact->id; // deprecated
-						} else {
-							$row->contact_id    = (int) $this->contact_id;
-						}
+						$row->usertodo_id   = (int) $this->userownerid;
+						$row->userdone_id   = (int) $this->userdoneid;
+						$row->company_id    = (int) $this->socid;
+						$row->contact_id    = (int) $this->contact_id;
 						$row->project_id        = (int) $this->fk_project;
 
 						array_push($results, $row);
@@ -442,7 +426,7 @@ class ExtDirectActionComm extends ActionComm
 
 			$param->id=$this->id;
 			$this->_societe->id=$this->socid;
-			$this->_societe->add_commercial($this->_user, $this->usertodo->id);
+			$this->_societe->add_commercial($this->_user, $this->usertodoid);
 		}
 
 		if (is_array($params)) {
@@ -479,7 +463,7 @@ class ExtDirectActionComm extends ActionComm
 				if (($result = $this->update($this->_user, $notrigger)) < 0) {
 					 return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				$this->_societe->id=$this->societe->id;
+				$this->_societe->id=$this->socid;
 				$this->_societe->add_commercial($this->_user, $this->userdoneid);
 			} else {
 				return PARAMETERERROR;
