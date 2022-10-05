@@ -812,29 +812,41 @@ class ExtDirectMo extends Mo
 									}
 								}
 							} else {
-								foreach ($product->stock_warehouse as $warehouse=>$stock_warehouse) {
-									$row = $this->getLineData($line, $object, $product, $photoSize);
-									$row->warehouse_id = $warehouse;
-									$row->id = $row->line_id . '_' . $warehouse;
-									$row->stock = (float) $stock_warehouse->real;
-									$row->total_stock = $product->stock_reel;
-									if (empty($conf->productbatch->enabled)) {
-										array_push($results, $row);
-									} else {
-										$row->batch_id = 0;
-										$row->has_batch = $product->status_batch;
-										if ($row->has_batch > 0) {
-											if (($res = $product->fetchBatches($results, $row, $product->id, $warehouse, $stock_warehouse->id, false, null, $line->batch, $photoSize)) < 0) return $res;
-										} else {
+								if (count($product->stock_warehouse) > 0) {
+									foreach ($product->stock_warehouse as $warehouse=>$stock_warehouse) {
+										$row = $this->getLineData($line, $object, $product, $photoSize);
+										$row->warehouse_id = $warehouse;
+										$row->id = $row->line_id . '_' . $warehouse;
+										$row->stock = (float) $stock_warehouse->real;
+										$row->total_stock = $product->stock_reel;
+										if (empty($conf->productbatch->enabled)) {
 											array_push($results, $row);
+										} else {
+											$row->batch_id = 0;
+											$row->has_batch = $product->status_batch;
+											if ($row->has_batch > 0) {
+												if (($res = $product->fetchBatches($results, $row, $product->id, $warehouse, $stock_warehouse->id, false, null, $line->batch, $photoSize)) < 0) return $res;
+											} else {
+												array_push($results, $row);
+											}
 										}
 									}
+								} else {
+									$row->warehouse_id = 0;
+									$row->id = $row->line_id . '_' . 0;
+									$row->stock = (float) $product->stock_reel;
+									$row->total_stock = $product->stock_reel;
+									array_push($results, $row);
 								}
 							}
 						} elseif ($result < 0) {
 							return ExtDirect::getDolError($result, $object->errors, $object->error);
 						} else {
 							// free line
+							$row->warehouse_id = 0;
+							$row->id = $row->line_id . '_' . 0;
+							$row->stock = 0;
+							$row->total_stock = 0;
 							$row = $this->getLineData($line, $object);
 							array_push($results, $row);
 						}
