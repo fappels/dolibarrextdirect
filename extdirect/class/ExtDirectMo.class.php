@@ -58,6 +58,8 @@ class ExtDirectMo extends Mo
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang('auto');
 				}
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);

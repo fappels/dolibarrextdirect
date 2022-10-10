@@ -54,6 +54,8 @@ class ExtDirectActionComm extends ActionComm
 				$this->_user = $user;
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang('auto');
 				}
 				$langs->load("main");
 				$langs->load("dict");

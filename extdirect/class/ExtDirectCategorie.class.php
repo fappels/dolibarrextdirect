@@ -47,7 +47,7 @@ class ExtDirectCategorie extends Categorie
 	 */
 	public function __construct($login)
 	{
-		global $langs,$db,$user;
+		global $conf, $langs, $db, $user;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -55,6 +55,8 @@ class ExtDirectCategorie extends Categorie
 				$this->_user = $user;  //product.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang('auto');
 				}
 				$langs->load("main");
 				$langs->load("dict");
