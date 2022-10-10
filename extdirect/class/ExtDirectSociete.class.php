@@ -54,7 +54,7 @@ class ExtDirectSociete extends Societe
 				if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
 					$langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
 				} else {
-					$langs->setDefaultLang('auto');
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
 				$langs->load("main");
 				$langs->load("dict");
