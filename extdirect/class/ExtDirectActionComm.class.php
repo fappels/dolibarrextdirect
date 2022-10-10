@@ -52,7 +52,7 @@ class ExtDirectActionComm extends ActionComm
 				$user->getrights();
 				$this->_enabled = !empty($conf->agenda->enabled) && isset($user->rights->agenda->allactions->read);
 				$this->_user = $user;
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
 					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);

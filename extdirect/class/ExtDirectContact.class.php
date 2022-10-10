@@ -50,7 +50,7 @@ class ExtDirectContact extends Contact
 				$user->getrights();
 				$this->_enabled = !empty($conf->societe->enabled) && isset($user->rights->societe->contact->lire);
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
 					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);

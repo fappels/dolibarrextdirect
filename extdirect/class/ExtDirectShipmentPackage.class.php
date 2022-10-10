@@ -55,7 +55,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 				$user->getrights();
 				$this->_enabled = !empty($conf->shipmentpackage->enabled) && isset($user->rights->shipmentpackage->shipmentpackage->read);
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
 					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);

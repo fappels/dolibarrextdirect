@@ -65,7 +65,7 @@ class ExtDirectProduct extends Product
 				$user->getrights();
 				$this->_enabled = !empty($conf->product->enabled) && isset($user->rights->produit->lire);
 				$this->_user = $user;  //product.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
 					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);

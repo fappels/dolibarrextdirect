@@ -51,7 +51,7 @@ class ExtDirectSociete extends Societe
 				$user->getrights();
 				$this->_enabled = !empty($conf->societe->enabled) && isset($user->rights->societe->lire);
 				$this->_user = $user;
-				if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
 				} else {
 					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
