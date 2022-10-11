@@ -1,7 +1,7 @@
 <?PHP
 
 /**
- * Copyright (C) 2013       Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2022       Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  */
 
 /**
- *  \file       htdocs/extdirect/class/ExtDirectExpedition.class.php
+ *  \file       htdocs/extdirect/class/ExtDirectShipmentPackage.class.php
  *  \brief      Sencha Ext.Direct shipments remoting class
  */
 
@@ -33,13 +33,14 @@ dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
 dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 
-/** ExtDirectExpedition class
+/** ExtDirectShipmentPackage class
  * Class to access shipments with CRUD methods to connect to Extjs or sencha touch using Ext.direct connector
  */
 class ExtDirectShipmentPackage extends ShipmentPackage
 {
 	private $_user;
 	private $_shipmentPackageConstants = array();
+	private $_enabled = false;
 
 	/** Constructor
 	 *
@@ -52,13 +53,19 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->shipmentpackage->enabled) && isset($user->rights->shipmentpackage->shipmentpackage->read);
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("sendings");
 				$langs->load("products");
 				$langs->load("stocks");
@@ -70,7 +77,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 *	Load shipping related constants
+	 *	Load related constants
 	 *
 	 *	@param			stdClass	$params		filter with elements
 	 *		                                    constant	name of specific constant
@@ -100,10 +107,10 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 * public method to read shipment optionals (extra fields) from database
+	 * public method to read optionals (extra fields) from database
 	 *
 	 *    @param    stdClass    $param  filter with elements:
-	 *                                  id Id of shipment to load
+	 *                                  id Id of shipmentpackage to load
 	 *
 	 *    @return     stdClass result data or -1
 	 */
@@ -227,7 +234,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * Ext.direct method to Create ShipmentPackage
 	 *
-	 * @param unknown_type $param object or object array with shipment record
+	 * @param unknown_type $param object or object array with object record
 	 * @return result data or -1
 	 */
 	public function extCreate($param)
@@ -253,10 +260,10 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 *    Load shipment package from database into memory
+	 *    Load shipmentpackage from database into memory
 	 *
 	 *    @param    stdClass    $params     filter with elements:
-	 *                                      id Id of shipment to load
+	 *                                      id Id of object to load
 	 *    @return     stdClass result data or -1
 	 */
 	public function extRead(stdClass $params)
@@ -298,7 +305,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * Ext.direct method to update
 	 *
-	 * @param unknown_type $param object or object array with shipment record
+	 * @param unknown_type $param object or object array with record
 	 * @return result data or -1
 	 */
 	public function extUpdate($param)
@@ -360,9 +367,9 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 * Ext.direct method to destroy shipment package
+	 * Ext.direct method to destroy shipmentpackage
 	 *
-	 * @param unknown_type $param object or object array with shipment record
+	 * @param unknown_type $param object or object array with record
 	 * @return result data or -1
 	 */
 	public function extDestroy($param)
@@ -392,7 +399,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 * Ext.direct method to upload file for shipment object
+	 * Ext.direct method to upload file for shipmentpackage object
 	 *
 	 * @param unknown_type $params object or object array with uploaded file(s)
 	 * @return Array    ExtDirect response message
@@ -435,6 +442,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	public function extList(stdClass $params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->read)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
@@ -469,10 +477,10 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, ep.rowid, ep.ref, ep.status, ep.ref_supplier, ea.activity_status, ep.date_creation";
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "societe as s, " . MAIN_DB_PREFIX . "expedition_package as ep";
-		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec ON e.rowid = ec.element_id";
+		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec ON ep.rowid = ec.element_id";
 		if ($originId) {
-			$sqlFrom .= " INNER JOIN " . MAIN_DB_PREFIX . "element_element as el ON el.fk_target = e.rowid AND fk_source = " . $originId;
-			$sqlFrom .= " AND el.sourcetype = 'shipping' AND el.targettype = '" . $this->db->escape($this->element) . "'";
+			$sqlFrom .= " INNER JOIN " . MAIN_DB_PREFIX . "element_element as el ON el.fk_target = ep.rowid AND fk_source = " . $originId;
+			$sqlFrom .= " AND el.sourcetype = 'shipmentpackage' AND el.targettype = '" . $this->db->escape($this->element) . "'";
 		}
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
 		$sqlFrom .= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status as activity_status";
@@ -482,9 +490,9 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$sqlFrom .= "    GROUP BY activity_id";
 		$sqlFrom .= "   ) AS ma, " . MAIN_DB_PREFIX . "extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
-		$sqlFrom .= " ) AS ea ON e.rowid = ea.activity_id";
-		$sqlWhere = " WHERE e.entity IN (" . getEntity($this->table_element) . ')';
-		$sqlWhere .= " AND e.fk_soc = s.rowid";
+		$sqlFrom .= " ) AS ea ON ep.rowid = ea.activity_id";
+		$sqlWhere = " WHERE ep.entity IN (" . getEntity($this->table_element) . ')';
+		$sqlWhere .= " AND ep.fk_soc = s.rowid";
 
 		if ($statusFilterCount > 0) {
 			$sqlWhere .= " AND ( ";
@@ -495,7 +503,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 			$sqlWhere .= ")";
 		}
 		if ($ref) {
-			$sqlWhere .= " AND e.ref = '" . $ref . "'";
+			$sqlWhere .= " AND ep.ref = '" . $ref . "'";
 		}
 		if ($contactTypeId > 0) {
 			$sqlWhere .= " AND ec.fk_c_type_contact = " . $contactTypeId;
@@ -585,7 +593,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 * public method to read a list of shipment statusses
+	 * public method to read a list of statusses
 	 *
 	 * @return     stdClass result data or error number
 	 */
@@ -642,7 +650,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	}
 
 	/**
-	 * get data from shipmentpackage opject
+	 * get data from shipmentpackage object
 	 *
 	 * @param Object	$object	shipmentpackage object
 	 * @return stdClass object with data

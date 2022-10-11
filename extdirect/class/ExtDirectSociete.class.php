@@ -34,6 +34,7 @@ class ExtDirectSociete extends Societe
 {
 	private $_user;
 	private $_constants = array('SOCIETE_CODECLIENT_ADDON');
+	private $_enabled = false;
 
 	/** Constructor
 	 *
@@ -43,15 +44,21 @@ class ExtDirectSociete extends Societe
 	 */
 	public function __construct($login)
 	{
-		global $langs,$user,$db;
+		global $conf, $langs ,$user, $db;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->societe->enabled) && isset($user->rights->societe->lire);
 				$this->_user = $user;
-				if (isset($user->conf->MAIN_LANG_DEFAULT) && ($user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("companies");
 				$langs->load("bills");
 				$langs->load("dict");
@@ -357,6 +364,7 @@ class ExtDirectSociete extends Societe
 		global $conf,$langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();

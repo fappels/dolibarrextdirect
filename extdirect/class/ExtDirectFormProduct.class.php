@@ -45,15 +45,20 @@ class ExtDirectFormProduct extends FormProduct
 	 */
 	public function __construct($login)
 	{
-		global $langs,$user,$db;
+		global $conf, $langs, $user, $db;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("products");
 				$langs->load("extdirect@extdirect");
 				parent::__construct($db);

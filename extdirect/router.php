@@ -8,13 +8,8 @@ if (!defined('NOCSRFCHECK'))        define('NOCSRFCHECK', '1');
 if (!defined('NOREQUIREMENU'))      define('NOREQUIREMENU', '1');    // If there is no menu to show
 if (!defined('NOREQUIREHTML'))      define('NOREQUIREHTML', '1');    // If we don't need to load the html.form.class.php
 if (!defined('NOREQUIREAJAX'))      define('NOREQUIREAJAX', '1');
-if (!defined("NOLOGIN"))            define("NOLOGIN", '1');          // If this page is public (can be called outside logged session)
-
-// a non CSRF cookie should be created but cookie needs to be secured
-if (requestIsHTTPS() && version_compare(phpversion(), '7.3', '>=')) {
-	$site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
-	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
-}
+if (!defined('NOLOGIN'))            define('NOLOGIN', '1');          // If this page is public (can be called outside logged session)
+if (!defined('NOREQUIRETRAN'))      define('NOREQUIRETRAN', '1');    // no load of main translations, because we do not know user lang yet
 
 // Change this following line to use the correct relative path (../, ../../, etc)
 $res=0;
@@ -22,9 +17,20 @@ if (! $res && file_exists("../main.inc.php")) $res=@include "../main.inc.php";
 if (! $res && file_exists("../../main.inc.php")) $res=@include "../../main.inc.php" ;
 if (! $res && file_exists("../../../main.inc.php")) $res=@include "../../../main.inc.php";
 if (! $res) die("Include of main fails");
+dol_include_once("/core/class/translate.class.php");
 dol_include_once("/extdirect/class/extdirect.class.php");
 require 'config.php';
 $debugData = '[]';
+$langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
+
+// a non CSRF cookie should be created but cookie needs to be secured
+if (version_compare(phpversion(), '7.3', '>=')) {
+	$site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
+	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
+	session_abort();
+	session_set_cookie_params(array('samesite' => 'None'));
+	session_start();
+}
 
 /** Action class
  * class to execute extdirect functions
@@ -143,6 +149,9 @@ function doRpc($cdata)
 						break;
 					case DUPLICATEERROR:
 						$error->message = "Duplicate Error: $method on action $action";
+						break;
+					case NOTENABLEDERROR:
+						$error->message = "Not enabled Error: $method on action $action";
 						break;
 					default:
 						$error->message = "Error $result from dolibarr: $method on action $action";

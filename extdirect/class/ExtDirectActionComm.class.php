@@ -35,6 +35,7 @@ class ExtDirectActionComm extends ActionComm
 {
 	private $_user;
 	private $_societe;
+	private $_enabled = false;
 
 	/**
 	 * constructor
@@ -44,15 +45,21 @@ class ExtDirectActionComm extends ActionComm
 	 */
 	public function __construct($login)
 	{
-		global $langs,$db,$user;
+		global $conf, $langs, $db, $user;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->agenda->enabled) && isset($user->rights->agenda->allactions->read);
 				$this->_user = $user;
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				parent::__construct($db);
 				$this->_societe = new Societe($db);
 			}
@@ -93,26 +100,10 @@ class ExtDirectActionComm extends ActionComm
 						$row->transparency      = (int) $this->transparency;
 						$row->priority          = $this->priority;
 						$row->note              = $this->note;
-						if (isset($this->usertodo->id)) {
-							$row->usertodo_id   = (int) $this->usertodo->id; // deprecated
-						} else {
-							$row->usertodo_id   = (int) $this->userownerid;
-						}
-						if (isset($this->userdone->id)) {
-							$row->userdone_id   = (int) $this->userdone->id; // deprecated
-						} else {
-							$row->userdone_id   = (int) $this->userdoneid;
-						}
-						if (isset($this->societe->id)) {
-							$row->company_id    = (int) $this->societe->id; // deprecated
-						} else {
-							$row->company_id    = (int) $this->socid;
-						}
-						if (isset($this->contact->id)) {
-							$row->contact_id    = (int) $this->contact->id; // deprecated
-						} else {
-							$row->contact_id    = (int) $this->contact_id;
-						}
+						$row->usertodo_id   = (int) $this->userownerid;
+						$row->userdone_id   = (int) $this->userdoneid;
+						$row->company_id    = (int) $this->socid;
+						$row->contact_id    = (int) $this->contact_id;
 						$row->project_id        = (int) $this->fk_project;
 
 						array_push($results, $row);
@@ -287,6 +278,7 @@ class ExtDirectActionComm extends ActionComm
 		global $conf,$langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
@@ -436,7 +428,7 @@ class ExtDirectActionComm extends ActionComm
 
 			$param->id=$this->id;
 			$this->_societe->id=$this->socid;
-			$this->_societe->add_commercial($this->_user, $this->usertodo->id);
+			$this->_societe->add_commercial($this->_user, $this->usertodoid);
 		}
 
 		if (is_array($params)) {
@@ -473,7 +465,7 @@ class ExtDirectActionComm extends ActionComm
 				if (($result = $this->update($this->_user, $notrigger)) < 0) {
 					 return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				$this->_societe->id=$this->societe->id;
+				$this->_societe->id=$this->socid;
 				$this->_societe->add_commercial($this->_user, $this->userdoneid);
 			} else {
 				return PARAMETERERROR;

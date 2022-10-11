@@ -43,6 +43,7 @@ dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
 class ExtDirectProduct extends Product
 {
 	private $_user;
+	private $_enabled = false;
 
 	/**
 	 * parameters received from client
@@ -62,13 +63,18 @@ class ExtDirectProduct extends Product
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->product->enabled) && isset($user->rights->produit->lire);
 				$this->_user = $user;  //product.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
 				$langs->load("products");
 				$langs->load("stocks");
 				$langs->load("errors");
@@ -733,11 +739,14 @@ class ExtDirectProduct extends Product
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
-		$notrigger=0;
 		$paramArray = ExtDirect::toArray($params);
 		$supplier = new Societe($this->db);
 
 		foreach ($paramArray as &$param) {
+			$notrigger=0;
+			$origin_element = '';
+			$origin_id = null;
+			$disablestockchangeforsubproduct = 0;
 			if ($param->notrigger) $notrigger = $param->notrigger;
 			// prepare fields
 			$this->prepareFields($param);
@@ -758,6 +767,20 @@ class ExtDirectProduct extends Product
 					}
 				}
 			}
+			if (!$notrigger) {
+				// Call trigger
+				$this->extParam = &$param; // pass client parameters by reference to trigger
+				$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_CREATE', $this->_user);
+				if ($result < 0) {
+					return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				// End call triggers
+			}
+
+			if ($param->origin_element) $origin_element = $param->origin_element;
+			if ($param->origin_id) $origin_id = $param->origin_id;
+			if ($param->disablestockchangeforsubproduct) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
+
 			if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			//! Stock
 			if (!empty($param->correct_stock_nbpiece)) {
@@ -780,7 +803,13 @@ class ExtDirectProduct extends Product
 									// batch number
 									$param->batch,
 									// inventorycode
-									$param->inventorycode
+									$param->inventorycode,
+									// Origin element type
+									$origin_element,
+									// Origin id of element
+									$origin_id,
+									// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+									$disablestockchangeforsubproduct
 					);
 				} else {
 					$result = $this->correct_stock(
@@ -795,7 +824,13 @@ class ExtDirectProduct extends Product
 									// Price to use for stock eval
 									$param->correct_stock_price,
 									// inventorycode
-									$param->inventorycode
+									$param->inventorycode,
+									// Origin element type
+									$origin_element,
+									// Origin id of element
+									$origin_id,
+									// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+									$disablestockchangeforsubproduct
 					);
 				}
 				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -855,8 +890,8 @@ class ExtDirectProduct extends Product
 			$param->id=$this->id;
 			if (!$notrigger) {
 				// Call trigger
-				$this->extParam = $param; // pass client parameters to trigger
-				$result = $this->call_trigger('EXTDIRECTPRODUCT_CREATE', $this->_user);
+				$this->extParam = &$param; // pass client parameters by reference to trigger
+				$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_CREATE', $this->_user);
 				if ($result < 0) {
 					return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
@@ -884,13 +919,16 @@ class ExtDirectProduct extends Product
 		if (!isset($this->db)) return CONNECTERROR;
 		if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 		// dolibarr update settings
-		$notrigger=false;
 		$supplierProducts = array();
 
 		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
+				$notrigger=false;
+				$origin_element = '';
+				$origin_id = null;
+				$disablestockchangeforsubproduct = 0;
 				if ($param->notrigger) $notrigger = $param->notrigger;
 				$id = $param->id;
 				if (($result = $this->fetch($id, '', '')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -938,6 +976,20 @@ class ExtDirectProduct extends Product
 				if (!empty($this->barcode)) {
 					$this->fetch_barcode();
 				}
+				if (!$notrigger) {
+					// Call trigger
+					$this->extParam = &$param; // pass client parameters by reference to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_MODIFY', $this->_user);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $this->errors, $this->error);
+					}
+					// End call triggers
+				}
+
+				if ($param->origin_element) $origin_element = $param->origin_element;
+				if ($param->origin_id) $origin_id = $param->origin_id;
+				if ($param->disablestockchangeforsubproduct) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
+
 				if (($updated || $updatedBarcode || $updatedSellPrice || $updatedBuyPrice) && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
 				if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
 				// verify
@@ -1010,7 +1062,13 @@ class ExtDirectProduct extends Product
 											// batch number
 											$param->batch,
 											// inventorycode
-											$param->inventorycode
+											$param->inventorycode,
+											// Origin element type
+											$origin_element,
+											// Origin id of element
+											$origin_id,
+											// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+											$disablestockchangeforsubproduct
 							);
 						} else {
 							$result = $this->correct_stock(
@@ -1025,7 +1083,13 @@ class ExtDirectProduct extends Product
 											// Price to use for stock eval
 											$param->correct_stock_price,
 											// inventorycode
-											$param->inventorycode
+											$param->inventorycode,
+											// Origin element type
+											$origin_element,
+											// Origin id of element
+											$origin_id,
+											// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+											$disablestockchangeforsubproduct
 							);
 						}
 						if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1049,7 +1113,13 @@ class ExtDirectProduct extends Product
 											// batch number
 											$param->batch,
 											// inventorycode
-											$param->inventorycode
+											$param->inventorycode,
+											// Origin element type
+											$origin_element,
+											// Origin id of element
+											$origin_id,
+											// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+											$disablestockchangeforsubproduct
 							);
 						} else {
 							$result = $this->correct_stock(
@@ -1064,7 +1134,13 @@ class ExtDirectProduct extends Product
 											// Price to use for stock eval
 											$param->correct_stock_price,
 											// inventorycode
-											$param->inventorycode
+											$param->inventorycode,
+											// Origin element type
+											$origin_element,
+											// Origin id of element
+											$origin_id,
+											// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+											$disablestockchangeforsubproduct
 							);
 						}
 						if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1090,7 +1166,13 @@ class ExtDirectProduct extends Product
 										// batch number
 										$param->batch,
 										// inventorycode
-										$param->inventorycode
+										$param->inventorycode,
+										// Origin element type
+										$origin_element,
+										// Origin id of element
+										$origin_id,
+										// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+										$disablestockchangeforsubproduct
 						);
 					} else {
 						$result = $this->correct_stock(
@@ -1105,7 +1187,13 @@ class ExtDirectProduct extends Product
 										// Price to use for stock eval
 										$param->correct_stock_price,
 										// inventorycode
-										$param->inventorycode
+										$param->inventorycode,
+										// Origin element type
+										$origin_element,
+										// Origin id of element
+										$origin_id,
+										// Disable stock change for sub-products of kit (usefull only if product is a subproduct)
+										$disablestockchangeforsubproduct
 						);
 					}
 					if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1216,8 +1304,8 @@ class ExtDirectProduct extends Product
 				}
 				if (!$notrigger) {
 					// Call trigger
-					$this->extParam = $param; // pass client parameters to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_MODIFY', $this->_user);
+					$this->extParam = &$param; // pass client parameters by reference to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_MODIFY', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1256,8 +1344,8 @@ class ExtDirectProduct extends Product
 				$this->ref = $param->ref;
 				if (!$notrigger) {
 					// Call trigger
-					$this->extParam = $param; // pass client parameters to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_DELETE', $this->_user);
+					$this->extParam = &$param; // pass client parameters by reference to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_DELETE', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1268,6 +1356,15 @@ class ExtDirectProduct extends Product
 					if (($result = $this->delete($this->_user, $notrigger)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				} else {
 					if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				if (!$notrigger) {
+					// Call trigger
+					$this->extParam = &$param; // pass client parameters by reference to trigger
+					$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_DELETE', $this->_user);
+					if ($result < 0) {
+						return ExtDirect::getDolError($result, $this->errors, $this->error);
+					}
+					// End call triggers
 				}
 			} else {
 				return PARAMETERERROR;
@@ -1301,6 +1398,7 @@ class ExtDirectProduct extends Product
 	{
 		global $conf, $langs;
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
@@ -2182,6 +2280,13 @@ class ExtDirectProduct extends Product
 		if ($barcodeType == 'UPC') {
 			// dolibarr UPC is UPCA
 			$barcodeType = 'UPCA';
+		}
+
+		// if barcode is full ean13 and first char in '0', we strip 0 and return stripped value,
+		// because barcode readers interprete ean13 with leading 0 as a UPC code.
+		if (substr($barcode, 0, 1) === '0' && $barcodeType == 'EAN13' && strlen($barcode) == 13) {
+			$barcodeType = '';
+			$barcode = substr($barcode, 1);
 		}
 
 		if (in_array($barcodeType, array('EAN8', 'EAN13', 'UPCA')) && !empty($barcode)) {

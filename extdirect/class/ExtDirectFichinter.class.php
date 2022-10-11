@@ -43,6 +43,7 @@ class ExtDirectFichinter extends Fichinter
 		'FICHINTER_WITHOUT_DURATION',
 		'FICHINTER_DATE_WITHOUT_HOUR'
 	);
+	private $_enabled = false;
 
 	/**
 	 * Constructor
@@ -56,13 +57,19 @@ class ExtDirectFichinter extends Fichinter
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->ficheinter->enabled) && isset($user->rights->ficheinter->lire);
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("interventions");
 				parent::__construct($db);
 			}
@@ -499,6 +506,7 @@ class ExtDirectFichinter extends Fichinter
 	public function readList(stdClass $params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();

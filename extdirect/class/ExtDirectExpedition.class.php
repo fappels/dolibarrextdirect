@@ -39,6 +39,7 @@ class ExtDirectExpedition extends Expedition
 {
 	private $_user;
 	private $_shipmentConstants = array('STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT', 'STOCK_CALCULATE_ON_SHIPMENT');
+	private $_enabled = false;
 
 	const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
@@ -55,13 +56,19 @@ class ExtDirectExpedition extends Expedition
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
 				$user->getrights();
+				$this->_enabled = !empty($conf->expedition->enabled) && isset($user->rights->expedition->lire);
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
 				// set global $mysoc required for price calculation
 				$mysoc = new Societe($db);
 				$mysoc->setMysoc($conf);
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("sendings");
 				$langs->load("products");
 				$langs->load("stocks");
@@ -531,6 +538,7 @@ class ExtDirectExpedition extends Expedition
 		global $conf;
 
 		if (!isset($this->db)) return CONNECTERROR;
+		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
@@ -1184,7 +1192,7 @@ class ExtDirectExpedition extends Expedition
 					$line = new ExtDirectExpeditionLine($this->db);
 				}
 				if (($result = $line->fetch($params->line_id)) < 0) {
-					return ExtDirect::getDolError($result, $this->errors, $this->error);
+					return ExtDirect::getDolError($result, $line->errors, $line->error);
 				}
 				$line->id = $params->line_id;
 				$line->entrepot_id = $params->warehouse_id;

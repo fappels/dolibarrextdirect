@@ -40,15 +40,20 @@ class ExtDirectActivities extends ExtDirectActivity
 	 */
 	public function __construct($login)
 	{
-		global $langs,$user,$db;
+		global $conf, $langs, $user, $db;
 
 		if (!empty($login)) {
 			if ($user->fetch('', $login, '', 1)>0) {
 				$user->getrights();
 				$this->_user = $user;  //commande.class uses global user
-				if (isset($this->_user->conf->MAIN_LANG_DEFAULT) && ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')) {
+				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+				} else {
+					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
+				$langs->load("main");
+				$langs->load("dict");
+				$langs->load("errors");
 				$langs->load("extdirect");
 				parent::__construct($db);
 			}

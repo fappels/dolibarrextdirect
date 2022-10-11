@@ -164,6 +164,7 @@ For client File uploads create an upload fieldset like below, set extTID field v
 - Supplier orders
 - Interventions
 - https://github.com/fappels/dolibarr-shipmentpackage
+- Manufacture orders
 
 
 > New classes will be added.
