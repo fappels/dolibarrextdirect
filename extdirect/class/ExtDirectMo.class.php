@@ -787,13 +787,8 @@ class ExtDirectMo extends Mo
 						$result = $product->fetch($line->fk_product);
 						if ($result > 0) {
 							$row = $this->getLineData($line, $object, $product, $photoSize);
-							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-								$result = $product->load_stock('warehouseopen, warehouseinternal');
-								if ($result < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
-							} else {
-								$result = $product->load_stock('novirtual, warehouseopen, warehouseinternal');
-								if ($result < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
-							}
+							$result = $product->load_stock('novirtual, warehouseopen, warehouseinternal');
+							if ($result < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
 							if (empty($product->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
 								$product->barcode_type = (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
 							}
