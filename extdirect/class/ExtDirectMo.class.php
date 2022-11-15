@@ -934,36 +934,43 @@ class ExtDirectMo extends Mo
 					$result = $object->fetch($params->origin_id);
 					if ($result < 0) return ExtDirect::getDolError($result, $object->errors, $object->error);
 					if ($result > 0) {
-						$inventorylabel = ($params->inventorylabel ? $params->inventorylabel : $langs->trans("ProductionForRef", $object->ref));
-						$inventorycode = ($params->inventorycode ? $params->inventorycode : $langs->trans("ProductionForRef", $object->ref));
-						if ($qtytoprocess > 0) {
-							$idstockmove = $stockmove->livraison($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $batch_id, $inventorycode);
-						}
-						if ($qtytoprocess < 0) {
-							$idstockmove = $stockmove->reception($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $batch_id, $inventorycode);
-						}
-						if ($idstockmove > 0) {
-							// Record consumption
-							$moline = new MoLine($this->db);
-							$moline->fk_mo = $object->id;
-							$moline->position = $pos;
-							$moline->fk_product = $line->fk_product;
-							$moline->fk_warehouse = $line->fk_warehouse;
-							$moline->qty = $qtytoprocess;
-							$moline->batch = $line->batch;
-							$moline->role = 'consumed';
-							$moline->fk_mrp_production = $line->id;
-							$moline->fk_stock_movement = $idstockmove;
-							$line->fk_user_creat = $this->_user->id;
-
-							$resultmoline = $moline->create($this->_user);
-							if ($resultmoline <= 0) {
-								return ExtDirect::getDolError($resultmoline, $moline->errors, $moline->error);
+						if (!empty($qtytoprocess)) {
+							$inventorylabel = ($params->inventorylabel ? $params->inventorylabel : $langs->trans("ProductionForRef", $object->ref));
+							$inventorycode = ($params->inventorycode ? $params->inventorycode : $langs->trans("ProductionForRef", $object->ref));
+							if ($qtytoprocess > 0) {
+								$idstockmove = $stockmove->livraison($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $batch_id, $inventorycode);
 							}
+							if ($qtytoprocess < 0) {
+								$idstockmove = $stockmove->reception($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $batch_id, $inventorycode);
+							}
+							if ($idstockmove > 0) {
+								// Record consumption
+								$moline = new MoLine($this->db);
+								$moline->fk_mo = $object->id;
+								$moline->position = $pos;
+								$moline->fk_product = $line->fk_product;
+								$moline->fk_warehouse = $line->fk_warehouse;
+								$moline->qty = $qtytoprocess;
+								$moline->batch = $line->batch;
+								$moline->role = 'consumed';
+								$moline->fk_mrp_production = $line->id;
+								$moline->fk_stock_movement = $idstockmove;
+								$line->fk_user_creat = $this->_user->id;
 
-							$pos++;
+								$resultmoline = $moline->create($this->_user);
+								if ($resultmoline <= 0) {
+									return ExtDirect::getDolError($resultmoline, $moline->errors, $moline->error);
+								}
+
+								$pos++;
+							} else {
+								return ExtDirect::getDolError($idstockmove, $stockmove->errors, $stockmove->error);
+							}
 						} else {
-							return ExtDirect::getDolError($idstockmove, $stockmove->errors, $stockmove->error);
+							$resultmoline = $line->update($this->_user);
+							if ($resultmoline <= 0) {
+								return ExtDirect::getDolError($resultmoline, $line->errors, $line->error);
+							}
 						}
 					} else {
 						return PARAMETERERROR;
@@ -998,14 +1005,15 @@ class ExtDirectMo extends Mo
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
-			$lineId = $params->line_id;
+			$idArray = explode('_', $params->id);
+			$lineId = $idArray[0];
 			$line = new MoLine($this->db);
 			$line->fetch($lineId);
-			if (($result = $object->fetch($params->origin_id)) < 0) {
+			if (($result = $object->fetch($line->fk_mo)) < 0) {
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
-			// Add a protection to refuse deleting if object is not in draft status
-			if ($this->statut == self::STATUS_DRAFT && $lineId) {
+			// Add a protection to refuse deleting if object in produced status
+			if ($object->status < self::STATUS_PRODUCED && $lineId) {
 				if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
 			} else {
 				return PARAMETERERROR;
@@ -1045,7 +1053,7 @@ class ExtDirectMo extends Mo
 			} elseif ($field == 'origin_type') {
 				isset($params->origin_line_type) ? $line->{$field} = $params->origin_line_type : (isset($line->{$field}) ? null : $line->{$field} = null);
 			} elseif ($field == 'qty') {
-				!empty($params->qty_toprocess) ? $line->{$field} = $params->qty_toproduce : (isset($line->{$field}) ? null : $line->{$field} = null);
+				!empty($params->qty_asked) ? $line->{$field} = $params->qty_asked : (isset($line->{$field}) ? null : $line->{$field} = null);
 			} else {
 				isset($params->{$field}) ? $line->{$field} = $params->{$field} : (isset($line->{$field}) ? null : $line->{$field} = null);
 			}
@@ -1107,8 +1115,6 @@ class ExtDirectMo extends Mo
 				}
 			} elseif ($field == 'tms') {
 				$data->date_modification = $object->{$field};
-			} elseif ($field == 'position') {
-				$data->rang = $object->{$field};
 			} elseif ($field == 'qty') {
 				$data->qty_consumed = 0;
 				$data->qty_produced = 0;
@@ -1135,8 +1141,8 @@ class ExtDirectMo extends Mo
 					$data->qty_asked = $toConsumeLine->qty;
 					$data->qty_produced = $object->qty;
 				}
-			} elseif ($field == 'position') {
-				$data->rang = $object->{$field};
+			} elseif ($field == 'origin_type') {
+				$data->origin_line_type = $object->{$field};
 			} elseif ($field == 'tms') {
 				$data->date_modification = $object->{$field};
 			} else {
