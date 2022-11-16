@@ -808,6 +808,13 @@ class ExtDirectMo extends Mo
 										array_push($results, $row);
 									}
 								}
+							} elseif ($warehouse_id < 0) {
+								// no warehouse and batch info needed
+								$row->warehouse_id = 0;
+								$row->id = $row->line_id . '_' . $row->warehouse_id;
+								$row->stock = $product->stock_reel;
+								$row->total_stock = $product->stock_reel;
+								array_push($results, $row);
 							} else {
 								if (count($product->stock_warehouse) > 0) {
 									foreach ($product->stock_warehouse as $warehouse=>$stock_warehouse) {
@@ -930,11 +937,11 @@ class ExtDirectMo extends Mo
 				}
 				// prepare fields
 				$this->prepareLineFields($params, $line);
-				if ($params->origin_id > 0 && $params->warehouse_id > 0) {
+				if ($params->origin_id > 0) {
 					$result = $object->fetch($params->origin_id);
 					if ($result < 0) return ExtDirect::getDolError($result, $object->errors, $object->error);
 					if ($result > 0) {
-						if (!empty($qtytoprocess)) {
+						if (!empty($qtytoprocess) && $params->warehouse_id > 0) {
 							$inventorylabel = ($params->inventorylabel ? $params->inventorylabel : $langs->trans("ProductionForRef", $object->ref));
 							$inventorycode = ($params->inventorycode ? $params->inventorycode : $langs->trans("ProductionForRef", $object->ref));
 							if ($qtytoprocess > 0) {
@@ -966,11 +973,13 @@ class ExtDirectMo extends Mo
 							} else {
 								return ExtDirect::getDolError($idstockmove, $stockmove->errors, $stockmove->error);
 							}
-						} else {
+						} elseif (empty($qtytoprocess)) {
 							$resultmoline = $line->update($this->_user);
 							if ($resultmoline <= 0) {
 								return ExtDirect::getDolError($resultmoline, $line->errors, $line->error);
 							}
+						} else {
+							return PARAMETERERROR;
 						}
 					} else {
 						return PARAMETERERROR;
