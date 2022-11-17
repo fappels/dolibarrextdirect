@@ -803,7 +803,7 @@ class ExtDirectMo extends Mo
 									$row->batch_id = 0;
 									$row->has_batch = $product->status_batch;
 									if ($row->has_batch > 0) {
-										if (($res = $product->fetchBatches($results, $row, $product->id, $warehouse_id, $product->stock_warehouse[$warehouse_id]->id, false, null, $line->batch, $photoSize)) < 0) return $res;
+										if (($res = $product->fetchBatches($results, $row, $row->id, $warehouse_id, $product->stock_warehouse[$warehouse_id]->id, false, null, $line->batch, $photoSize)) < 0) return $res;
 									} else {
 										array_push($results, $row);
 									}
@@ -829,7 +829,7 @@ class ExtDirectMo extends Mo
 											$row->batch_id = 0;
 											$row->has_batch = $product->status_batch;
 											if ($row->has_batch > 0) {
-												if (($res = $product->fetchBatches($results, $row, $product->id, $warehouse, $stock_warehouse->id, false, null, $line->batch, $photoSize)) < 0) return $res;
+												if (($res = $product->fetchBatches($results, $row, $row->id, $warehouse, $stock_warehouse->id, false, null, $line->batch, $photoSize)) < 0) return $res;
 											} else {
 												array_push($results, $row);
 											}
