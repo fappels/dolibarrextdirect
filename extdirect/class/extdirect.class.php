@@ -763,7 +763,7 @@ class ExtDirect
 				}
 				$row = new stdClass;
 				$row->name = $name;
-				($langs->trans($label) != $label) ? $row->label = $langs->trans($label) : $label;
+				($langs->trans($label) != $label) ? $row->label = $langs->trans($label) : $row->label = $label;
 				$row->type = $extraFields->attributes[$object->table_element]['type'][$name];
 				$row->default = $extraFields->attributes[$object->table_element]['default'][$name];
 				$row->readonly = (abs($enabled) == 5) ? 1 : 0;
