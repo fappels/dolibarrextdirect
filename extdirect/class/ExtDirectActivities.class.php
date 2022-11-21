@@ -54,7 +54,7 @@ class ExtDirectActivities extends ExtDirectActivity
 				$langs->load("main");
 				$langs->load("dict");
 				$langs->load("errors");
-				$langs->load("extdirect");
+				$langs->load("extdirect@extdirect");
 				parent::__construct($db);
 			}
 		}

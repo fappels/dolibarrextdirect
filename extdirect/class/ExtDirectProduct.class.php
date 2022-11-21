@@ -78,6 +78,7 @@ class ExtDirectProduct extends Product
 				$langs->load("products");
 				$langs->load("stocks");
 				$langs->load("errors");
+				$langs->load("extdirect@extdirect");
 				if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
 				parent::__construct($db);
 			}
