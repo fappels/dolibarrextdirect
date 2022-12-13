@@ -912,19 +912,12 @@ class ExtDirectMo extends Mo
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->mrp->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
-		$batch_id = null;
 		$pos = 0;
 		$object = new Mo($this->db);
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if (($result = $object->fetch($params->origin_id)) < 0) {
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
-			}
-			$idArray = explode('_', $params->id);
-			if ($idArray[1] > 0) {
-				$batch_id = $idArray[1];
-			} else {
-				$batch_id = $params->batch_id;
 			}
 			$qtytoprocess = $params->qty_toprocess;
 			// Add a protection to refuse updating if already produced
@@ -945,10 +938,10 @@ class ExtDirectMo extends Mo
 							$inventorylabel = ($params->inventorylabel ? $params->inventorylabel : $langs->trans("ProductionForRef", $object->ref));
 							$inventorycode = ($params->inventorycode ? $params->inventorycode : $langs->trans("ProductionForRef", $object->ref));
 							if ($qtytoprocess > 0) {
-								$idstockmove = $stockmove->livraison($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $batch_id, $inventorycode);
+								$idstockmove = $stockmove->livraison($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $params->batch_id, $inventorycode);
 							}
 							if ($qtytoprocess < 0) {
-								$idstockmove = $stockmove->reception($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $batch_id, $inventorycode);
+								$idstockmove = $stockmove->reception($this->_user, $line->fk_product, $params->warehouse_id, $qtytoprocess, 0, $inventorylabel, dol_now(), $params->eatby, $params->sellby, $params->batch, $params->batch_id, $inventorycode);
 							}
 							if ($idstockmove > 0) {
 								// Record consumption
