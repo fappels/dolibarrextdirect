@@ -102,23 +102,29 @@ function doRpc($cdata)
 			'method'=>$method
 		);
 
-		dol_include_once("/extdirect/class/$action.class.php");
-		$o = new $action($_SESSION['dol_login']);
-		if (isset($mdef['len'])) {
-			$params = isset($cdata->data) && is_array($cdata->data) ? $cdata->data : array();
-		} else {
-			$params = array($cdata->data);
-		}
-		error_reporting(0); // comment for debugging or change 0 to E_ALL
-		if (!object_analyse_sql_and_script($params, 0)) {
-			$result = VULNERABILITYERROR;
-		} else {
-			if (ExtDirect::checkDolVersion() < 0) {
-				$result = COMPATIBILITYERROR;
+		$actionAvailable = true;
+		if (ExtDirect::checkDolVersion(0, '', '10') && $action == 'ExtDirectMo') $actionAvailable = false; // skip non existing classes
+		if ($actionAvailable) {
+			dol_include_once("/extdirect/class/$action.class.php");
+			$o = new $action($_SESSION['dol_login']);
+			if (isset($mdef['len'])) {
+				$params = isset($cdata->data) && is_array($cdata->data) ? $cdata->data : array();
 			} else {
-				dol_syslog(get_class($o) . '::' . $method, LOG_DEBUG);
-				$result = call_user_func_array(array($o, $method), $params);
+				$params = array($cdata->data);
 			}
+			error_reporting(0); // comment for debugging or change 0 to E_ALL
+			if (!object_analyse_sql_and_script($params, 0)) {
+				$result = VULNERABILITYERROR;
+			} else {
+				if (ExtDirect::checkDolVersion() < 0) {
+					$result = COMPATIBILITYERROR;
+				} else {
+					dol_syslog(get_class($o) . '::' . $method, LOG_DEBUG);
+					$result = call_user_func_array(array($o, $method), $params);
+				}
+			}
+		} else {
+			$result = NOTENABLEDERROR;
 		}
 		$error = new stdClass;
 		if (is_int($result) && ($result < 0)) {
