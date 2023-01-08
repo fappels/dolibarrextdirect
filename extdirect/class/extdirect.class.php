@@ -949,7 +949,8 @@ class ExtDirect
 		$sql .= ", e.label";
 		$sql .= " FROM ".MAIN_DB_PREFIX."user as u";
 		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."usergroup_user as ug ON ug.fk_user = u.rowid";
-		$sql .= " INNER JOIN ".MAIN_DB_PREFIX."entity as e ON e.rowid = ug.entity";
+		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."entity as e ON e.rowid = ug.entity";
+		$sql .= " WHERE ((ug.entity > 0 AND e.label IS NOT NULL) OR ug.entity IS NULL)";
 		if (!empty($user->socid)) {
 			$sql .= " AND u.fk_soc = ".((int) $user->socid);
 		}
@@ -1038,11 +1039,11 @@ class ExtDirect
 					}
 					$labeltoshow .= $moreinfo;
 
-					$out .= '<option value="'.$obj->rowid.'_'.$obj->entity.'"';
+					$out .= '<option value="'.$obj->rowid.'_'.($obj->entity ? $obj->entity : 0).'"';
 					if ($disableline) {
 						$out .= ' disabled';
 					}
-					if ((is_object($selected) && $selected->id == $obj->rowid) || (!is_object($selected) && in_array($obj->rowid.'_'.$obj->entity, $selected))) {
+					if ((is_object($selected) && $selected->id == $obj->rowid) || (!is_object($selected) && in_array($obj->rowid.'_'.($obj->entity ? $obj->entity : 0), $selected))) {
 						$out .= ' selected';
 					}
 					$out .= ' data-html="';
