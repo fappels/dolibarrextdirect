@@ -100,13 +100,32 @@ if (!$error) {
 					$res = $extDirect->delete($user);
 				} else {
 					//update
-                    $extDirect->fetch($extDirect->id);
-					if ($extDirect->fk_user != GETPOST('userid'.$i, 'alpha') ||
-						$extDirect->identify != GETPOST('identify'.$i, 'int')
-					) {
-						$extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
-						$extDirect->identify = GETPOST('identify'.$i, 'int');
-						$res = $extDirect->update($user, 1);
+					$extDirect->fetch($extDirect->id);
+					if (!empty($conf->multicompany->enabled) && !empty($conf->global->MULTICOMPANY_TRANSVERSE_MODE)) {
+						$user_entity = explode('_', GETPOST('userid'.$i, 'alpha'));
+
+						if ($extDirect->fk_user != $user_entity[0] ||
+							$extDirect->entity != $user_entity[1] ||
+							$extDirect->identify != GETPOST('identify'.$i, 'int')
+						) {
+							$extDirect->fk_user = $user_entity[0];
+							$extDirect->entity = $user_entity[1];
+							$extDirect->identify = GETPOST('identify'.$i, 'int');
+							$res = $extDirect->update($user, 1);
+						}
+					} else {
+						if ($extDirect->fk_user != GETPOST('userid'.$i, 'alpha') ||
+							$extDirect->identify != GETPOST('identify'.$i, 'int')
+						) {
+							$extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
+							if (!empty($conf->multicompany->enabled)) {
+								$extUser = new User($db);
+								$extUser->fetch($extDirect->fk_user);
+								$extDirect->entity = $extUser->entity;
+							}
+							$extDirect->identify = GETPOST('identify'.$i, 'int');
+							$res = $extDirect->update($user, 1);
+						}
 					}
 				}
 				$i++;
@@ -242,7 +261,16 @@ if ($mode == $tabs['tab1']->mode) {
 			print '<td>'.$user_app['datec'].'</td>';
 			print '<td>'.$user_app['date_last_connect'].'</td>';
 			print '<td align="right" width="60">';
-			print $form->select_dolusers($userId, 'userid'.$i, 1, $userExclude, 0, '', '');
+			if (!empty($conf->multicompany->enabled) && !empty($conf->global->MULTICOMPANY_TRANSVERSE_MODE)) {
+				print $extDirect->selectdolusers($userId.'_'.$user_app['entity'], 'userid'.$i, 1, $userExclude, 0, '', '');
+			} else {
+				if (!empty($conf->multicompany->enabled)) {
+					$extUser = new User($db);
+					$extUser->fetch($userId);
+					if ($extDirect->entity != $extUser->entity) $userId = -1; // entity mismatch
+				}
+				print $form->select_dolusers($userId, 'userid'.$i, 1, $userExclude, 0, '', '');
+			}
 			print '</td>';
 			print '<td align="right" width="40">';
 			print '<input '.$bc[$var].' type="checkbox" name="ACK" value="1"';

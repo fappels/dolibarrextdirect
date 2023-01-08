@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2013-2014  Francis Appels <francis.appels@z-application.com>
+ * Copyright (C) 2013-2023  Francis Appels <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -141,12 +141,21 @@ class ExtDirectAuthenticate extends ExtDirect
 			if ($ack_id == $this->ack_id) {
 				$_SESSION['dol_login'] = $this->_user->login;
 			}
-			if (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+			$tmpEntity = $conf->entity;
+			if (isset($this->entity) && ($this->entity > 0)) {
+				$_SESSION['dol_entity'] = $this->entity;
+				$conf->entity = $this->entity;
+			} elseif (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+				// backward compatiblity
 				$_SESSION['dol_entity'] = $this->_user->entity;
 				$conf->entity = $this->_user->entity;
 			} else {
 				$_SESSION['dol_entity'] = 1;
 				$conf->entity = 1;
+			}
+			if ($tmpEntity != $conf->entity) {
+				$conf->setValues($this->db);
+				$mysoc->setMysoc($conf); // get company name of entity
 			}
 			$result->id = (int) $this->id;
 			$result->ack_id = $this->ack_id;
@@ -219,7 +228,11 @@ class ExtDirectAuthenticate extends ExtDirect
 				if ($param->ack_id == $this->ack_id) {
 					$_SESSION['dol_login'] = $this->_user->login;
 				}
-				if (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+				if (isset($this->entity) && ($this->entity > 0)) {
+					$_SESSION['dol_entity'] = $this->entity;
+					$conf->entity = $this->entity;
+				} elseif (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+					// backward compatiblity
 					$_SESSION['dol_entity'] = $this->_user->entity;
 					$conf->entity = $this->_user->entity;
 				} else {
