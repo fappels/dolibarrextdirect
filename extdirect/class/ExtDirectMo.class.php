@@ -1034,18 +1034,16 @@ class ExtDirectMo extends Mo
 	 * private method to copy package fields into dolibarr object
 	 *
 	 * @param stdclass $params object with fields
-	 * @param CommonObjectLine $line line object with fields
+	 * @param MoLine $line line object with fields
 	 * @return null
 	 */
-	private function prepareLineFields($params, CommonObjectLine &$line)
+	private function prepareLineFields($params, MoLine &$line)
 	{
 		foreach ($line->fields as $field => $info) {
 			if ($field == 'fk_product') {
 				isset($params->product_id) ? $line->{$field} = $params->product_id : (isset($line->{$field}) ? null : $line->{$field} = null);
 			} elseif ($field == 'fk_user_modif') {
-				$line->{$field} = $this->_user_id;
-			} elseif ($field == 'fk_user_modif') {
-				$line->{$field} = $this->_user_id;
+				$line->{$field} = $this->_user->id;
 			} elseif ($field == 'origin_id') {
 				isset($params->origin_line_id) ? $line->{$field} = $params->origin_line_id : (isset($line->{$field}) ? null : $line->{$field} = null);
 			} elseif ($field == 'fk_mo') {
@@ -1078,13 +1076,13 @@ class ExtDirectMo extends Mo
 	/**
 	 * get line data from object
 	 *
-	 * @param CommonObjectLine	$object		object
+	 * @param MoLine	$object		object
 	 * @param Mo				$mo			Manufacturing order object
 	 * @param ExtDirectProduct	$product	product object
 	 * @param String			$photoSize	format size of photo 'mini', 'small' or 'full' to add to line
 	 * @return stdClass object with data
 	 */
-	private function getLineData(CommonObjectLine $object, Mo $mo, ExtDirectProduct $product = null, $photoSize = '')
+	private function getLineData(MoLine $object, Mo $mo, ExtDirectProduct $product = null, $photoSize = '')
 	{
 		$data = new stdClass;
 		$myUser = new User($this->db);
