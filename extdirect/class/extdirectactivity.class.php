@@ -44,6 +44,7 @@ class ExtDirectActivity extends CommonObject
 	public $fk_user;
 	public $app_id;
 	public $app_version;
+	public $app_name;
 	public $activity_name;
 	public $activity_id;
 	public $datec='';

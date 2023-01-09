@@ -428,7 +428,7 @@ class ExtDirectActionComm extends ActionComm
 
 			$param->id=$this->id;
 			$this->_societe->id=$this->socid;
-			$this->_societe->add_commercial($this->_user, $this->usertodoid);
+			$this->_societe->add_commercial($this->_user, $this->userownerid);
 		}
 
 		if (is_array($params)) {

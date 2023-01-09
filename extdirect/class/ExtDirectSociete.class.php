@@ -1193,7 +1193,7 @@ class ExtDirectSociete extends Societe
 		isset($params->zip) ? ($this->zip = $params->zip) : null;
 		isset($params->town) ? ($this->town = $params->town) : null;
 		isset($params->fax) ? ($this->fax = $params->fax) : null;
-		isset($params->phone) ? ($this->tel = $params->phone) : null;
+		isset($params->phone) ? ($this->phone = $params->phone) : null;
 		isset($params->skype) ? ($this->skype = $params->skype) : null;
 		isset($params->email) ? ($this->email = $params->email) : null;
 		isset($params->ref) ? ($this->ref=$params->ref) : null;

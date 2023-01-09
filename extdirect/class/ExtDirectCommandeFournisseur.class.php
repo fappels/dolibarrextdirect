@@ -530,7 +530,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
 		isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
 		isset($params->date_delivered) ? ( $this->date_delivered =$params->date_delivered) : ( isset($this->date_delivered) ? null : ($this->date_delivered = null));
-		isset($params->deliver_date) ? ( $this->delivary_date = $params->deliver_date) : ( isset($this->delivary_date) ? null : ($this->delivary_date = null));
+		isset($params->deliver_date) ? ( $this->delivery_date = $params->deliver_date) : ( isset($this->delivery_date) ? null : ($this->delivery_date = null));
 		isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
 		isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
 		isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;

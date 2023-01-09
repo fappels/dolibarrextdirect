@@ -37,6 +37,8 @@ class ExtDirectFormProduct extends FormProduct
 	const ALLWAREHOUSE_LABEL = 'AllLocationsLabel';
 	const ALLWAREHOUSE_DESCRIPTION = 'AllLocationsDesc';
 
+	public $errors = array();
+
 	/** Constructor
 	 *
 	 * @param string $login user name
