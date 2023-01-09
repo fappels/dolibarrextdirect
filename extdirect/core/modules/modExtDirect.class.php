@@ -91,15 +91,13 @@ class modExtDirect extends DolibarrModules
 		$this->depends = array("modProduct","modStock","modExpedition");       // List of modules id that must be enabled if this module is enabled
 		$this->requiredby = array();    // List of modules id to disable if this one is disabled
 		$this->phpmin = array(5,2);                 // Minimum version of PHP required by module
-		$this->need_dolibarr_version = array(3,8);  // Minimum version of Dolibarr required by module
+		$this->need_dolibarr_version = array(4,0);  // Minimum version of Dolibarr required by module
 		$this->langfiles = array("extdirect@extdirect");
 
 		// Constants
 		// List of particular constants to add when module is enabled
 		// (key, 'chaine', value, desc, visible, 'current' or 'allentities', deleteonunactive)
-		$this->const=array(0=>array('DIRECTCONNECT_AUTO_ASIGN','yesno',0,'Automatic user asignment to application id',1),
-									 1=>array('DIRECTCONNECT_AUTO_USER','chaine','','Automatic asigned user id',1)
-		);
+		$this->const=array();
 
 		// Array to add new pages in new tabs
 
@@ -141,9 +139,19 @@ class modExtDirect extends DolibarrModules
 	 */
 	public function init($options = '')
 	{
+		global $conf;
+
 		$sql = array();
 
 		$result=$this->_load_tables('/extdirect/sql/');
+		if ($result < 0) return -1; // Do not activate module if not allowed errors found on module SQL queries (the _load_table run sql with run_sql with error allowed parameter to 'default')
+		// set default constant on first enable
+		if (!isset($conf->global->DIRECTCONNECT_AUTO_ASIGN)) {
+			dolibarr_set_const($this->db, 'DIRECTCONNECT_AUTO_ASIGN', '0', 'yesno', 1, 'Automatic user asignment to application id', 0);
+		}
+		if (!isset($conf->global->DIRECTCONNECT_AUTO_USER)) {
+			dolibarr_set_const($this->db, 'DIRECTCONNECT_AUTO_USER', '', 'chaine', 1, 'Automatic asigned user id', 0);
+		}
 
 		return $this->_init($sql, $options);
 	}
