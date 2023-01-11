@@ -475,7 +475,20 @@ class ExtDirect
 			$sql.= " WHERE rowid=".$this->id;
 
 			$resql = $this->db->query($sql);
-			if (! $resql) { $error++; $this->errors[]="Error ".$this->db->lasterror(); }
+			if (! $resql) {
+				$error++;
+				$this->errors[]="Error ".$this->db->lasterror();
+			} else {
+				// delete child table
+				$sql = "DELETE FROM ".MAIN_DB_PREFIX."extdirect_activity";
+				$sql.= " WHERE app_id = '".$this->db->escape($this->app_id)."'";
+
+				$resql = $this->db->query($sql);
+				if (! $resql) {
+					$error++;
+					$this->errors[]="Error ".$this->db->lasterror();
+				}
+			}
 		}
 
 		// Commit or rollback
