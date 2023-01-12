@@ -1430,7 +1430,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		global $conf, $mysoc;
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
+		if (empty($conf->reception->enabled)) {
+			if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
+		} else {
+			if (!isset($this->_user->rights->reception->creer)) return PERMISSIONERROR;
+		}
 		dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 		$orderlineUpdated = false;
 
