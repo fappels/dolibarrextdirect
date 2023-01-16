@@ -2053,12 +2053,13 @@ class ExtDirectProduct extends Product
 						$row->stock_id = 0;
 						$row->sellby = null;
 						$row->eatby = null;
-						$row->batch = $batchValue;
+						$row->batch = null; // no preset batch for non serail to allow to set full batch info by GS1 code.
 						$row->stock_reel= 0;
 						$row->stock = 0;
 						$row->batch_info = null;
 						if ($this->status_batch == 2) {
-							// if unique batch type always receive one by one.
+							// if unique batch type always receive one by one and preset batch.
+							$row->batch = $batchValue;
 							$row->qty_toreceive = 1;
 						}
 						$num++;
