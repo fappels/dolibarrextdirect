@@ -2046,25 +2046,6 @@ class ExtDirectProduct extends Product
 						$num++;
 						array_push($results, clone $row);
 						break;
-					} else {
-						// new batch
-						$row->id = $id;
-						$row->batch_id = 0;
-						$row->stock_id = 0;
-						$row->sellby = null;
-						$row->eatby = null;
-						$row->batch = null; // no preset batch for non serail to allow to set full batch info by GS1 code.
-						$row->stock_reel= 0;
-						$row->stock = 0;
-						$row->batch_info = null;
-						if ($this->status_batch == 2) {
-							// if unique batch type always receive one by one and preset batch.
-							$row->batch = $batchValue;
-							$row->qty_toreceive = 1;
-						}
-						$num++;
-						array_push($results, clone $row);
-						break;
 					}
 				} elseif ($batchId == $batch->id) {
 					$row->id = $id;
@@ -2073,6 +2054,21 @@ class ExtDirectProduct extends Product
 					break;
 				}
 				$batchesQty += $batch->qty;
+			}
+			if (empty($batchId) && !empty($batchValue) && $this->status_batch == 2) {
+				// new serial number
+				$row->id = $id;
+				$row->batch_id = 0;
+				$row->stock_id = 0;
+				$row->sellby = null;
+				$row->eatby = null;
+				$row->batch = $batchValue;
+				$row->stock_reel= 0;
+				$row->stock = 0;
+				$row->batch_info = null;
+				$row->qty_toreceive = 1;
+				$num++;
+				array_push($results, clone $row);
 			}
 		} elseif (isset($row->id) && !empty($productStockId)) {
 			// no batch
