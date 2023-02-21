@@ -229,7 +229,7 @@ class ExtDirectAuthenticate extends ExtDirect
 					$_SESSION['dol_login'] = $this->_user->login;
 					$_SESSION['dol_tz'] = $param->local_timezone_offset;
 					$_SESSION['dol_tz_string'] = $param->local_timezone;
-					$param->local_dst ? $_SESSION['dol_dst'] = 1 : $_SESSION['dol_dst'] = 0;
+					empty($param->local_dst) ? $_SESSION['dol_dst'] = 0 : $_SESSION['dol_dst'] = 1;
 				}
 				if (isset($this->entity) && ($this->entity > 0)) {
 					$_SESSION['dol_entity'] = $this->entity;
