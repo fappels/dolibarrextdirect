@@ -41,8 +41,9 @@ class ExtDirectCommande extends Commande
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
 		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO');
 	private $_enabled = false;
+	private $_productstat_cache = array();
 
-		/**
+	/**
 	 * Fully shippable status of validated order
 	 */
 	const STATUS_VALIDATED_FULLY_SHIPPABLE = 20;
@@ -53,12 +54,12 @@ class ExtDirectCommande extends Commande
 	const STATUS_VALIDATED_PARTLY_SHIPPABLE = 21;
 
 	/**
-	 * Fully shippable status of validated order
+	 * Fully shippable status of on process order
 	 */
 	const STATUS_ONPROCESS_FULLY_SHIPPABLE = 22;
 
 	/**
-	 * partly shippable status of validated order
+	 * partly shippable status of on process order
 	 */
 	const STATUS_ONPROCESS_PARTLY_SHIPPABLE = 23;
 
@@ -1038,7 +1039,6 @@ class ExtDirectCommande extends Commande
 
 		dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 		$generic_product = new ExtDirectProduct($this->db);
-		$productstat_cache = array();
 		$notshippable = 0;
 		$notshippableQty = 0;
 		$shippableQty = 0;
@@ -1055,11 +1055,11 @@ class ExtDirectCommande extends Commande
 				$qtyToShip = $this->lines[$lig]->qty - $this->expeditions[$this->lines[$lig]->id];
 
 				// Get local and virtual stock and store it into cache
-				if (empty($productstat_cache[$this->lines[$lig]->fk_product])) {
+				if (empty($this->_productstat_cache[$this->lines[$lig]->fk_product])) {
 					$generic_product->load_stock('nobatch, novirtual');
-					$productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
+					$this->_productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
 				} else {
-					$generic_product->stock_reel = $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
+					$generic_product->stock_reel = $this->_productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
 				}
 
 				if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
