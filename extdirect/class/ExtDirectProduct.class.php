@@ -163,7 +163,7 @@ class ExtDirectProduct extends Product
 				//! Ref
 				$row->ref= $this->ref;
 				$row->label= $this->label;
-				$row->description= $this->description?$this->description:'';
+				$row->description= $this->description?html_entity_decode($this->description):'';
 				//! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
 				$row->type= $this->type;
 				$row->note= $this->note;
