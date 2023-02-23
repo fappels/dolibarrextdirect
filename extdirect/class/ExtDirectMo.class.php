@@ -42,6 +42,42 @@ class ExtDirectMo extends Mo
 	private $_user;
 	private $_moConstants = array('STOCK_ALLOW_NEGATIVE_TRANSFER');
 	private $_enabled = false;
+	private $_productstock_cache = array();
+
+	/**
+	 * Fully producible status of validated order
+	 */
+	const STATUS_VALIDATED_FULLY_PRODUCIBLE = 20;
+
+	/**
+	 * Fully producible status of onprocess order
+	 */
+	const STATUS_INPROGRESS_FULLY_PRODUCIBLE = 21;
+
+	/**
+	 * partly producible status of validated order
+	 */
+	const STATUS_VALIDATED_PARTLY_PRODUCIBLE = 22;
+
+	/**
+	 * partly producible status of on process order
+	 */
+	const STATUS_INPROGRESS_PARTLY_PRODUCIBLE = 23;
+
+	/**
+	 * Not producible status of validate order
+	 */
+	const STATUS_VALIDATED_NOT_PRODUCIBLE = 24;
+
+	/**
+	 * Not producible status of on process order
+	 */
+	const STATUS_INPROGRESS_NOT_PRODUCIBLE = 25;
+
+	/**
+	 * end status to allow status itteration
+	 */
+	const STATUS_END = 26;
 
 	/** Constructor
 	 *
@@ -279,13 +315,26 @@ class ExtDirectMo extends Mo
 		$row = new stdClass;
 		$id = 0;
 		$ref = '';
+		$status_ids = array();
+		$customStatus = false;
 		$object = new Mo($this->db);
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'id') $id = $filter->value;
 				elseif ($filter->property == 'ref') $ref = $filter->value;
+				elseif ($filter->property == 'status_id') array_push($status_ids, $filter->value);
 			}
+		}
+
+		if (in_array(self::STATUS_VALIDATED_FULLY_PRODUCIBLE, $status_ids)
+			|| in_array(self::STATUS_VALIDATED_NOT_PRODUCIBLE, $status_ids)
+			|| in_array(self::STATUS_VALIDATED_PARTLY_PRODUCIBLE, $status_ids)
+			|| in_array(self::STATUS_INPROGRESS_FULLY_PRODUCIBLE, $status_ids)
+			|| in_array(self::STATUS_INPROGRESS_NOT_PRODUCIBLE, $status_ids)
+			|| in_array(self::STATUS_INPROGRESS_PARTLY_PRODUCIBLE, $status_ids)
+		) {
+			$customStatus = true;
 		}
 
 		if (($id > 0) || ($ref != '')) {
@@ -293,6 +342,10 @@ class ExtDirectMo extends Mo
 			if ($result < 0) return ExtDirect::getDolError($result, $object->errors, $object->error);
 			if ($result > 0) {
 				$row = $this->getData($object);
+				if ($customStatus) {
+					$this->getProducible($row, $object->qty);
+					$row->statusdisplay = html_entity_decode($this->LibStatut($row->status_id, false, 1));
+				}
 				array_push($results, $row);
 			} else {
 				return 0;
@@ -455,6 +508,7 @@ class ExtDirectMo extends Mo
 		$originId = 0;
 		$status_id = array();
 		$contentFilter = null;
+		$customStatus = false;
 
 		$includeTotal = true;
 
@@ -477,7 +531,20 @@ class ExtDirectMo extends Mo
 			}
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, mo.rowid, mo.ref, mo.status, bom.ref as ref_bom, p.ref as ref_product, ea.activity_status, mo.date_start_planned, mol.role, mol.qty";
+		if (in_array(self::STATUS_VALIDATED_FULLY_PRODUCIBLE, $status_id)
+			|| in_array(self::STATUS_VALIDATED_NOT_PRODUCIBLE, $status_id)
+			|| in_array(self::STATUS_VALIDATED_PARTLY_PRODUCIBLE, $status_id)
+			|| in_array(self::STATUS_INPROGRESS_FULLY_PRODUCIBLE, $status_id)
+			|| in_array(self::STATUS_INPROGRESS_NOT_PRODUCIBLE, $status_id)
+			|| in_array(self::STATUS_INPROGRESS_PARTLY_PRODUCIBLE, $status_id)
+		) {
+			$customStatus = true;
+			// always load page from start to be able to sort on complete result
+			$limit += $start;
+			$start = 0;
+		}
+
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, mo.rowid, mo.ref, mo.status, bom.ref as ref_bom, p.ref as ref_product, ea.activity_status, mo.date_start_planned, mol.role, mol.qty, mo.qty as product_qty";
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "mrp_mo as mo";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "societe as s ON mo.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "bom_bom as bom ON mo.fk_bom = bom.rowid";
@@ -503,6 +570,8 @@ class ExtDirectMo extends Mo
 		if ($statusFilterCount > 0) {
 			$sqlWhere .= " AND ( ";
 			foreach ($status_id as $key => $status) {
+				if ($status === self::STATUS_VALIDATED_FULLY_PRODUCIBLE || $status === self::STATUS_VALIDATED_NOT_PRODUCIBLE || $status === self::STATUS_VALIDATED_PARTLY_PRODUCIBLE) $status = self::STATUS_VALIDATED;
+				if ($status === self::STATUS_INPROGRESS_FULLY_PRODUCIBLE || $status === self::STATUS_INPROGRESS_NOT_PRODUCIBLE || $status === self::STATUS_INPROGRESS_PARTLY_PRODUCIBLE) $status = self::STATUS_INPROGRESS;
 				$sqlWhere  .= "mo.status = " . $status;
 				if ($key < ($statusFilterCount - 1)) $sqlWhere  .= " OR ";
 			}
@@ -579,7 +648,10 @@ class ExtDirectMo extends Mo
 				$row->ref           = $obj->ref;
 				$row->ref_bom       = $obj->ref_bom;
 				$row->status_id = (int) $obj->status;
-				$row->statusdisplay = html_entity_decode($this->LibStatut($obj->status, 1));
+				if ($customStatus && $obj->status > self::STATUS_DRAFT && $obj->fk_status < self::STATUS_PRODUCED) {
+					$this->getProducible($row, $obj->product_qty);
+				}
+				$row->statusdisplay = html_entity_decode($this->LibStatut($row->status_id, 1));
 				$row->status        = $obj->activity_status;
 				$row->ref_product   = $obj->ref_product;
 				$row->date_start_planned  = $this->db->jdate($obj->date_start_planned);
@@ -590,9 +662,16 @@ class ExtDirectMo extends Mo
 			foreach ($rows as $key => &$row) {
 				$row->qty_toproduce = $qty_toproduce[$key];
 				$row->qty_produced = $qty_produced[$key];
-				array_push($data, $row);
+				if ($customStatus) {
+					if (in_array($row->status_id, $status_id)) {
+						array_push($data, $row);
+					}
+				} else {
+					array_push($data, $row);
+				}
 			}
 			$this->db->free($resql);
+			if ($customStatus && $sorterSize > 0) $data = ExtDirect::resultSort($data, $params->sort);
 			if ($includeTotal) {
 				$result->total = $total;
 				$result->data = $data;
@@ -603,6 +682,48 @@ class ExtDirectMo extends Mo
 		} else {
 			return SQLERROR;
 		}
+	}
+
+	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
+	/**
+	 *	Return label of status
+	 *
+	 *	@param		int		$status      	  Id status
+	 *  @param      int		$mode        	  1=Short label
+	 *  @return     string					  Label of status
+	 */
+	public function LibStatut($status, $mode = 0)
+	{
+		// phpcs:enable
+		global $langs, $conf;
+
+		if ($status == self::STATUS_CANCELED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('Canceled');
+		} elseif ($status == self::STATUS_DRAFT) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('Draft');
+		} elseif ($status == self::STATUS_VALIDATED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('Validated');
+		} elseif ($status == self::STATUS_INPROGRESS) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('InProgress');
+		} elseif ($status == self::STATUS_PRODUCED) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMOProduced');
+		} elseif ($status == self::STATUS_VALIDATED_FULLY_PRODUCIBLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMoValidatedFullyProducibleShort');
+		} elseif ($status == self::STATUS_VALIDATED_NOT_PRODUCIBLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMoValidatedNotProducibleShort');
+		} elseif ($status == self::STATUS_VALIDATED_PARTLY_PRODUCIBLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMoValidatedPartlyProducibleShort');
+		} elseif ($status == self::STATUS_INPROGRESS_FULLY_PRODUCIBLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMoInprogessFullyProducibleShort');
+		} elseif ($status == self::STATUS_INPROGRESS_NOT_PRODUCIBLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMoInprogessNotProducibleShort');
+		} elseif ($status == self::STATUS_INPROGRESS_PARTLY_PRODUCIBLE) {
+			$labelStatusShort = $langs->transnoentitiesnoconv('StatusMoInprogessPartlyProducibleShort');
+		} else {
+			$labelStatusShort = '';
+		}
+
+		return $labelStatusShort;
 	}
 
 	/**
@@ -616,13 +737,15 @@ class ExtDirectMo extends Mo
 		$results = array();
 		$statut = 0;
 		$row = new stdClass;
-		while (($result = $this->LibStatut($statut, 0)) !== null) {
-			if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
-			$row = new stdClass;
-			$row->id = $statut;
-			$row->status = html_entity_decode($result);
+		while ($statut < self::STATUS_END) {
+			$result = $this->LibStatut($statut);
+			if (!empty($result)) {
+				$row = new stdClass;
+				$row->id = $statut;
+				$row->status = html_entity_decode($result);
+				array_push($results, $row);
+			}
 			$statut++;
-			array_push($results, $row);
 		}
 		return $results;
 	}
@@ -741,6 +864,84 @@ class ExtDirectMo extends Mo
 			} else {
 				isset($params->{$field}) ? $this->{$field} = $params->{$field} : (isset($this->{$field}) ? null : $this->{$field} = null);
 			}
+		}
+	}
+
+	/**
+	 * Get producible status
+	 *
+	 * @param object $row row of resultset
+	 * @return void
+	 */
+	private function getProducible(&$row, $productQty)
+	{
+		dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
+		$product = new ExtDirectProduct($this->db);
+		$notproducable = 0;
+		$notfullyproducable = 0;
+		$qtyToProduce = 0;
+		$qtyProduced = 0;
+		$this->id = $row->id;
+		$this->getLinesArray();
+		foreach ($this->lines as $line) {
+			if ($line->fk_product > 0) {
+				// store to consume and consumed product
+				if (!isset($qtyToConsume[$line->fk_product])) $qtyToConsume[$line->fk_product] = 0;
+				if (!isset($qtyConsumed[$line->fk_product])) $qtyConsumed[$line->fk_product] = 0;
+				if ($line->role == 'toconsume') {
+					$qtyToConsume[$line->fk_product] += $line->qty;
+				} elseif ($line->role == 'consumed') {
+					$qtyConsumed[$line->fk_product] += $line->qty;
+				}
+				// store toproduce and produced
+				if ($line->role == 'toproduce') {
+					$qtyToProduce += $line->qty;
+				} elseif ($line->role == 'produced') {
+					$qtyProduced += $line->qty;
+				}
+				// Get product stock and store it
+				if (empty($this->_productstock_cache[$line->fk_product])) {
+					$product->fetch($line->fk_product);
+					$product->load_stock();
+					$this->_productstock_cache[$line->fk_product]['stock_reel'] = $product->stock_reel;
+					$this->_productstock_cache[$line->fk_product]['stock_virtual'] = $product->stock_theorique;
+					$this->_productstock_cache[$line->fk_product]['type'] = $product->type;
+				}
+			}
+		}
+		$qtyToComplete = $qtyToProduce - $qtyProduced;
+		if ($qtyToComplete > 0) {
+			foreach ($qtyToConsume as $fk_product => $qty) {
+				if ($this->_productstock_cache[$fk_product]['type'] == 0) {
+					$qtyToProduce = $qty - $qtyConsumed[$fk_product];
+					if ($productQty > 1) {
+						// situation for more item to produce (if stock enough for one item we can start production)
+						if ($qtyToProduce / $qtyToComplete > $this->_productstock_cache[$fk_product]['stock_reel']) {
+							$notproducable++;
+						} elseif ($qtyToProduce > $this->_productstock_cache[$fk_product]['stock_reel'] && $qtyToProduce / $qtyToComplete <= $this->_productstock_cache[$fk_product]['stock_reel']) {
+							$notfullyproducable++;
+						}
+					} else {
+						// situation for 1 item to produce (if stock is soon expected we can start production)
+						if ($qtyToProduce > $this->_productstock_cache[$fk_product]['stock_reel']) {
+							$notfullyproducable++;
+						}
+						if ($qtyToProduce > $this->_productstock_cache[$fk_product]['stock_virtual']) {
+							$notproducable++;
+						}
+					}
+				}
+			}
+		}
+		if ($notproducable > 0) {
+			if ($row->status_id == self::STATUS_VALIDATED) $row->status_id = self::STATUS_VALIDATED_NOT_PRODUCIBLE;
+			elseif ($row->status_id == self::STATUS_INPROGRESS) $row->status_id = self::STATUS_INPROGRESS_NOT_PRODUCIBLE;
+		} elseif ($notfullyproducable > 0) {
+			if ($row->status_id == self::STATUS_VALIDATED) $row->status_id = self::STATUS_VALIDATED_PARTLY_PRODUCIBLE;
+			elseif ($row->status_id == self::STATUS_INPROGRESS) $row->status_id = self::STATUS_INPROGRESS_PARTLY_PRODUCIBLE;
+		} else {
+			if ($row->status_id == self::STATUS_VALIDATED) $row->status_id = self::STATUS_VALIDATED_FULLY_PRODUCIBLE;
+			elseif ($row->status_id == self::STATUS_INPROGRESS) $row->status_id = self::STATUS_INPROGRESS_FULLY_PRODUCIBLE;
 		}
 	}
 
