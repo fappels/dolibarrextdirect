@@ -597,7 +597,7 @@ class ExtDirectProduct extends ProductFournisseur
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if ($param->element == 'productlot') {
+			if (isset($param->element) && $param->element == 'productlot') {
 				$productLot = new Productlot($this->db);
 				if ($productLot->id != $param->object_id && ($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 				$productLot->array_options['options_'.$param->name] = $param->raw_value;
@@ -930,7 +930,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$origin_element = '';
 				$origin_id = null;
 				$disablestockchangeforsubproduct = 0;
-				if ($param->notrigger) $notrigger = $param->notrigger;
+				if (isset($param->notrigger)) $notrigger = $param->notrigger;
 				$id = $param->id;
 				if (($result = $this->fetch($id, '', '')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				// supplier fields
@@ -987,8 +987,8 @@ class ExtDirectProduct extends ProductFournisseur
 					// End call triggers
 				}
 
-				if ($param->origin_element) $origin_element = $param->origin_element;
-				if ($param->origin_id) $origin_id = $param->origin_id;
+				if (!empty($param->origin_element)) $origin_element = $param->origin_element;
+				if (!empty($param->origin_id)) $origin_id = $param->origin_id;
 				if (!empty($param->disablestockchangeforsubproduct)) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
 
 				if (($updated || $updatedBarcode || $updatedSellPrice || $updatedBuyPrice) && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;

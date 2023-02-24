@@ -686,6 +686,8 @@ class ExtDirect
 	public static function prepareField($diff, $param, $object, $paramName = null, $propertyName = null, $default = null, $paramIndex = null, $propertyIndex = null)
 	{
 		$epsilon = 0.00001;
+		$paramValue = null;
+		$propertyValue = null;
 		if (!empty($propertyName) && isset($object->$propertyName)) {
 			$propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
 		} elseif (!is_object($object)) {

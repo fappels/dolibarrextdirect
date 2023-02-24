@@ -504,7 +504,8 @@ class ExtDirectExpedition extends Expedition
 		isset($params->deliver_date) ? $this->date_delivery = $params->deliver_date : (isset($this->date_delivery) ? null : $this->date_delivery = null);
 		isset($params->shipment_date) ? $this->date_shipping = $params->shipment_date : (isset($this->date_shipping) ? null : $this->date_shipping = null);
 		isset($params->weight_units) ? $this->weight_units = $params->weight_units : (isset($this->weight_units) ? null : $this->weight_units = 0);
-		isset($params->weight) ? $this->trueWeight = $params->weight : (isset($this->trueWeight) ? null : $this->trueWeight = 0);
+		isset($params->weight) ? $this->trueWeight = $params->weight : (isset($this->trueWeight) ? null : $this->trueWeight = 0); // for update
+		isset($params->weight) ? $this->weight = $params->weight : (isset($this->weight) ? null : $this->weight = 0); // for create
 		isset($params->size_units) ? $this->size_units = $params->size_units : (isset($this->size_units) ? null : $this->size_units = 0);
 		// deprecated sizes for create
 		isset($params->trueDepth) ? $this->sizeS = $params->trueDepth : (isset($this->sizeS) ? null : $this->sizeS = 0);
@@ -1191,7 +1192,7 @@ class ExtDirectExpedition extends Expedition
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 			$idArray = explode('_', $params->id);
-			if ($idArray[1] > 0) $batch_id = $idArray[1];
+			if (isset($idArray[1]) && $idArray[1] > 0) $batch_id = $idArray[1];
 			// Add a protection to refuse deleting if shipment is not in draft status
 			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
 				if (ExtDirect::checkDolVersion(0, '9.0', '')) {
