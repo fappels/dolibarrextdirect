@@ -1045,24 +1045,25 @@ class ExtDirectCommande extends Commande
 		$this->id = $row->id;
 		$this->getLinesArray(); // This set ->lines
 		if ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $this->loadExpeditions(); // get already shipped
-		$nbprod = 0;
-		$numlines = count($this->lines); // Loop on each line of order
-		for ($lig = 0; $lig < $numlines; $lig++) {
-			if ($this->lines[$lig]->product_type == 0 && $this->lines[$lig]->fk_product > 0) {
+		foreach ($this->lines as $line) {
+			if ($line->product_type == 0 && $line->fk_product > 0) {
 				// If line is a product and not a service
-				$nbprod++; // order contains real products
-				$generic_product->id = $this->lines[$lig]->fk_product;
-				$qtyToShip = $this->lines[$lig]->qty - $this->expeditions[$this->lines[$lig]->id];
-
-				// Get local and virtual stock and store it into cache
-				if (empty($this->_productstat_cache[$this->lines[$lig]->fk_product])) {
-					$generic_product->load_stock('nobatch, novirtual');
-					$this->_productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
+				$generic_product->id = $line->fk_product;
+				if (!empty($this->expeditions[$line->id])) {
+					$qtyToShip = $line->qty - $this->expeditions[$line->id];
 				} else {
-					$generic_product->stock_reel = $this->_productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
+					$qtyToShip = $line->qty
 				}
 
-				if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
+				// Get local and virtual stock and store it into cache
+				if (empty($this->_productstat_cache[$line->fk_product])) {
+					$generic_product->load_stock('nobatch, novirtual');
+					$this->_productstat_cache[$line->fk_product]['stock_reel'] = $generic_product->stock_reel;
+				} else {
+					$generic_product->stock_reel = $this->_productstat_cache[$line->fk_product]['stock_reel'];
+				}
+
+				if ($line->qty > $generic_product->stock_reel) {
 					$notshippable++;
 					$notshippableQty += $qtyToShip - $generic_product->stock_reel;
 				} else {

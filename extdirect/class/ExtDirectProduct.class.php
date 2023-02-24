@@ -40,7 +40,7 @@ dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
  * @version  Release: 1.0
  * @link     https://github.com/fappels/dolibarrextdirect/blob/master/extdirect/class/ExtDirectProduct.class.php
  */
-class ExtDirectProduct extends Product
+class ExtDirectProduct extends ProductFournisseur
 {
 	private $_user;
 	private $_enabled = false;
@@ -778,9 +778,9 @@ class ExtDirectProduct extends Product
 				// End call triggers
 			}
 
-			if ($param->origin_element) $origin_element = $param->origin_element;
-			if ($param->origin_id) $origin_id = $param->origin_id;
-			if ($param->disablestockchangeforsubproduct) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
+			if (!empty($param->origin_element)) $origin_element = $param->origin_element;
+			if (!empty($param->origin_id)) $origin_id = $param->origin_id;
+			if (!empty($param->disablestockchangeforsubproduct)) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
 
 			if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			//! Stock
@@ -989,7 +989,7 @@ class ExtDirectProduct extends Product
 
 				if ($param->origin_element) $origin_element = $param->origin_element;
 				if ($param->origin_id) $origin_id = $param->origin_id;
-				if ($param->disablestockchangeforsubproduct) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
+				if (!empty($param->disablestockchangeforsubproduct)) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
 
 				if (($updated || $updatedBarcode || $updatedSellPrice || $updatedBuyPrice) && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
 				if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
@@ -1300,7 +1300,7 @@ class ExtDirectProduct extends Product
 				// add photo
 				$photo = new stdClass;
 				$this->fetchPhoto($photo);
-				if ($param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
+				if (isset($param->has_photo) && $param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
 					if (($result = $this->addBase64Jpeg($param->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				if (!$notrigger) {
@@ -1473,7 +1473,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
-		if ($warehouseFilter || $conf->multicompany->enabled) {
+		if ($warehouseFilter || !empty($conf->multicompany->enabled)) {
 			if (in_array(0, $checkWarehouseIds)) {
 				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
 			} else {
@@ -1482,7 +1482,7 @@ class ExtDirectProduct extends Product
 			if (count($warehouseIds) > 0) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
 			}
-			if ($conf->multicompany->enabled) {
+			if (!empty($conf->multicompany->enabled)) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN (SELECT rowid FROM '.MAIN_DB_PREFIX.'entrepot WHERE entity IN ('.getEntity('stock', 1).'))';
 			}
 		}
