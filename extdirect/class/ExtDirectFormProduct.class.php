@@ -516,7 +516,7 @@ class ExtDirectFormProduct extends FormProduct
 					$alphaLabel[$warehouse['id']] = $matches[2];
 					$orderLabel[$warehouse['id']] = 'num-alfa';
 				}
-				if ($numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
+				if (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
 			}
 		}
 		if (strlen((string) $maxLabel) > $maxLabelLen) {
@@ -525,10 +525,10 @@ class ExtDirectFormProduct extends FormProduct
 			$digits = '%0'.$maxLabelLen.'d';
 		}
 		foreach ($this->cache_warehouses as &$warehouse) {
-			$numericPart = ($numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
-			if ($orderLabel[$warehouse['id']] == 'num-alfa') {
+			$numericPart = (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
+			if (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'num-alfa') {
 				$warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
-			} elseif ($orderLabel[$warehouse['id']] == 'alfa-num') {
+			} elseif (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'alfa-num') {
 				$warehouse['label'] = $alphaLabel[$warehouse['id']] . $numericPart . $alphaLabelEnd[$warehouse['id']];
 			}
 		}

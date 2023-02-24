@@ -64,6 +64,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	public $date_delivered;
 
 	/**
+	 * end status to allow status itteration
+	 */
+	const STATUS_END = 10;
+
+	/**
 	 * Constructor
 	 *
 	 * @param string $login user name
@@ -753,7 +758,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (!isset($this->db)) return CONNECTERROR;
 		$results = array();
 
-		for ($statut = 0; $statut < 10; $statut++) {
+		for ($statut = 0; $statut < self::STATUS_END; $statut++) {
 			$result = $this->LibStatut($statut, 1);
 			$row = new stdClass;
 			$row->id = $statut;

@@ -108,7 +108,7 @@ class ExtDirectContact extends Contact
 					if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 					$row = new stdClass;
 					$row->id                = (int) $this->id;
-					$row->civility_id       = $this->civilite_id;
+					$row->civility_id       = $this->civility_id;
 					$row->lastname          = $this->lastname;
 					$row->firstname         = $this->firstname;
 					$row->address           = $this->address;

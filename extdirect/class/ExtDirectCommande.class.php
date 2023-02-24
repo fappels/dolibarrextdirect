@@ -1218,7 +1218,7 @@ class ExtDirectCommande extends Commande
 							$row->price = $line->price;
 							$row->subprice = $line->subprice;
 							$row->reduction_percent = $line->remise_percent;
-							$this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
+							isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 								$row->is_virtual_stock = true;
 								$row->stock = $myprod->stock_theorique;
@@ -1298,7 +1298,7 @@ class ExtDirectCommande extends Commande
 							$row->price = $line->price;
 							$row->subprice = $line->subprice;
 							$row->reduction_percent = $line->remise_percent;
-							$this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
+							isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 								if (!empty($line_warehouse_id)) {
 									$row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real;
@@ -1378,7 +1378,7 @@ class ExtDirectCommande extends Commande
 								$row->price = $line->price;
 								$row->subprice = $line->subprice;
 								$row->reduction_percent = $line->remise_percent;
-								$this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
+								isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 								$row->stock = (float) $stock_warehouse->real;
 								$row->total_stock = $myprod->stock_reel;
 								$row->warehouse_id = $warehouse;

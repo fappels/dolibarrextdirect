@@ -147,7 +147,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 
-		if (!$refSupplierId) {
+		if (!$refSupplierId && isset($idArray['supplier_product'])) {
 			$refSupplierId = $idArray['supplier_product'];
 		}
 
@@ -648,7 +648,7 @@ class ExtDirectProduct extends Product
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if ($param->element == 'productlot') {
+			if (isset($param->element) && $param->element == 'productlot') {
 				$productLot = new Productlot($this->db);
 				if (($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 			} else {
@@ -1339,7 +1339,7 @@ class ExtDirectProduct extends Product
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
-				if ($param->notrigger) $notrigger = $param->notrigger;
+				if (isset($param->notrigger)) $notrigger = $param->notrigger;
 				$id = $param->id;
 				$this->id = $id;
 				$this->ref = $param->ref;
@@ -2017,8 +2017,8 @@ class ExtDirectProduct extends Product
 		require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
 		$batches = array();
 		$batchesQty = 0;
-		$stockQty = $row->stock_reel;
-		$product_id = $row->product_id;
+		$stockQty = isset($row->stock_reel) ? $row->stock_reel : 0;
+		$product_id = isset($row->product_id) ? $row->product_id : null;
 		$undefinedBatch = clone $row;
 		$num = 0;
 
