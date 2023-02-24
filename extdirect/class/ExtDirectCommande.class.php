@@ -1052,7 +1052,7 @@ class ExtDirectCommande extends Commande
 				if (!empty($this->expeditions[$line->id])) {
 					$qtyToShip = $line->qty - $this->expeditions[$line->id];
 				} else {
-					$qtyToShip = $line->qty
+					$qtyToShip = $line->qty;
 				}
 
 				// Get local and virtual stock and store it into cache
