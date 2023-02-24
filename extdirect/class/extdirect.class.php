@@ -688,13 +688,13 @@ class ExtDirect
 		$epsilon = 0.00001;
 		if (!empty($propertyName) && isset($object->$propertyName)) {
 			$propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
-		} else {
+		} elseif (!is_object($object)) {
 			$propertyValue = $object;
 		}
 
 		if (!empty($paramName) && isset($param->$paramName)) {
 			$paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
-		} else {
+		} elseif (!is_object($param)) {
 			$paramValue = $param;
 		}
 
