@@ -44,7 +44,7 @@ class ExtDirectSociete extends Societe
 	 */
 	public function __construct($login)
 	{
-		global $conf, $langs ,$user, $db;
+		global $conf, $langs ,$user, $db, $mysoc;
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
@@ -56,6 +56,9 @@ class ExtDirectSociete extends Societe
 				} else {
 					$langs->setDefaultLang(empty($conf->global->MAIN_LANG_DEFAULT) ? 'auto' : $conf->global->MAIN_LANG_DEFAULT);
 				}
+				// set global $mysoc required for verify on create
+				$mysoc = new Societe($db);
+				$mysoc->setMysoc($conf);
 				$langs->load("main");
 				$langs->load("dict");
 				$langs->load("errors");
