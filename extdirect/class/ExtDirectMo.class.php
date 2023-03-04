@@ -871,9 +871,10 @@ class ExtDirectMo extends Mo
 	 * Get producible status
 	 *
 	 * @param object $row row of resultset
+	 * @param float $productQty if only 1 item to produce we use virtual stock for partial producible
 	 * @return void
 	 */
-	private function getProducible(&$row, $productQty)
+	public function getProducible(&$row, $productQty)
 	{
 		dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 		$product = new ExtDirectProduct($this->db);
@@ -882,7 +883,11 @@ class ExtDirectMo extends Mo
 		$qtyToProduce = 0;
 		$qtyProduced = 0;
 		$this->id = $row->id;
-		$this->getLinesArray();
+		if (ExtDirect::checkDolVersion(0, '16.0')) {
+			$this->getLinesArray();
+		} else {
+			$this->getPatchedLinesArray();
+		}
 		foreach ($this->lines as $line) {
 			if ($line->fk_product > 0) {
 				// store to consume and consumed product
@@ -942,6 +947,31 @@ class ExtDirectMo extends Mo
 		} else {
 			if ($row->status_id == self::STATUS_VALIDATED) $row->status_id = self::STATUS_VALIDATED_FULLY_PRODUCIBLE;
 			elseif ($row->status_id == self::STATUS_INPROGRESS) $row->status_id = self::STATUS_INPROGRESS_FULLY_PRODUCIBLE;
+		}
+	}
+
+	/**
+	 * 	Create an array of lines, patch on limit. Set to value because on dolibarr < 16 no lines fetched when limit 0.
+	 * 	@param string $rolefilter string lines role filter
+	 * 	@return array|int		array of lines if OK, <0 if KO
+	 */
+	public function getPatchedLinesArray($rolefilter = '')
+	{
+		$this->lines = array();
+
+		$objectline = new MoLine($this->db);
+
+		$TFilters = array('customsql'=>'fk_mo = '.((int) $this->id));
+		if (!empty($rolefilter)) $TFilters['role'] = $rolefilter;
+		$result = $objectline->fetchAll('ASC', 'position', 10000, 0, $TFilters);
+
+		if (is_numeric($result)) {
+			$this->error = $objectline->error;
+			$this->errors = $objectline->errors;
+			return $result;
+		} else {
+			$this->lines = $result;
+			return $this->lines;
 		}
 	}
 
