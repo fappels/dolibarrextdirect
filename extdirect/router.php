@@ -28,7 +28,9 @@ if (version_compare(phpversion(), '7.3', '>=')) {
 	$site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
-	session_set_cookie_params(array('samesite' => 'None'));
+	$sessionParam = array('samesite' => 'None');
+	if (!requestIsHTTPS()) $sessionParam['secure'] = 0;
+	session_set_cookie_params($sessionParam);
 	session_start();
 }
 
