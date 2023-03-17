@@ -220,7 +220,16 @@ if ($mode == $tabs['tab1']->mode) {
 		print '<tr '.$bc[$var].'>';
 		print '<td>'.$langs->trans("AutoUser").'</td>';
 		print '<td align="right">';
-		print $form->select_dolusers($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
+		if (!empty($conf->multicompany->enabled) && !empty($conf->global->MULTICOMPANY_TRANSVERSE_MODE)) {
+			print $extDirect->selectdolusers($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
+		} else {
+			if (!empty($conf->multicompany->enabled)) {
+				$extUser = new User($db);
+				$extUser->fetch($userId);
+				if ($extDirect->entity != $extUser->entity) $userId = -1; // entity mismatch
+			}
+			print $form->select_dolusers($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
+		}
 		print '</td><td align="right"><input type="submit" class="button" value="'.$langs->trans("Modify").'"></td>';
 		print '</tr>';
 		print '</form>';
@@ -315,7 +324,16 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<tr '.$bc[$var].'>';
 	print '<td>'.$langs->trans("ActivitiesFromUser").'</td>';
 	print '<td>';
-	print $form->select_dolusers($userId, 'userid', 1, $userExclude, 0, '', '');
+	if (!empty($conf->multicompany->enabled) && !empty($conf->global->MULTICOMPANY_TRANSVERSE_MODE)) {
+		print $extDirect->selectdolusers($userId, 'userid', 1, $userExclude, 0, '', '');
+	} else {
+		if (!empty($conf->multicompany->enabled)) {
+			$extUser = new User($db);
+			$extUser->fetch($userId);
+			if ($extDirect->entity != $extUser->entity) $userId = -1; // entity mismatch
+		}
+		print $form->select_dolusers($userId, 'userid', 1, $userExclude, 0, '', '');
+	}
 	print '</td><td></td><td></td><td></td><td></td><td>';
 	print '<input type="submit" name="refresh" class="button" value="'.$langs->trans("Refresh").'">';
 	print '</td>';
