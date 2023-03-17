@@ -1155,7 +1155,11 @@ class ExtDirectMo extends Mo
 			if ($object->statut < Mo::STATUS_PRODUCED && $params->line_id > 0) {
 				$line = new MoLine($this->db);
 				$stockmove = new MouvementStock($this->db);
-				$stockmove->origin = $object;
+				if (ExtDirect::checkDolVersion(0, '', '14')) {
+					$stockmove->origin = $object;
+				} else {
+					$stockmove->setOrigin($object->element, $object->id);
+				}
 				if (($result = $line->fetch($params->line_id)) < 0) {
 					return ExtDirect::getDolError($result, $line->errors, $line->error);
 				}
