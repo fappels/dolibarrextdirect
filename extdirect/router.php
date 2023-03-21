@@ -29,7 +29,7 @@ if (version_compare(phpversion(), '7.3', '>=') && empty($conf->global->EXTDIRECT
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
 	$sessionParam = array('samesite' => 'None');
-	if (!requestIsHTTPS()) $sessionParam['secure'] = 0;
+	requestIsHTTPS() ? $sessionParam['secure'] = 1 : $sessionParam['secure'] = 0;
 	session_set_cookie_params($sessionParam);
 	session_start();
 }
