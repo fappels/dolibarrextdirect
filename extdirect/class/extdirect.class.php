@@ -120,6 +120,12 @@ class ExtDirect
 		if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
 			$this->fk_user = $conf->global->DIRECTCONNECT_AUTO_USER;
 			$this->ack_id = uniqid('llx', true);
+			if ($this->fk_user > 0 && !empty($conf->multicompany->enabled)) {
+				require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+				$user = new User($this->db);
+				$user->fetch($this->fk_user);
+				$this->entity = $user->entity;
+			}
 		}
 
 		// Clean parameters
