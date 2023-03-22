@@ -24,13 +24,19 @@ $debugData = '[]';
 $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
-if (version_compare(phpversion(), '7.3', '>=') && empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE)) {
-	$site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
+if (version_compare(phpversion(), '7.3', '>=')) {
+	empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? $site_cookie_samesite = ini_set('session.cookie_samesite', 'None') : $site_cookie_samesite = ini_get('session.cookie_samesite');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
-	$sessionParam = array('samesite' => 'None');
+	empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? $sessionParam = array('samesite' => 'None') : null;
 	requestIsHTTPS() ? $sessionParam['secure'] = 1 : $sessionParam['secure'] = 0;
 	session_set_cookie_params($sessionParam);
+	session_start();
+} else {
+	$site_cookie_samesite = 'NA';
+	$site_cookie_secure = ini_get('session.cookie_secure');
+	session_abort();
+	session_set_cookie_params(0, (empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? '/; samesite=None' : '/'), null, (requestIsHTTPS() ? true : false), true);
 	session_start();
 }
 
