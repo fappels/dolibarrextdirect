@@ -45,6 +45,11 @@ class ExtDirectExpedition extends Expedition
 	const STATUS_VALIDATED = 1;
 	const STATUS_CLOSED = 2;
 
+	/**
+	 * end status to allow status itteration
+	 */
+	const STATUS_END = 3;
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -165,7 +170,7 @@ class ExtDirectExpedition extends Expedition
 					}
 				}
 				$row->weight_units = $this->weight_units;
-				$row->weight = $this->weight;
+				$row->weight = $this->trueWeight;
 				$row->size_units = $this->size_units;
 				$row->trueDepth = $this->trueDepth; // deprecated
 				$row->trueWidth = $this->trueWidth; // deprecated
@@ -499,7 +504,8 @@ class ExtDirectExpedition extends Expedition
 		isset($params->deliver_date) ? $this->date_delivery = $params->deliver_date : (isset($this->date_delivery) ? null : $this->date_delivery = null);
 		isset($params->shipment_date) ? $this->date_shipping = $params->shipment_date : (isset($this->date_shipping) ? null : $this->date_shipping = null);
 		isset($params->weight_units) ? $this->weight_units = $params->weight_units : (isset($this->weight_units) ? null : $this->weight_units = 0);
-		isset($params->weight) ? $this->weight = $params->weight : (isset($this->weight) ? null : $this->weight = 0);
+		isset($params->weight) ? $this->trueWeight = $params->weight : (isset($this->trueWeight) ? null : $this->trueWeight = 0); // for update
+		isset($params->weight) ? $this->weight = $params->weight : (isset($this->weight) ? null : $this->weight = 0); // for create
 		isset($params->size_units) ? $this->size_units = $params->size_units : (isset($this->size_units) ? null : $this->size_units = 0);
 		// deprecated sizes for create
 		isset($params->trueDepth) ? $this->sizeS = $params->trueDepth : (isset($this->sizeS) ? null : $this->sizeS = 0);
@@ -737,13 +743,15 @@ class ExtDirectExpedition extends Expedition
 		$results = array();
 		$statut = 0;
 		$row = new stdClass;
-		while (($result = $this->LibStatut($statut, 1)) !== null) {
-			if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
-			$row = new stdClass;
-			$row->id = $statut;
-			$row->status = html_entity_decode($result);
+		while ($statut < self::STATUS_END) {
+			$result = $this->LibStatut($statut, 1);
+			if (!empty($result)) {
+				$row = new stdClass;
+				$row->id = $statut;
+				$row->status = html_entity_decode($result);
+				array_push($results, $row);
+			}
 			$statut++;
-			array_push($results, $row);
 		}
 		return $results;
 	}
@@ -800,6 +808,7 @@ class ExtDirectExpedition extends Expedition
 		$row = new stdClass;
 		$origin_id = 0;
 		$hasSubProductFilter = false;
+		$photoSize = '';
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
@@ -1183,7 +1192,7 @@ class ExtDirectExpedition extends Expedition
 				return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 			$idArray = explode('_', $params->id);
-			if ($idArray[1] > 0) $batch_id = $idArray[1];
+			if (isset($idArray[1]) && $idArray[1] > 0) $batch_id = $idArray[1];
 			// Add a protection to refuse deleting if shipment is not in draft status
 			if (($this->statut == self::STATUS_DRAFT) && ($params->line_id)) {
 				if (ExtDirect::checkDolVersion(0, '9.0', '')) {
@@ -1295,6 +1304,7 @@ class ExtDirectExpedition extends Expedition
 		$shipmentLineId = 0;
 		foreach ($batches as $batch) {
 			if ($batch->warehouse_id) {
+				if (!isset($stockLocationQty[$batch->warehouse_id])) $stockLocationQty[$batch->warehouse_id] = 0;
 				$stockLocationQty[$batch->warehouse_id] += $batch->qty_toship;
 				$stockLocationOriginLineId[$batch->warehouse_id] = $batch->origin_line_id;
 			}

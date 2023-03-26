@@ -25,10 +25,18 @@ $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
 if (version_compare(phpversion(), '7.3', '>=')) {
-	$site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
+	empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? $site_cookie_samesite = ini_set('session.cookie_samesite', 'None') : $site_cookie_samesite = ini_get('session.cookie_samesite');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
-	session_set_cookie_params(array('samesite' => 'None'));
+	empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? $sessionParam = array('samesite' => 'None') : null;
+	requestIsHTTPS() ? $sessionParam['secure'] = 1 : $sessionParam['secure'] = 0;
+	session_set_cookie_params($sessionParam);
+	session_start();
+} else {
+	$site_cookie_samesite = 'NA';
+	$site_cookie_secure = ini_get('session.cookie_secure');
+	session_abort();
+	session_set_cookie_params(0, (empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? '/; samesite=None' : '/'), null, (requestIsHTTPS() ? true : false), true);
 	session_start();
 }
 
@@ -102,23 +110,29 @@ function doRpc($cdata)
 			'method'=>$method
 		);
 
-		dol_include_once("/extdirect/class/$action.class.php");
-		$o = new $action($_SESSION['dol_login']);
-		if (isset($mdef['len'])) {
-			$params = isset($cdata->data) && is_array($cdata->data) ? $cdata->data : array();
-		} else {
-			$params = array($cdata->data);
-		}
-		error_reporting(0); // comment for debugging or change 0 to E_ALL
-		if (!object_analyse_sql_and_script($params, 0)) {
-			$result = VULNERABILITYERROR;
-		} else {
-			if (ExtDirect::checkDolVersion() < 0) {
-				$result = COMPATIBILITYERROR;
+		$actionAvailable = true;
+		if (ExtDirect::checkDolVersion(0, '', '10') && $action == 'ExtDirectMo') $actionAvailable = false; // skip non existing classes
+		if ($actionAvailable) {
+			error_reporting(0); // comment for debugging or change 0 to E_ALL
+			dol_include_once("/extdirect/class/$action.class.php");
+			$o = new $action(isset($_SESSION['dol_login']) ? $_SESSION['dol_login'] : null);
+			if (isset($mdef['len'])) {
+				$params = isset($cdata->data) && is_array($cdata->data) ? $cdata->data : array();
 			} else {
-				dol_syslog(get_class($o) . '::' . $method, LOG_DEBUG);
-				$result = call_user_func_array(array($o, $method), $params);
+				$params = array($cdata->data);
 			}
+			if (!object_analyse_sql_and_script($params, 0)) {
+				$result = VULNERABILITYERROR;
+			} else {
+				if (ExtDirect::checkDolVersion() < 0) {
+					$result = COMPATIBILITYERROR;
+				} else {
+					dol_syslog(get_class($o) . '::' . $method, LOG_DEBUG);
+					$result = call_user_func_array(array($o, $method), $params);
+				}
+			}
+		} else {
+			$result = NOTENABLEDERROR;
 		}
 		$error = new stdClass;
 		if (is_int($result) && ($result < 0)) {

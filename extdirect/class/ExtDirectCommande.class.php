@@ -41,8 +41,9 @@ class ExtDirectCommande extends Commande
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
 		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO');
 	private $_enabled = false;
+	private $_productstat_cache = array();
 
-		/**
+	/**
 	 * Fully shippable status of validated order
 	 */
 	const STATUS_VALIDATED_FULLY_SHIPPABLE = 20;
@@ -53,12 +54,12 @@ class ExtDirectCommande extends Commande
 	const STATUS_VALIDATED_PARTLY_SHIPPABLE = 21;
 
 	/**
-	 * Fully shippable status of validated order
+	 * Fully shippable status of on process order
 	 */
 	const STATUS_ONPROCESS_FULLY_SHIPPABLE = 22;
 
 	/**
-	 * partly shippable status of validated order
+	 * partly shippable status of on process order
 	 */
 	const STATUS_ONPROCESS_PARTLY_SHIPPABLE = 23;
 
@@ -1038,31 +1039,31 @@ class ExtDirectCommande extends Commande
 
 		dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 		$generic_product = new ExtDirectProduct($this->db);
-		$productstat_cache = array();
 		$notshippable = 0;
 		$notshippableQty = 0;
 		$shippableQty = 0;
 		$this->id = $row->id;
 		$this->getLinesArray(); // This set ->lines
 		if ($row->orderstatus_id == self::STATUS_SHIPMENTONPROCESS) $this->loadExpeditions(); // get already shipped
-		$nbprod = 0;
-		$numlines = count($this->lines); // Loop on each line of order
-		for ($lig = 0; $lig < $numlines; $lig++) {
-			if ($this->lines[$lig]->product_type == 0 && $this->lines[$lig]->fk_product > 0) {
+		foreach ($this->lines as $line) {
+			if ($line->product_type == 0 && $line->fk_product > 0) {
 				// If line is a product and not a service
-				$nbprod++; // order contains real products
-				$generic_product->id = $this->lines[$lig]->fk_product;
-				$qtyToShip = $this->lines[$lig]->qty - $this->expeditions[$this->lines[$lig]->id];
-
-				// Get local and virtual stock and store it into cache
-				if (empty($productstat_cache[$this->lines[$lig]->fk_product])) {
-					$generic_product->load_stock('nobatch, novirtual');
-					$productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'] = $generic_product->stock_reel;
+				$generic_product->id = $line->fk_product;
+				if (!empty($this->expeditions[$line->id])) {
+					$qtyToShip = $line->qty - $this->expeditions[$line->id];
 				} else {
-					$generic_product->stock_reel = $productstat_cache[$this->lines[$lig]->fk_product]['stock_reel'];
+					$qtyToShip = $line->qty;
 				}
 
-				if ($this->lines[$lig]->qty > $generic_product->stock_reel) {
+				// Get local and virtual stock and store it into cache
+				if (empty($this->_productstat_cache[$line->fk_product])) {
+					$generic_product->load_stock('nobatch, novirtual');
+					$this->_productstat_cache[$line->fk_product]['stock_reel'] = $generic_product->stock_reel;
+				} else {
+					$generic_product->stock_reel = $this->_productstat_cache[$line->fk_product]['stock_reel'];
+				}
+
+				if ($line->qty > $generic_product->stock_reel) {
 					$notshippable++;
 					$notshippableQty += $qtyToShip - $generic_product->stock_reel;
 				} else {
@@ -1218,7 +1219,7 @@ class ExtDirectCommande extends Commande
 							$row->price = $line->price;
 							$row->subprice = $line->subprice;
 							$row->reduction_percent = $line->remise_percent;
-							$this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
+							isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 								$row->is_virtual_stock = true;
 								$row->stock = $myprod->stock_theorique;
@@ -1298,7 +1299,7 @@ class ExtDirectCommande extends Commande
 							$row->price = $line->price;
 							$row->subprice = $line->subprice;
 							$row->reduction_percent = $line->remise_percent;
-							$this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
+							isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 								if (!empty($line_warehouse_id)) {
 									$row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real;
@@ -1378,7 +1379,7 @@ class ExtDirectCommande extends Commande
 								$row->price = $line->price;
 								$row->subprice = $line->subprice;
 								$row->reduction_percent = $line->remise_percent;
-								$this->expeditions[$line->id]?$row->qty_shipped = $this->expeditions[$line->id]:$row->qty_shipped = 0;
+								isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 								$row->stock = (float) $stock_warehouse->real;
 								$row->total_stock = $myprod->stock_reel;
 								$row->warehouse_id = $warehouse;

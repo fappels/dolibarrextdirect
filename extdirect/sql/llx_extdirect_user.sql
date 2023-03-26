@@ -1,6 +1,6 @@
 -- ============================================================================
 -- 
--- Copyright (C) 2012-2021      Francis Appels        <francis.appels@z-application.com>
+-- Copyright (C) 2012-2023      Francis Appels        <francis.appels@z-application.com>
 --
 -- This program is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -33,5 +33,6 @@ CREATE TABLE llx_extdirect_user(
   webview_name varchar(100) default NULL, 
   webview_version varchar(100) default NULL, 
   identify smallint default 0 COMMENT 'User need to indentify on app to login', 
+  entity integer default NULL COMMENT 'Used entity for User in transverse mode',  
   import_key varchar(14)
 ) ENGINE=innodb;

@@ -42,6 +42,11 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	private $_shipmentPackageConstants = array();
 	private $_enabled = false;
 
+	/**
+	 * end status to allow status itteration
+	 */
+	const STATUS_END = 3;
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -603,13 +608,15 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$results = array();
 		$statut = 0;
 		$row = new stdClass;
-		while (($result = $this->LibStatut($statut, 1)) !== null) {
-			if ($row->status == html_entity_decode($result)) break; // avoid infinite loop
-			$row = new stdClass;
-			$row->id = $statut;
-			$row->status = html_entity_decode($result);
+		while ($statut < self::STATUS_END) {
+			$result = $this->LibStatut($statut, 1);
+			if (!empty($result)) {
+				$row = new stdClass;
+				$row->id = $statut;
+				$row->status = html_entity_decode($result);
+				array_push($results, $row);
+			}
 			$statut++;
-			array_push($results, $row);
 		}
 		return $results;
 	}

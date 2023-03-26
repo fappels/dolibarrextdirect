@@ -37,6 +37,8 @@ class ExtDirectFormProduct extends FormProduct
 	const ALLWAREHOUSE_LABEL = 'AllLocationsLabel';
 	const ALLWAREHOUSE_DESCRIPTION = 'AllLocationsDesc';
 
+	public $errors = array();
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -490,19 +492,45 @@ class ExtDirectFormProduct extends FormProduct
 	private function _makeNumericLabelSortable()
 	{
 		$numericLabel = array();
+		$alphaLabel = array();
+		$alphaLabelEnd = array();
+		$orderLabel = array();
 		$maxLabel = 0;
+		$maxLabelLen = 0;
 
 		foreach ($this->cache_warehouses as $warehouse) {
 			if (preg_match('/(^[0-9]*)([a-z_A-Z-0-9\s\.]*)/', $warehouse['label'], $matches)) {
-				$numericLabel[$warehouse['id']] = (int) $matches[1];
-				$alphaLabel[$warehouse['id']] = $matches[2];
-				if ($numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
+				if (empty($matches[1])) {
+					if (preg_match('/(^[a-z_A-Z\s\.]*)([0-9]*)(.*)/', $warehouse['label'], $matches)) {
+						if (!empty($matches[2])) {
+							if (strlen($matches[2]) > $maxLabelLen) $maxLabelLen = strlen($matches[2]);
+							$numericLabel[$warehouse['id']] = (int) $matches[2];
+							$alphaLabel[$warehouse['id']] = $matches[1];
+							$alphaLabelEnd[$warehouse['id']] = $matches[3];
+							$orderLabel[$warehouse['id']] = 'alfa-num';
+						}
+					}
+				} else {
+					if (strlen($matches[1]) > $maxLabelLen) $maxLabelLen = strlen($matches[1]);
+					$numericLabel[$warehouse['id']] = (int) $matches[1];
+					$alphaLabel[$warehouse['id']] = $matches[2];
+					$orderLabel[$warehouse['id']] = 'num-alfa';
+				}
+				if (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] > $maxLabel) $maxLabel = $numericLabel[$warehouse['id']];
 			}
 		}
-		$digits = '%0'.strlen((string) $maxLabel).'d';
+		if (strlen((string) $maxLabel) > $maxLabelLen) {
+			$digits = '%0'.strlen((string) $maxLabel).'d';
+		} else {
+			$digits = '%0'.$maxLabelLen.'d';
+		}
 		foreach ($this->cache_warehouses as &$warehouse) {
-			$numericPart = ($numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
-			$warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
+			$numericPart = (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
+			if (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'num-alfa') {
+				$warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
+			} elseif (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'alfa-num') {
+				$warehouse['label'] = $alphaLabel[$warehouse['id']] . $numericPart . $alphaLabelEnd[$warehouse['id']];
+			}
 		}
 	}
 

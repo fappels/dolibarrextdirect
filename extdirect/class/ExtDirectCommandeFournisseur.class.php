@@ -64,6 +64,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	public $date_delivered;
 
 	/**
+	 * end status to allow status itteration
+	 */
+	const STATUS_END = 10;
+
+	/**
 	 * Constructor
 	 *
 	 * @param string $login user name
@@ -530,7 +535,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
 		isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
 		isset($params->date_delivered) ? ( $this->date_delivered =$params->date_delivered) : ( isset($this->date_delivered) ? null : ($this->date_delivered = null));
-		isset($params->deliver_date) ? ( $this->delivary_date = $params->deliver_date) : ( isset($this->delivary_date) ? null : ($this->delivary_date = null));
+		isset($params->deliver_date) ? ( $this->delivery_date = $params->deliver_date) : ( isset($this->delivery_date) ? null : ($this->delivery_date = null));
 		isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
 		isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
 		isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
@@ -753,7 +758,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (!isset($this->db)) return CONNECTERROR;
 		$results = array();
 
-		for ($statut = 0; $statut < 10; $statut++) {
+		for ($statut = 0; $statut < self::STATUS_END; $statut++) {
 			$result = $this->LibStatut($statut, 1);
 			$row = new stdClass;
 			$row->id = $statut;
@@ -1430,7 +1435,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		global $conf, $mysoc;
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
+		if (empty($conf->reception->enabled)) {
+			if (!isset($this->_user->rights->fournisseur->commande->receptionner)) return PERMISSIONERROR;
+		} else {
+			if (!isset($this->_user->rights->reception->creer)) return PERMISSIONERROR;
+		}
 		dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 		$orderlineUpdated = false;
 
@@ -1506,7 +1515,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							// add photo
 							$photo = new stdClass;
 							$product->fetchPhoto($photo);
-							if ($param->has_photo > $photo->has_photo && !empty($params->photo) && isset($this->_user->rights->produit->creer)) {
+							if (isset($param->has_photo) && $param->has_photo > $photo->has_photo && !empty($params->photo) && isset($this->_user->rights->produit->creer)) {
 								if (($result = $product->addBase64Jpeg($params->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
 							}
 

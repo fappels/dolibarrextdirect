@@ -40,7 +40,7 @@ dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
  * @version  Release: 1.0
  * @link     https://github.com/fappels/dolibarrextdirect/blob/master/extdirect/class/ExtDirectProduct.class.php
  */
-class ExtDirectProduct extends Product
+class ExtDirectProduct extends ProductFournisseur
 {
 	private $_user;
 	private $_enabled = false;
@@ -78,6 +78,7 @@ class ExtDirectProduct extends Product
 				$langs->load("products");
 				$langs->load("stocks");
 				$langs->load("errors");
+				$langs->load("extdirect@extdirect");
 				if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
 				parent::__construct($db);
 			}
@@ -146,7 +147,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 
-		if (!$refSupplierId) {
+		if (!$refSupplierId && isset($idArray['supplier_product'])) {
 			$refSupplierId = $idArray['supplier_product'];
 		}
 
@@ -162,7 +163,7 @@ class ExtDirectProduct extends Product
 				//! Ref
 				$row->ref= $this->ref;
 				$row->label= $this->label;
-				$row->description= $this->description?$this->description:'';
+				$row->description= $this->description?html_entity_decode($this->description):'';
 				//! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
 				$row->type= $this->type;
 				$row->note= $this->note;
@@ -596,7 +597,7 @@ class ExtDirectProduct extends Product
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if ($param->element == 'productlot') {
+			if (isset($param->element) && $param->element == 'productlot') {
 				$productLot = new Productlot($this->db);
 				if ($productLot->id != $param->object_id && ($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 				$productLot->array_options['options_'.$param->name] = $param->raw_value;
@@ -647,7 +648,7 @@ class ExtDirectProduct extends Product
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if ($param->element == 'productlot') {
+			if (isset($param->element) && $param->element == 'productlot') {
 				$productLot = new Productlot($this->db);
 				if (($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 			} else {
@@ -777,9 +778,9 @@ class ExtDirectProduct extends Product
 				// End call triggers
 			}
 
-			if ($param->origin_element) $origin_element = $param->origin_element;
-			if ($param->origin_id) $origin_id = $param->origin_id;
-			if ($param->disablestockchangeforsubproduct) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
+			if (!empty($param->origin_element)) $origin_element = $param->origin_element;
+			if (!empty($param->origin_id)) $origin_id = $param->origin_id;
+			if (!empty($param->disablestockchangeforsubproduct)) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
 
 			if (($result = $this->create($this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			//! Stock
@@ -929,7 +930,7 @@ class ExtDirectProduct extends Product
 				$origin_element = '';
 				$origin_id = null;
 				$disablestockchangeforsubproduct = 0;
-				if ($param->notrigger) $notrigger = $param->notrigger;
+				if (isset($param->notrigger)) $notrigger = $param->notrigger;
 				$id = $param->id;
 				if (($result = $this->fetch($id, '', '')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				// supplier fields
@@ -986,9 +987,9 @@ class ExtDirectProduct extends Product
 					// End call triggers
 				}
 
-				if ($param->origin_element) $origin_element = $param->origin_element;
-				if ($param->origin_id) $origin_id = $param->origin_id;
-				if ($param->disablestockchangeforsubproduct) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
+				if (!empty($param->origin_element)) $origin_element = $param->origin_element;
+				if (!empty($param->origin_id)) $origin_id = $param->origin_id;
+				if (!empty($param->disablestockchangeforsubproduct)) $disablestockchangeforsubproduct = $param->disablestockchangeforsubproduct;
 
 				if (($updated || $updatedBarcode || $updatedSellPrice || $updatedBuyPrice) && (!isset($this->_user->rights->produit->creer))) return PERMISSIONERROR;
 				if (!empty($param->correct_stock_nbpiece) && !isset($this->_user->rights->stock->mouvement->creer)) return PERMISSIONERROR;
@@ -1299,7 +1300,7 @@ class ExtDirectProduct extends Product
 				// add photo
 				$photo = new stdClass;
 				$this->fetchPhoto($photo);
-				if ($param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
+				if (isset($param->has_photo) && $param->has_photo > $photo->has_photo && !empty($param->photo) && isset($this->_user->rights->produit->creer)) {
 					if (($result = $this->addBase64Jpeg($param->photo, $param->has_photo)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				if (!$notrigger) {
@@ -1338,7 +1339,7 @@ class ExtDirectProduct extends Product
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id) {
-				if ($param->notrigger) $notrigger = $param->notrigger;
+				if (isset($param->notrigger)) $notrigger = $param->notrigger;
 				$id = $param->id;
 				$this->id = $id;
 				$this->ref = $param->ref;
@@ -1472,7 +1473,7 @@ class ExtDirectProduct extends Product
 			}
 		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
-		if ($warehouseFilter || $conf->multicompany->enabled) {
+		if ($warehouseFilter || !empty($conf->multicompany->enabled)) {
 			if (in_array(0, $checkWarehouseIds)) {
 				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
 			} else {
@@ -1481,7 +1482,7 @@ class ExtDirectProduct extends Product
 			if (count($warehouseIds) > 0) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN ('.implode(',', $warehouseIds).')';
 			}
-			if ($conf->multicompany->enabled) {
+			if (!empty($conf->multicompany->enabled)) {
 				$sqlFrom .= ' AND ps.fk_entrepot IN (SELECT rowid FROM '.MAIN_DB_PREFIX.'entrepot WHERE entity IN ('.getEntity('stock', 1).'))';
 			}
 		}
@@ -2016,8 +2017,8 @@ class ExtDirectProduct extends Product
 		require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
 		$batches = array();
 		$batchesQty = 0;
-		$stockQty = $row->stock_reel;
-		$product_id = $row->product_id;
+		$stockQty = isset($row->stock_reel) ? $row->stock_reel : 0;
+		$product_id = isset($row->product_id) ? $row->product_id : null;
 		$undefinedBatch = clone $row;
 		$num = 0;
 
@@ -2045,24 +2046,6 @@ class ExtDirectProduct extends Product
 						$num++;
 						array_push($results, clone $row);
 						break;
-					} else {
-						// new batch
-						$row->id = $id;
-						$row->batch_id = 0;
-						$row->stock_id = 0;
-						$row->sellby = null;
-						$row->eatby = null;
-						$row->batch = $batchValue;
-						$row->stock_reel= 0;
-						$row->stock = 0;
-						$row->batch_info = null;
-						if ($this->status_batch == 2) {
-							// if unique batch type always receive one by one.
-							$row->qty_toreceive = 1;
-						}
-						$num++;
-						array_push($results, clone $row);
-						break;
 					}
 				} elseif ($batchId == $batch->id) {
 					$row->id = $id;
@@ -2071,6 +2054,21 @@ class ExtDirectProduct extends Product
 					break;
 				}
 				$batchesQty += $batch->qty;
+			}
+			if (empty($batchId) && !empty($batchValue) && $this->status_batch == 2) {
+				// new serial number
+				$row->id = $id;
+				$row->batch_id = 0;
+				$row->stock_id = 0;
+				$row->sellby = null;
+				$row->eatby = null;
+				$row->batch = $batchValue;
+				$row->stock_reel= 0;
+				$row->stock = 0;
+				$row->batch_info = null;
+				$row->qty_toreceive = 1;
+				$num++;
+				array_push($results, clone $row);
 			}
 		} elseif (isset($row->id) && !empty($productStockId)) {
 			// no batch

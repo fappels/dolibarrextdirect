@@ -1,6 +1,6 @@
 <?php
 /* Copyright (C) 2007-2012 Laurent Destailleur  <eldy@users.sourceforge.net>
- * Copyright (C) 2012      Francis Appels       <francis.appels@yahoo.com>
+ * Copyright (C) 2012-2023 Francis Appels       <francis.appels@z-application.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,6 +90,7 @@ class ExtDirect
 	public $webview_name;
 	public $webview_version;
 	public $identify;
+	public $entity;
 	// array with multiple records
 	public $dataset=array();
 
@@ -119,6 +120,12 @@ class ExtDirect
 		if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
 			$this->fk_user = $conf->global->DIRECTCONNECT_AUTO_USER;
 			$this->ack_id = uniqid('llx', true);
+			if ($this->fk_user > 0 && !empty($conf->multicompany->enabled)) {
+				require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+				$user = new User($this->db);
+				$user->fetch($this->fk_user);
+				$this->entity = $user->entity;
+			}
 		}
 
 		// Clean parameters
@@ -150,6 +157,9 @@ class ExtDirect
 		$sql.= "webview_name,";
 		$sql.= "webview_version,";
 		$sql.= "identify";
+		if (!empty($conf->multicompany->enabled)) {
+			$sql.= ",entity";
+		}
 		$sql.= ") VALUES (";
 		$sql.= " ".(! isset($this->fk_user)?'NULL':"'".(int) $this->fk_user."'").",";
 		$sql.= " ".(! isset($this->app_id)?'NULL':"'".$this->db->escape($this->app_id)."'").",";
@@ -163,6 +173,9 @@ class ExtDirect
 		$sql.= " ".(! isset($this->webview_name)?'NULL':"'".$this->db->escape($this->webview_name)."'").",";
 		$sql.= " ".(! isset($this->webview_version)?'NULL':"'".$this->db->escape($this->webview_version)."'").",";
 		$sql.= " ".(! isset($this->identify)?'NULL':"'".(int) $this->identify."'")."";
+		if (!empty($conf->multicompany->enabled)) {
+			$sql.= ", ".(! isset($this->entity)?'NULL':"'".(int) $this->entity."'")."";
+		}
 		$sql.= ")";
 
 		$this->db->begin();
@@ -211,7 +224,7 @@ class ExtDirect
 	 */
 	public function fetchList($filter = '', $orderBy = '')
 	{
-		global $langs;
+		global $conf;
 
 		$sql = "SELECT";
 		$sql.= " t.rowid,";
@@ -228,6 +241,9 @@ class ExtDirect
 		$sql.= " t.webview_name,";
 		$sql.= " t.webview_version,";
 		$sql.= " t.identify";
+		if (!empty($conf->multicompany->enabled)) {
+			$sql.= ", t.entity";
+		}
 
 		$sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
 		if (!empty($filter)) {
@@ -257,6 +273,9 @@ class ExtDirect
 				$this->dataset[$i]['webview_name']  = $obj->webview_name;
 				$this->dataset[$i]['webview_version']  = $obj->webview_version;
 				$this->dataset[$i]['identify']  = $obj->identify;
+				if (!empty($conf->multicompany->enabled)) {
+					$this->dataset[$i]['entity']  = $obj->entity;
+				}
 				$i++;
 			}
 			$this->db->free($resql);
@@ -279,7 +298,8 @@ class ExtDirect
 	 */
 	public function fetch($id = 0, $app_id = '', $ack_id = '')
 	{
-		global $langs;
+		global $conf;
+
 		$sql = "SELECT";
 		$sql.= " t.rowid,";
 		$sql.= " t.fk_user,";
@@ -294,6 +314,9 @@ class ExtDirect
 		$sql.= " t.webview_name,";
 		$sql.= " t.webview_version,";
 		$sql.= " t.identify";
+		if (!empty($conf->multicompany->enabled)) {
+			$sql.= ", t.entity";
+		}
 
 		$sql.= " FROM ".MAIN_DB_PREFIX."extdirect_user as t";
 		if ($id) {
@@ -326,6 +349,9 @@ class ExtDirect
 				$this->webview_name = $obj->webview_name;
 				$this->webview_version = $obj->webview_version;
 				$this->identify = $obj->identify;
+				if (!empty($conf->multicompany->enabled)) {
+					$this->entity = $obj->entity;
+				}
 
 				return 1;
 			} else {
@@ -380,6 +406,9 @@ class ExtDirect
 		$sql.= " webview_name=".(isset($this->webview_name)?"'".$this->db->escape($this->webview_name)."'":"null").",";
 		$sql.= " webview_version=".(isset($this->webview_version)?"'".$this->db->escape($this->webview_version)."'":"null").",";
 		$sql.= " identify=".(isset($this->identify)?"'".(int) $this->identify."'":"null")."";
+		if (!empty($conf->multicompany->enabled)) {
+			$sql.= ", entity=".(isset($this->entity)?"'".(int) $this->entity."'":"null")."";
+		}
 
 		$sql.= " WHERE rowid=".$this->id;
 
@@ -452,7 +481,20 @@ class ExtDirect
 			$sql.= " WHERE rowid=".$this->id;
 
 			$resql = $this->db->query($sql);
-			if (! $resql) { $error++; $this->errors[]="Error ".$this->db->lasterror(); }
+			if (! $resql) {
+				$error++;
+				$this->errors[]="Error ".$this->db->lasterror();
+			} else {
+				// delete child table
+				$sql = "DELETE FROM ".MAIN_DB_PREFIX."extdirect_activity";
+				$sql.= " WHERE app_id = '".$this->db->escape($this->app_id)."'";
+
+				$resql = $this->db->query($sql);
+				if (! $resql) {
+					$error++;
+					$this->errors[]="Error ".$this->db->lasterror();
+				}
+			}
 		}
 
 		// Commit or rollback
@@ -558,13 +600,13 @@ class ExtDirect
 
 		if ($validate) {
 			$minVersion = '4.0';
-			$maxVersion = '16.0'; // tested version
+			$maxVersion = '17.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
 		} else {
 			if (empty($minVersion)) $minVersion = '4.0';
-			if (empty($maxVersion)) $maxVersion = '17.0'; // debugging version
+			if (empty($maxVersion)) $maxVersion = '18.0'; // debugging version
 			if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
 				return 1;
 			} else {
@@ -650,15 +692,17 @@ class ExtDirect
 	public static function prepareField($diff, $param, $object, $paramName = null, $propertyName = null, $default = null, $paramIndex = null, $propertyIndex = null)
 	{
 		$epsilon = 0.00001;
-		if (!empty($propertyName)) {
+		$paramValue = null;
+		$propertyValue = null;
+		if (!empty($propertyName) && isset($object->$propertyName)) {
 			$propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
-		} else {
+		} elseif (!is_object($object)) {
 			$propertyValue = $object;
 		}
 
-		if (!empty($paramName)) {
+		if (!empty($paramName) && isset($param->$paramName)) {
 			$paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
-		} else {
+		} elseif (!is_object($param)) {
 			$paramValue = $param;
 		}
 
@@ -698,7 +742,7 @@ class ExtDirect
 	{
 		$constants =  array();
 		$results = array();
-		$filter = $params->filter;
+		if (isset($params->filter)) $filter = $params->filter;
 		$entity = ($user->entity > 0) ? $user->entity : 1;
 		if (!empty($moduleConstants)) {
 			$constants += $moduleConstants;
@@ -731,6 +775,8 @@ class ExtDirect
 	 */
 	public static function readOptionalModel($object)
 	{
+		global $langs;
+
 		$results = array();
 
 		$extraFields = new ExtraFields($object->db);
@@ -761,7 +807,7 @@ class ExtDirect
 				}
 				$row = new stdClass;
 				$row->name = $name;
-				$row->label = $label;
+				($langs->trans($label) != $label) ? $row->label = $langs->trans($label) : $row->label = $label;
 				$row->type = $extraFields->attributes[$object->table_element]['type'][$name];
 				$row->default = $extraFields->attributes[$object->table_element]['default'][$name];
 				$row->readonly = (abs($enabled) == 5) ? 1 : 0;
@@ -867,5 +913,188 @@ class ExtDirect
 			$value = (object) $value;
 		}
 		return $data;
+	}
+
+	/**
+	 *	Return select list of users for multicompany transverse mode
+	 *
+	 *  @param	string			$selected       User id and entity id in format 'id_entity' or user object of user preselected. If 0 or < -2, we use id of current user. If -1, keep unselected (if empty is allowed)
+	 *  @param  string			$htmlname       Field name in form
+	 *  @param  int|string		$show_empty     0=list with no empty value, 1=add also an empty value into list
+	 *  @param  array			$exclude        Array list of users id to exclude
+	 * 	@param	int				$disabled		If select list must be disabled
+	 *  @param  array|string	$include        Array list of users id to include. User '' for all users or 'hierarchy' to have only supervised users or 'hierarchyme' to have supervised + me
+	 * 	@return	string							HTML select string
+	 *  @see select_dolgroups()
+	 */
+	public function selectdolusers($selected = '', $htmlname = 'userid', $show_empty = 0, $exclude = null, $disabled = 0, $include = '')
+	{
+		// phpcs:enable
+		global $conf, $user, $langs, $hookmanager;
+
+		// If no preselected user defined, we take current user
+		if ((is_numeric($selected) && ($selected < -2 || empty($selected))) && empty($conf->global->SOCIETE_DISABLE_DEFAULT_SALESREPRESENTATIVE)) {
+			$selected = $user->id;
+		}
+
+		if ($selected === '') {
+			$selected = array();
+		} elseif (!is_array($selected)) {
+			$selected = array($selected);
+		}
+
+		$excludeUsers = null;
+		$includeUsers = null;
+
+		// Permettre l'exclusion d'utilisateurs
+		if (is_array($exclude)) {
+			$excludeUsers = implode(",", $exclude);
+		}
+		// Permettre l'inclusion d'utilisateurs
+		if (is_array($include)) {
+			$includeUsers = implode(",", $include);
+		} elseif ($include == 'hierarchy') {
+			// Build list includeUsers to have only hierarchy
+			$includeUsers = implode(",", $user->getAllChildIds(0));
+		} elseif ($include == 'hierarchyme') {
+			// Build list includeUsers to have only hierarchy and current user
+			$includeUsers = implode(",", $user->getAllChildIds(1));
+		}
+
+		$out = '';
+
+		if (empty($conf->multicompany->enabled) || empty($conf->global->MULTICOMPANY_TRANSVERSE_MODE)) return $out;
+
+		// Forge request to select users
+		$sql = "SELECT DISTINCT u.rowid, u.lastname as lastname, u.firstname, u.statut as status, u.login, u.admin, ug.entity, u.photo";
+		$sql .= ", e.label";
+		$sql .= " FROM ".MAIN_DB_PREFIX."user as u";
+		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."usergroup_user as ug ON ug.fk_user = u.rowid";
+		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."entity as e ON e.rowid = ug.entity";
+		$sql .= " WHERE ((ug.entity > 0 AND e.label IS NOT NULL) OR ug.entity IS NULL)";
+		if (!empty($user->socid)) {
+			$sql .= " AND u.fk_soc = ".((int) $user->socid);
+		}
+		if (is_array($exclude) && $excludeUsers) {
+			$sql .= " AND u.rowid NOT IN (".$this->db->sanitize($excludeUsers).")";
+		}
+		if ($includeUsers) {
+			$sql .= " AND u.rowid IN (".$this->db->sanitize($includeUsers).")";
+		}
+		if (!empty($conf->global->USER_HIDE_INACTIVE_IN_COMBOBOX)) {
+			$sql .= " AND u.statut <> 0";
+		}
+
+		//Add hook to filter on user (for exemple on usergroup define in custom modules)
+		$reshook = $hookmanager->executeHooks('addSQLWhereFilterOnSelectUsers', array(), $this, $action);
+		if (!empty($reshook)) {
+			$sql .= $hookmanager->resPrint;
+		}
+
+		if (empty($conf->global->MAIN_FIRSTNAME_NAME_POSITION)) {	// MAIN_FIRSTNAME_NAME_POSITION is 0 means firstname+lastname
+			$sql .= " ORDER BY u.statut DESC, u.firstname ASC, u.lastname ASC";
+		} else {
+			$sql .= " ORDER BY u.statut DESC, u.lastname ASC, u.firstname ASC";
+		}
+
+		dol_syslog(get_class($this)."::select_dolusers", LOG_DEBUG);
+
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			$num = $this->db->num_rows($resql);
+			$i = 0;
+			if ($num) {
+				// do not use maxwidthonsmartphone by default. Set it by caller so auto size to 100% will work when not defined
+				$out .= '<select class="flat minwidth200" id="'.$htmlname.'" name="'.$htmlname.'"'.($disabled ? ' disabled' : '').'>';
+				if ($show_empty) {
+					$textforempty = ' ';
+					if (!empty($conf->use_javascript_ajax)) {
+						$textforempty = '&nbsp;'; // If we use ajaxcombo, we need &nbsp; here to avoid to have an empty element that is too small.
+					}
+					if (!is_numeric($show_empty)) {
+						$textforempty = $show_empty;
+					}
+					$out .= '<option class="optiongrey" value="'.($show_empty < 0 ? $show_empty : -1).'"'.((empty($selected) || in_array(-1, $selected)) ? ' selected' : '').'>'.$textforempty.'</option>'."\n";
+				}
+
+				$userstatic = new User($this->db);
+
+				while ($i < $num) {
+					$obj = $this->db->fetch_object($resql);
+
+					$userstatic->id = $obj->rowid;
+					$userstatic->lastname = $obj->lastname;
+					$userstatic->firstname = $obj->firstname;
+					$userstatic->photo = $obj->photo;
+					$userstatic->statut = $obj->status;
+					$userstatic->entity = $obj->entity;
+					$userstatic->admin = $obj->admin;
+
+					$disableline = '';
+
+					$labeltoshow = '';
+
+					// $fullNameMode is 0=Lastname+Firstname (MAIN_FIRSTNAME_NAME_POSITION=1), 1=Firstname+Lastname (MAIN_FIRSTNAME_NAME_POSITION=0)
+					$fullNameMode = 0;
+					if (empty($conf->global->MAIN_FIRSTNAME_NAME_POSITION)) {
+						$fullNameMode = 1; //Firstname+lastname
+					}
+					$labeltoshow .= $userstatic->getFullName($langs, $fullNameMode, -1);
+					if (empty($obj->firstname) && empty($obj->lastname)) {
+						$labeltoshow .= $obj->login;
+					}
+
+					// Complete name with more info
+					$moreinfo = '';
+					if (!empty($conf->global->MAIN_SHOW_LOGIN)) {
+						$moreinfo .= ($moreinfo ? ' - ' : ' (').$obj->login;
+					}
+					if (!$obj->entity) {
+						$moreinfo .= ($moreinfo ? ' - ' : ' (').$langs->trans("AllEntities");
+					} else {
+						$moreinfo .= ($moreinfo ? ' - ' : ' (').($obj->label ? $obj->label : $langs->trans("EntityNameNotDefined"));
+					}
+					$moreinfo .= ($moreinfo ? ')' : '');
+					if ($disableline && $disableline != '1') {
+						$moreinfo .= ' - '.$disableline; // This is text from $enableonlytext parameter
+					}
+					$labeltoshow .= $moreinfo;
+
+					$out .= '<option value="'.$obj->rowid.'_'.($obj->entity ? $obj->entity : 0).'"';
+					if ($disableline) {
+						$out .= ' disabled';
+					}
+					if ((is_object($selected) && $selected->id == $obj->rowid) || (!is_object($selected) && in_array($obj->rowid.'_'.($obj->entity ? $obj->entity : 0), $selected))) {
+						$out .= ' selected';
+					}
+					$out .= ' data-html="';
+					$outhtml = '';
+					// if (!empty($obj->photo)) {
+					$outhtml .= $userstatic->getNomUrl(-3, '', 0, 1, 24, 1, 'login', '', 1).' ';
+					// }
+					$outhtml .= $labeltoshow;
+					$out .= dol_escape_htmltag($outhtml);
+					$out .= '">';
+					$out .= $labeltoshow;
+					$out .= '</option>';
+
+					$i++;
+				}
+			} else {
+				$out .= '<select class="flat" id="'.$htmlname.'" name="'.$htmlname.'" disabled>';
+				$out .= '<option value="">'.$langs->trans("None").'</option>';
+			}
+			$out .= '</select>';
+
+			if ($num) {
+				// Enhance with select2
+				include_once DOL_DOCUMENT_ROOT.'/core/lib/ajax.lib.php';
+				$out .= ajax_combobox($htmlname);
+			}
+		} else {
+			dol_print_error($this->db);
+		}
+
+		return $out;
 	}
 }
