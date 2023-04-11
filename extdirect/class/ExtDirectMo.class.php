@@ -891,12 +891,18 @@ class ExtDirectMo extends Mo
 		foreach ($this->lines as $line) {
 			if ($line->fk_product > 0) {
 				// store to consume and consumed product
-				if (!isset($qtyToConsume[$line->fk_product])) $qtyToConsume[$line->fk_product] = 0;
-				if (!isset($qtyConsumed[$line->fk_product])) $qtyConsumed[$line->fk_product] = 0;
+				if ($line->role == 'toconsume' || $line->role == 'consumed') {
+					$isConsumeLine = true;
+				} else {
+					$isConsumeLine = false;
+				}
+				if (!isset($qtyToConsume[$line->id])) $qtyToConsume[$line->id] = 0;
+				if (!isset($qtyConsumed[$line->fk_mrp_production])) $qtyConsumed[$line->fk_mrp_production] = 0;
+				if (!isset($productToConsume[$line->id]) && $isConsumeLine) $productToConsume[$line->id] = $line->fk_product;
 				if ($line->role == 'toconsume') {
-					$qtyToConsume[$line->fk_product] += $line->qty;
+					$qtyToConsume[$line->id] += $line->qty;
 				} elseif ($line->role == 'consumed') {
-					$qtyConsumed[$line->fk_product] += $line->qty;
+					$qtyConsumed[$line->fk_mrp_production] += $line->qty;
 				}
 				// store toproduce and produced
 				if ($line->role == 'toproduce') {
@@ -916,23 +922,35 @@ class ExtDirectMo extends Mo
 		}
 		$qtyToComplete = $qtyToProduce - $qtyProduced;
 		if ($qtyToComplete > 0) {
-			foreach ($qtyToConsume as $fk_product => $qty) {
+			foreach ($productToConsume as $line_id => $fk_product) {
 				if ($this->_productstock_cache[$fk_product]['type'] == 0) {
-					$qtyToProduce = $qty - $qtyConsumed[$fk_product];
-					if ($productQty > 1) {
-						// situation for more item to produce (if stock enough for one item we can start production)
-						if ($qtyToProduce / $qtyToComplete > $this->_productstock_cache[$fk_product]['stock_reel']) {
-							$notproducable++;
-						} elseif ($qtyToProduce > $this->_productstock_cache[$fk_product]['stock_reel'] && $qtyToProduce / $qtyToComplete <= $this->_productstock_cache[$fk_product]['stock_reel']) {
-							$notfullyproducable++;
+					$qtyToProduce = $qtyToConsume[$line_id] - $qtyConsumed[$line_id];
+					if ($qtyToProduce > 0) {
+						if (!isset($qtyStockAvailableToProduce[$fk_product])) {
+							$qtyStockAvailableToProduce[$fk_product] = $this->_productstock_cache[$fk_product]['stock_reel'];
+						} else {
+							$qtyStockAvailableToProduce[$fk_product] -= $qtyToProduce / $qtyToComplete;
 						}
-					} else {
-						// situation for 1 item to produce (if stock is soon expected we can start production)
-						if ($qtyToProduce > $this->_productstock_cache[$fk_product]['stock_reel']) {
-							$notfullyproducable++;
-						}
-						if ($qtyToProduce > $this->_productstock_cache[$fk_product]['stock_virtual']) {
-							$notproducable++;
+						if ($productQty > 1) {
+							// situation for more item to produce (if stock enough for one item we can start production)
+							if ($qtyToProduce / $qtyToComplete > $qtyStockAvailableToProduce[$fk_product]) {
+								$notproducable++;
+							} elseif ($qtyToProduce > $qtyStockAvailableToProduce[$fk_product] && $qtyToProduce / $qtyToComplete <= $qtyStockAvailableToProduce[$fk_product]) {
+								$notfullyproducable++;
+							}
+						} else {
+							// situation for 1 item to produce (if stock is soon expected we can start production)
+							if (!isset($qtyVirtualStockAvailableToProduce[$fk_product])) {
+								$qtyVirtualStockAvailableToProduce[$fk_product] = $this->_productstock_cache[$fk_product]['stock_virtual'];
+							} else {
+								$qtyVirtualStockAvailableToProduce[$fk_product] -= $qtyToProduce / $qtyToComplete;
+							}
+							if ($qtyToProduce > $qtyStockAvailableToProduce[$fk_product]) {
+								$notfullyproducable++;
+							}
+							if ($qtyToProduce > $qtyVirtualStockAvailableToProduce[$fk_product]) {
+								$notproducable++;
+							}
 						}
 					}
 				}
