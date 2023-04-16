@@ -882,6 +882,7 @@ class ExtDirectMo extends Mo
 		$notfullyproducable = 0;
 		$qtyToProduce = 0;
 		$qtyProduced = 0;
+		$productToConsume = array();
 		$this->id = $row->id;
 		if (ExtDirect::checkDolVersion(0, '16.0')) {
 			$this->getLinesArray();
