@@ -472,7 +472,7 @@ class ExtDirectMo extends Mo
 				$id = $param['extTID'];
 				if ($object->fetch($id)) {
 					$object->fetch_thirdparty();
-					$dir = $conf->mrp->dir_output . dol_sanitizeFileName($object->ref);
+					$dir = $conf->mrp->dir_output . '/' . dol_sanitizeFileName($object->ref);
 				} else {
 					$response = PARAMETERERROR;
 					break;
