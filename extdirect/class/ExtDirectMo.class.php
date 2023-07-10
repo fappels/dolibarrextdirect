@@ -1036,12 +1036,10 @@ class ExtDirectMo extends Mo
 					if (in_array($line->role, $roles)) {
 						$result = $product->fetch($line->fk_product);
 						if ($result > 0) {
+							$product->fetch_barcode();
 							$row = $this->getLineData($line, $object, $product, $photoSize);
 							$result = $product->load_stock('novirtual, warehouseopen, warehouseinternal');
 							if ($result < 0) return ExtDirect::getDolError($result, $product->errors, $product->error);
-							if (empty($product->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
-								$product->barcode_type = (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
-							}
 							if ($warehouse_id > 0) {
 								$row->warehouse_id = $warehouse_id;
 								$row->id = $row->line_id . '_' . $warehouse_id;

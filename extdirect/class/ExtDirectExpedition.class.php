@@ -845,6 +845,7 @@ class ExtDirectExpedition extends Expedition
 					if ($line->fk_product > 0) {
 						$myprod = new ExtDirectProduct($this->_user->login);
 						if (($result = $myprod->fetch($line->fk_product)) < 0) return $result;
+						$myprod->fetch_barcode();
 						$row->barcode= $myprod->barcode?$myprod->barcode:'';
 						$row->barcode_type = $myprod->barcode_type?$myprod->barcode_type:0;
 						$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';

@@ -158,6 +158,7 @@ class ExtDirectProduct extends ProductFournisseur
 			}
 			if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if ($this->id > 0) {
+				$this->fetch_barcode();
 				$row->id = $this->id ;
 				$row->is_virtual_stock = false;
 				//! Ref
@@ -383,11 +384,7 @@ class ExtDirectProduct extends ProductFournisseur
 				//$row->productinfo= $this->array_options['options_productinfo'];
 				//! barcode
 				$row->barcode= $this->barcode?$this->barcode:'';               // value
-				if (empty($this->barcode_type) && ! empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
-					$row->barcode_type= (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
-				} else {
-					$row->barcode_type= (int) $this->barcode_type;
-				}
+				$row->barcode_type= (int) $this->barcode_type;
 				// get barcode with checksum included, same when scanned
 				$row->barcode_with_checksum = $this->fetchBarcodeWithChecksum($this);
 				// no links to offers in this version

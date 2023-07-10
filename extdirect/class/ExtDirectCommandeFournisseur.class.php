@@ -917,9 +917,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$supplierProduct = $prodsupplier;
 								}
 							}
-							if (empty($myprod->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
-								$myprod->barcode_type = (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
-							}
+							$myprod->fetch_barcode();
 						} else {
 							$isFreeLine = true;
 						}

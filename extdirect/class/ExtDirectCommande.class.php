@@ -1163,9 +1163,7 @@ class ExtDirectCommande extends Commande
 						if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) {
 							$myprod->get_sousproduits_arbo();
 						}
-						if (empty($myprod->barcode_type) && !empty($conf->global->PRODUIT_DEFAULT_BARCODE_TYPE)) {
-							$myprod->barcode_type = (int) $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE;
-						}
+						$myprod->fetch_barcode();
 					}
 					if ($line->product_type == 1) {
 						$isService = true;
