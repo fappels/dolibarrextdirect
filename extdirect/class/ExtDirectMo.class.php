@@ -1213,10 +1213,10 @@ class ExtDirectMo extends Mo
 								if ($resultmoline <= 0) {
 									return ExtDirect::getDolError($resultmoline, $moline->errors, $moline->error);
 								} elseif ($object->status < Mo::STATUS_INPROGRESS) {
-									$result = $object->setStatut(Mo::STATUS_INPROGRESS, 0, '', 'MRP_MO_PRODUCED');
-									if ($result < 0) {
-										return ExtDirect::getDolError($result, $object->errors, $object->error);
-									}
+									$resultmo = $object->setStatut(Mo::STATUS_INPROGRESS, 0, '', 'MRP_MO_PRODUCED');
+								}
+								if ($resultmo < 0) {
+									return ExtDirect::getDolError($resultmo, $object->errors, $object->error);
 								}
 
 								$pos++;
