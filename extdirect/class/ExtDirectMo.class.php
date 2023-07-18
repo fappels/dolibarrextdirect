@@ -403,6 +403,16 @@ class ExtDirectMo extends Mo
 							}
 							break;
 						case 2:
+							$result = $object->setStatut(Mo::STATUS_INPROGRESS, 0, '', 'MRP_MO_PRODUCED');
+							if ($result < 0) {
+								return ExtDirect::getDolError($result, $object->errors, $object->error);
+							}
+							break;
+						case 3:
+							$result = $object->setStatut(Mo::STATUS_PRODUCED, 0, '', 'MRP_MO_PRODUCED');
+							if ($result < 0) {
+								return ExtDirect::getDolError($result, $object->errors, $object->error);
+							}
 							break;
 						default:
 							break;
