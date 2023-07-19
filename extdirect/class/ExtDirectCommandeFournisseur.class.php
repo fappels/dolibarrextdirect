@@ -719,7 +719,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$row->ref           = $obj->ref;
 				$row->ref_supplier  = $obj->ref_supplier;
 				$row->orderstatus_id= (int) $obj->fk_statut;
-				$row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
+				$row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, 1));
 				$row->status        = $obj->status;
 				if ($obj->mode_code && $langs->transnoentitiesnoconv($obj->mode_code)) {
 					$row->mode      = $langs->transnoentitiesnoconv($obj->mode_code);
