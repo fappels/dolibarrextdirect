@@ -1002,6 +1002,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$myprod->fetchPhoto($row, $photoSize);
 								}
 								$row->unit_id = $line->fk_unit;
+								$row->cost_price = $line->subprice;
+								if (!empty($line->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+									$row->cost_price = price2num($line->subprice * (100 - $line->remise_percent) / 100, 'MU');
+								}
 								array_push($results, $row);
 							} else {
 								// get orderline with stock of warehouse
@@ -1077,6 +1081,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$myprod->fetchPhoto($row, $photoSize);
 								}
 								$row->unit_id = $line->fk_unit;
+								$row->cost_price = $line->subprice;
+								if (!empty($line->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+									$row->cost_price = price2num($line->subprice * (100 - $line->remise_percent) / 100, 'MU');
+								}
 								if (empty($batchId)) {
 									if (empty($batch)) {
 										if ($myprod->status_batch == 2) {
@@ -1162,6 +1170,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$myprod->fetchPhoto($row, $photoSize);
 									}
 									$row->unit_id = $line->fk_unit;
+									$row->cost_price = $line->subprice;
+									if (!empty($line->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+										$row->cost_price = price2num($line->subprice * (100 - $line->remise_percent) / 100, 'MU');
+									}
 									if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
 										if (empty($batchId)) {
 											if (empty($batch)) {
@@ -1577,6 +1589,22 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$result = $reception->update($this->_user);
 										if ($result < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
 									}
+									// reception addline needs cost_price
+									if (isset($params->cost_price)) {
+										// updated in client
+										$cost_price = $params->cost_price;
+									} elseif (isset($params->product_price)) {
+										// updated in client
+										// for backwards compatible client with no cost_price form field and use (deprecated) product_price.
+										$cost_price = $params->product_price;
+									} else {
+										// Define unit price for PMP calculation
+										// for backwards compatible client with no cost_price form field.
+										$cost_price = $orderLine->subprice;
+										if (!empty($orderLine->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+											$cost_price = price2num($cost_price * (100 - $orderLine->remise_percent) / 100, 'MU');
+										}
+									}
 									// reception addline
 									$lineIndex = $reception->addline(
 										$params->warehouse_id,
@@ -1586,7 +1614,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$params->comment,
 										ExtDirect::dateTimeToDate($params->eatby),
 										ExtDirect::dateTimeToDate($params->sellby),
-										$params->batch
+										$params->batch,
+										$cost_price
 									);
 									if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
 									// create dispatch from line created by addline
