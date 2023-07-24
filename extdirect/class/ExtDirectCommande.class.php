@@ -1214,7 +1214,7 @@ class ExtDirectCommande extends Commande
 								$row->price_base_type = $myprod->price_base_type;
 							}
 							$row->rang = $line->rang;
-							$row->price = $line->price;
+							$row->price = $line->price; // deprecated
 							$row->subprice = $line->subprice;
 							$row->reduction_percent = $line->remise_percent;
 							isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
@@ -1294,7 +1294,7 @@ class ExtDirectCommande extends Commande
 								$row->price_base_type = $myprod->price_base_type;
 							}
 							$row->rang = $line->rang;
-							$row->price = $line->price;
+							$row->price = $line->price; // deprecated
 							$row->subprice = $line->subprice;
 							$row->reduction_percent = $line->remise_percent;
 							isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
@@ -1374,7 +1374,7 @@ class ExtDirectCommande extends Commande
 									$row->price_base_type = $myprod->price_base_type;
 								}
 								$row->rang = $line->rang;
-								$row->price = $line->price;
+								$row->price = $line->price; // deprecated
 								$row->subprice = $line->subprice;
 								$row->reduction_percent = $line->remise_percent;
 								isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;

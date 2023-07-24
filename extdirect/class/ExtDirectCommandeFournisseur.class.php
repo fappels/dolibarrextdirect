@@ -719,7 +719,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$row->ref           = $obj->ref;
 				$row->ref_supplier  = $obj->ref_supplier;
 				$row->orderstatus_id= (int) $obj->fk_statut;
-				$row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, false, 1));
+				$row->orderstatus   = html_entity_decode($this->LibStatut($obj->fk_statut, 1));
 				$row->status        = $obj->status;
 				if ($obj->mode_code && $langs->transnoentitiesnoconv($obj->mode_code)) {
 					$row->mode      = $langs->transnoentitiesnoconv($obj->mode_code);
@@ -966,7 +966,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->total_localtax1 = $line->total_localtax1;
 									$row->total_localtax2 = $line->total_localtax2;
 									$row->subprice = $line->pu_ht;
-									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+									$row->cost_price = $line->subprice;
+									if (!empty($line->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+										$row->cost_price = price2num($line->subprice * (100 - $line->remise_percent) / 100, 'MU');
+									}
+									$row->price = $row->cost_price; // deprecated
 									$row->reduction_percent = $line->remise_percent;
 								}
 								$row->ref_supplier = $line->ref_supplier;
@@ -1042,7 +1046,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->total_localtax1 = $line->total_localtax1;
 									$row->total_localtax2 = $line->total_localtax2;
 									$row->subprice = $line->pu_ht;
-									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
+									$row->cost_price = $line->subprice;
+									if (!empty($line->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+										$row->cost_price = price2num($line->subprice * (100 - $line->remise_percent) / 100, 'MU');
+									}
+									$row->price = $row->cost_price; // deprecated
 									$row->reduction_percent = $line->remise_percent;
 								}
 								$row->ref_supplier = $line->ref_supplier;
@@ -1119,22 +1127,28 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 									}
 									$row->qty_asked = $line->qty;
-									$row->tax_tx = $line->tva_tx;
-									$row->localtax1_tx = $line->localtax1_tx;
-									$row->localtax2_tx = $line->localtax2_tx;
-									$row->total_net = $line->total_ht;
-									$row->total_inc = $line->total_ttc;
-									$row->total_tax = $line->total_tva;
-									$row->total_localtax1 = $line->total_localtax1;
-									$row->total_localtax2 = $line->total_localtax2;
-									$row->subprice = $line->pu_ht;
+									if (!empty($this->_user->rights->fournisseur->lire)) {
+										$row->tax_tx = $line->tva_tx;
+										$row->localtax1_tx = $line->localtax1_tx;
+										$row->localtax2_tx = $line->localtax2_tx;
+										$row->total_net = $line->total_ht;
+										$row->total_inc = $line->total_ttc;
+										$row->total_tax = $line->total_tva;
+										$row->total_localtax1 = $line->total_localtax1;
+										$row->total_localtax2 = $line->total_localtax2;
+										$row->subprice = $line->pu_ht;
+										$row->cost_price = $line->subprice;
+										if (!empty($line->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+											$row->cost_price = price2num($line->subprice * (100 - $line->remise_percent) / 100, 'MU');
+										}
+										$row->price = $row->cost_price; // deprecated
+										$row->reduction_percent = $line->remise_percent;
+									}
 									if (isset($line->rang)) {
 										$row->rang = $line->rang;
 									} else {
 										$row->rang = $line->id;
 									}
-									$row->price = $line->pu_ht-((float) $line->pu_ht * ($line->remise_percent/100));
-									$row->reduction_percent = $line->remise_percent;
 									$row->ref_supplier = $line->ref_supplier;
 									if (!empty($line->fk_fournprice)) {
 										$row->ref_supplier_id = $line->fk_fournprice;
@@ -1451,7 +1465,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				if (!$this->error) {
 					foreach ($this->lines as $orderLine) {
 						if ($orderLine->id == $params->origin_line_id) {
-							if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer) && isset($this->_user->rights->fournisseur->lire)) {
+							if (($updated = $this->prepareOrderLineFields($params, $orderLine)) && isset($this->_user->rights->fournisseur->commande->creer) && !empty($this->_user->rights->fournisseur->lire)) {
 								if ($this->statut == 0) {
 									// update fields
 									$tva_tx = get_default_tva($this->thirdparty, $mysoc, $orderLine->fk_product, $params->ref_supplier_id);
@@ -1551,6 +1565,19 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 							// dispatch
 							if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
+								if (!empty($this->_user->rights->fournisseur->lire) && isset($params->cost_price)) {
+									// updated in client
+									$cost_price = $params->cost_price;
+								} elseif (!empty($this->_user->rights->fournisseur->lire) && isset($params->price)) {
+									// updated in client deprecated
+									$cost_price = $params->price;
+								} else {
+									// take ordeline price
+									$cost_price = $orderLine->subprice;
+									if (!empty($orderLine->remise_percent) && empty($conf->global->STOCK_EXCLUDE_DISCOUNT_FOR_PMP)) {
+										$cost_price = price2num($cost_price * (100 - $orderLine->remise_percent) / 100, 'MU');
+									}
+								}
 								if (!empty($conf->reception->enabled)) {
 									// use reception mode
 									require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
@@ -1586,7 +1613,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$params->comment,
 										ExtDirect::dateTimeToDate($params->eatby),
 										ExtDirect::dateTimeToDate($params->sellby),
-										$params->batch
+										$params->batch,
+										$cost_price
 									);
 									if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
 									// create dispatch from line created by addline
@@ -1599,7 +1627,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$orderLine->fk_product,
 										$params->qty_shipped,
 										$params->warehouse_id,
-										$params->price, // must be ordered unitprice with discount
+										$cost_price,
 										$params->comment,
 										ExtDirect::dateTimeToDate($params->eatby),
 										ExtDirect::dateTimeToDate($params->sellby),
