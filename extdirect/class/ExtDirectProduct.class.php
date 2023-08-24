@@ -1471,7 +1471,7 @@ class ExtDirectProduct extends ProductFournisseur
 		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
 		if ($warehouseFilter || !empty($conf->multicompany->enabled)) {
-			if (in_array(0, $checkWarehouseIds)) {
+			if (in_array(0, $checkWarehouseIds) || empty($checkWarehouseIds)) {
 				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
 			} else {
 				$sqlFrom .= ' INNER JOIN '.MAIN_DB_PREFIX.'product_stock as ps ON p.rowid = ps.fk_product';
