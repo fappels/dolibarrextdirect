@@ -2141,13 +2141,21 @@ class ExtDirectProduct extends ProductFournisseur
 			$pdir = $productObj->ref.'/';
 		}
 		$dir = $conf->product->multidir_output[(int) $productObj->entity] . '/'. $pdir;
+		$relativedir = '';
+		if ($dir) {
+			$relativedir = preg_replace('/^'.preg_quote(DOL_DATA_ROOT, '/').'/', '', $dir);
+			$relativedir = preg_replace('/^[\\/]/', '', $relativedir);
+			$relativedir = preg_replace('/[\\/]$/', '', $relativedir);
+		}
 
-		$photos = $this->liste_photos($dir, $maxNum);
+		$photos = dol_dir_list($dir, "files", 0, '', '(\.meta|_preview.*\.png)$', 'position_name', SORT_ASC, 1);
 
 		if (is_array($photos) && !empty($photos)) {
+			completeFileArrayWithDatabaseInfo($photos, $relativedir);
+			$photos = dol_sort_array($photos, 'position_name');
 			$row->has_photo = count($photos);
 			$row->photo_size = $format;
-			$photoFile = $photos[$num]['photo'];
+			$photoFile = $photos[$num]['name'];
 			$photo_parts = pathinfo($photoFile);
 			if ($format == 'mini') {
 				$filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
@@ -2155,7 +2163,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
 				if (!file_exists($filename)) {
 					// no small thumb available, return original size for small pics (< 20KB) else return mini size
-					if (dol_filesize($dir.$photoFile) > 20480) {
+					if ($photos[$num]['size'] > 20480) {
 						$filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
 						$row->photo_size = 'mini';
 					} else {
