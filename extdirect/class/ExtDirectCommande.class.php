@@ -624,10 +624,10 @@ class ExtDirectCommande extends Commande
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
-		if ($barcode) {
+		if ($barcode || $contentFilter) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON c.rowid = cd.fk_commande";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
-			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
+			if ($barcode) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
@@ -666,7 +666,7 @@ class ExtDirectCommande extends Commande
 		}
 
 		if ($contentFilter) {
-			$fields = array('c.ref', 'c.ref_client', 's.nom', 'u.firstname', 'u.lastname');
+			$fields = array('c.ref', 'c.ref_client', 's.nom', 'u.firstname', 'u.lastname', 'p.ref');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
