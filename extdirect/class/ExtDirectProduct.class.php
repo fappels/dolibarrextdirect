@@ -2151,8 +2151,10 @@ class ExtDirectProduct extends ProductFournisseur
 		$photos = dol_dir_list($dir, "files", 0, '', '(\.meta|_preview.*\.png)$', 'position_name', SORT_ASC, 1);
 
 		if (is_array($photos) && !empty($photos)) {
-			completeFileArrayWithDatabaseInfo($photos, $relativedir);
-			$photos = dol_sort_array($photos, 'position_name');
+			if (function_exists('completeFileArrayWithDatabaseInfo')) {
+				completeFileArrayWithDatabaseInfo($photos, $relativedir);
+				$photos = dol_sort_array($photos, 'position_name');
+			}
 			$row->has_photo = count($photos);
 			$row->photo_size = $format;
 			$photoFile = $photos[$num]['name'];
