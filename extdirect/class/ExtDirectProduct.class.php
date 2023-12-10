@@ -154,7 +154,7 @@ class ExtDirectProduct extends ProductFournisseur
 		if (($id > 0) || ($ref != '')) {
 			if ($socid > 0) {
 				$customer = new Societe($this->db);
-				if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
+				if (($result = $customer->fetch($socid)) < 0) return ExtDirect::getDolError($result, $customer->errors, $customer->error);
 			}
 			if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if ($this->id > 0) {
@@ -216,14 +216,20 @@ class ExtDirectProduct extends ProductFournisseur
 
 					$prodcustprice = new Productcustomerprice($this->db);
 
-					if (($result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid))) <= 0) ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
-					if ($result) {
+					if (ExtDirect::checkDolVersion(0, '17.0')) {
+						$result = $prodcustprice->fetchAll('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid));
+					} else {
+						$result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid));
+					}
+					if ($result > 0) {
 						if (count($prodcustprice->lines) > 0) {
 							$row->price = $prodcustprice->lines [0]->price;
 							$row->price_ttc = $prodcustprice->lines [0]->price_ttc;
 							$row->price_base_type = $prodcustprice->lines [0]->price_base_type;
 							$row->tva_tx = $prodcustprice->lines [0]->tva_tx;
 						}
+					} elseif ($result < 0) {
+						return ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
 					}
 				}
 				//! Default VAT rate of product, make sure vat is set if multi/customer vat is not set.
