@@ -25,10 +25,10 @@ $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
 if (version_compare(phpversion(), '7.3', '>=')) {
-	empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? $site_cookie_samesite = ini_set('session.cookie_samesite', 'None') : $site_cookie_samesite = ini_get('session.cookie_samesite');
+	browserHasNoSamesite() ? $site_cookie_samesite = ini_get('session.cookie_samesite') : $site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
-	empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? $sessionParam = array('samesite' => 'None') : null;
+	browserHasNoSamesite() ? $sessionParam = array('samesite' => null) : $sessionParam = array('samesite' => 'None');
 	requestIsHTTPS() ? $sessionParam['secure'] = 1 : $sessionParam['secure'] = 0;
 	session_set_cookie_params($sessionParam);
 	session_start();
@@ -36,7 +36,7 @@ if (version_compare(phpversion(), '7.3', '>=')) {
 	$site_cookie_samesite = 'NA';
 	$site_cookie_secure = ini_get('session.cookie_secure');
 	session_abort();
-	session_set_cookie_params(0, (empty($conf->global->EXTDIRECTCONNECT_NO_SAMESITE_NONE) ? '/; samesite=None' : '/'), null, (requestIsHTTPS() ? true : false), true);
+	session_set_cookie_params(0, (browserHasNoSamesite() ? '/' : '/; samesite=None'), null, (requestIsHTTPS() ? true : false), true);
 	session_start();
 }
 
@@ -261,6 +261,27 @@ function requestIsHTTPS()
 		$isSecure = true;
 	}
 	return $isSecure;
+}
+
+/**
+ * Return if an old browser not compatible with samesite cookies is connecting
+ * For the moment only check for android chrome.
+ *
+ * @return	boolean		True if browser not compatible
+ */
+function browserHasNoSamesite()
+{
+	global $conf;
+
+	$noSamesite = false;
+
+	if (!empty($conf->browser->version)) {
+		if ($conf->browser->name == 'chrome' && version_compare($conf->browser->version, '80.0.0.0', '<')) {
+			$noSamesite = true;
+		}
+	}
+
+	return $noSamesite;
 }
 
 $response = null;

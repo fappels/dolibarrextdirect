@@ -599,10 +599,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
-		if ($barcode || $productId) {
+		if ($barcode || $productId || $contentFilter) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON c.rowid = cd.fk_commande";
 		}
-		if ($barcode) {
+		if ($barcode || $contentFilter) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
 			if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_fournisseur_price as pfp ON pfp.fk_product = cd.fk_product";
 		}
@@ -651,7 +651,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		}
 
 		if ($contentFilter) {
-			$fields = array('c.ref', 'c.ref_supplier', 's.nom', 'u.firstname', 'u.lastname');
+			$fields = array('c.ref', 'c.ref_supplier', 's.nom', 'u.firstname', 'u.lastname', 'p.ref');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
@@ -1619,7 +1619,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
 									// create dispatch from line created by addline
 									$result = $reception->lines[$lineIndex]->create($this->_user);
-									if ($result < 0) ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+									if ($result < 0) return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
 								} else {
 									// use dispatch mode
 									if (($result = $this->DispatchProduct(

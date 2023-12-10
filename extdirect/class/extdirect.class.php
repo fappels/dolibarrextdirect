@@ -600,7 +600,7 @@ class ExtDirect
 
 		if ($validate) {
 			$minVersion = '4.0';
-			$maxVersion = '18.0'; // tested version
+			$maxVersion = '19.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
@@ -1026,7 +1026,8 @@ class ExtDirect
 					$userstatic->lastname = $obj->lastname;
 					$userstatic->firstname = $obj->firstname;
 					$userstatic->photo = $obj->photo;
-					$userstatic->statut = $obj->status;
+					$userstatic->statut = $obj->status; // deprecated
+					$userstatic->status = $obj->status;
 					$userstatic->entity = $obj->entity;
 					$userstatic->admin = $obj->admin;
 

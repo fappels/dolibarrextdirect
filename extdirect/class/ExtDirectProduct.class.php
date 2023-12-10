@@ -154,7 +154,7 @@ class ExtDirectProduct extends ProductFournisseur
 		if (($id > 0) || ($ref != '')) {
 			if ($socid > 0) {
 				$customer = new Societe($this->db);
-				if (($result = $customer->fetch($socid)) < 0) ExtDirect::getDolError($result, $customer->errors, $customer->error);
+				if (($result = $customer->fetch($socid)) < 0) return ExtDirect::getDolError($result, $customer->errors, $customer->error);
 			}
 			if (($result = $this->fetch($id, $ref, $ref_ext)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			if ($this->id > 0) {
@@ -216,14 +216,20 @@ class ExtDirectProduct extends ProductFournisseur
 
 					$prodcustprice = new Productcustomerprice($this->db);
 
-					if (($result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid))) <= 0) ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
-					if ($result) {
+					if (ExtDirect::checkDolVersion(0, '17.0')) {
+						$result = $prodcustprice->fetchAll('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid));
+					} else {
+						$result = $prodcustprice->fetch_all('', '', 0, 0, array('t.fk_product' => $this->id,'t.fk_soc' => $socid));
+					}
+					if ($result > 0) {
 						if (count($prodcustprice->lines) > 0) {
 							$row->price = $prodcustprice->lines [0]->price;
 							$row->price_ttc = $prodcustprice->lines [0]->price_ttc;
 							$row->price_base_type = $prodcustprice->lines [0]->price_base_type;
 							$row->tva_tx = $prodcustprice->lines [0]->tva_tx;
 						}
+					} elseif ($result < 0) {
+						return ExtDirect::getDolError($result, $prodcustprice->errors, $prodcustprice->error);
 					}
 				}
 				//! Default VAT rate of product, make sure vat is set if multi/customer vat is not set.
@@ -2141,13 +2147,23 @@ class ExtDirectProduct extends ProductFournisseur
 			$pdir = $productObj->ref.'/';
 		}
 		$dir = $conf->product->multidir_output[(int) $productObj->entity] . '/'. $pdir;
+		$relativedir = '';
+		if ($dir) {
+			$relativedir = preg_replace('/^'.preg_quote(DOL_DATA_ROOT, '/').'/', '', $dir);
+			$relativedir = preg_replace('/^[\\/]/', '', $relativedir);
+			$relativedir = preg_replace('/[\\/]$/', '', $relativedir);
+		}
 
-		$photos = $this->liste_photos($dir, $maxNum);
+		$photos = dol_dir_list($dir, "files", 0, '', '(\.meta|_preview.*\.png)$', 'position_name', SORT_ASC, 1);
 
 		if (is_array($photos) && !empty($photos)) {
+			if (function_exists('completeFileArrayWithDatabaseInfo')) {
+				completeFileArrayWithDatabaseInfo($photos, $relativedir);
+				$photos = dol_sort_array($photos, 'position_name');
+			}
 			$row->has_photo = count($photos);
 			$row->photo_size = $format;
-			$photoFile = $photos[$num]['photo'];
+			$photoFile = $photos[$num]['name'];
 			$photo_parts = pathinfo($photoFile);
 			if ($format == 'mini') {
 				$filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
@@ -2155,7 +2171,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$filename=$dir.'thumbs/'.$photo_parts['filename'].'_small.'.$photo_parts['extension'];
 				if (!file_exists($filename)) {
 					// no small thumb available, return original size for small pics (< 20KB) else return mini size
-					if (dol_filesize($dir.$photoFile) > 20480) {
+					if ($photos[$num]['size'] > 20480) {
 						$filename=$dir.'thumbs/'.$photo_parts['filename'].'_mini.'.$photo_parts['extension'];
 						$row->photo_size = 'mini';
 					} else {
