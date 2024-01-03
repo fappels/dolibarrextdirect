@@ -176,9 +176,16 @@ class ExtDirectFormProduct extends FormProduct
 					$row->is_virtual_stock = false;
 					isset($warehouse['label']) ? $row->label = $warehouse['label'] : $row->label='';
 					isset($warehouse['stock']) ? $row->stock = $warehouse['stock'] : $row->stock=null;
-					isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
+					if (!empty($warehouse['barcode']) && !empty($warehouse['label']) && empty($warehouse['description']) && $warehouse['label'] != $warehouse['barcode']) {
+						// temp solution until warehouse barcodes supported by client
+						$row->description = $warehouse['barcode'];
+					} else {
+						isset($warehouse['description']) ? $row->description = $warehouse['description'] : $row->description=null;
+					}
 					isset($warehouse['status']) ? $row->status = $warehouse['status'] : $row->status=null;
 					isset($warehouse['parent_id']) ? $row->parent_id = $warehouse['parent_id'] : $row->parent_id=null;
+					isset($warehouse['barcode']) ? $row->barcode = $warehouse['barcode'] : $row->barcode=null;
+					isset($warehouse['fk_barcode_type']) ? $row->barcode_type = $warehouse['fk_barcode_type'] : $row->barcode_type=null;
 					array_push($data, $row);
 				}
 				$recordNbr++;
@@ -347,20 +354,18 @@ class ExtDirectFormProduct extends FormProduct
 				array_push($results, clone $row);
 				for ($i = 0;$i < $num; $i++) {
 					$obj = $this->db->fetch_object($resql);
-					if ($obj->coder != '0') {
-						$row->id    = $obj->rowid;
-						$row->code  = $obj->code;
-						$row->label = $obj->label;
-						$row->coder = $obj->coder;
-						$row->product_default = false;
-						$row->company_default = false;
-						if ($row->id == $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE) {
-							$row->product_default = true;
-						} elseif ($row->id == $conf->global->GENBARCODE_BARCODETYPE_THIRDPARTY) {
-							$row->company_default = true;
-						}
-						array_push($results, clone $row);
+					$row->id    = $obj->rowid;
+					$row->code  = $obj->code;
+					$row->label = $obj->label;
+					$row->coder = $obj->coder;
+					$row->product_default = false;
+					$row->company_default = false;
+					if ($row->id == $conf->global->PRODUIT_DEFAULT_BARCODE_TYPE) {
+						$row->product_default = true;
+					} elseif ($row->id == $conf->global->GENBARCODE_BARCODETYPE_THIRDPARTY) {
+						$row->company_default = true;
 					}
+					array_push($results, clone $row);
 				}
 			} else {
 				$error="Error ".$this->db->lasterror();
@@ -397,6 +402,11 @@ class ExtDirectFormProduct extends FormProduct
 
 		$warehouseStatus = array();
 
+		$barcodeTypeData = $this->readBarcodeType(new stdClass);
+		foreach ($barcodeTypeData as $barcodeType) {
+			$barcodeTypes[$barcodeType->code] = $barcodeType->id;
+		}
+
 		if (preg_match('/warehouseclosed/', $statusFilter)) {
 			$warehouseStatus[] = Entrepot::STATUS_CLOSED;
 		}
@@ -406,7 +416,9 @@ class ExtDirectFormProduct extends FormProduct
 		if (preg_match('/warehouseinternal/', $statusFilter)) {
 			$warehouseStatus[] = Entrepot::STATUS_OPEN_INTERNAL;
 		}
-		if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+		if (ExtDirect::checkDolVersion(0, '16.0', '')) {
+			$sql = "SELECT e.rowid, e.ref as label, e.description, e.statut, e.fk_parent, e.barcode, e.fk_barcode_type";
+		} elseif (ExtDirect::checkDolVersion(0, '7.0', '')) {
 			$sql = "SELECT e.rowid, e.ref as label, e.description, e.statut, e.fk_parent";
 		} else {
 			$sql = "SELECT e.rowid, e.label, e.description, e.statut";
@@ -472,6 +484,16 @@ class ExtDirectFormProduct extends FormProduct
 				$this->cache_warehouses[$obj->rowid]['id'] = $obj->rowid;
 				$this->cache_warehouses[$obj->rowid]['label'] = $obj->label;
 				$this->cache_warehouses[$obj->rowid]['description'] = $obj->description;
+				if (empty($obj->barcode)) {
+					$this->cache_warehouses[$obj->rowid]['barcode'] = $obj->label;
+				} else {
+					$this->cache_warehouses[$obj->rowid]['barcode'] = $obj->barcode;
+				}
+				if (empty($obj->fk_barcode_type)) {
+					$this->cache_warehouses[$obj->rowid]['fk_barcode_type'] = $barcodeTypes['C128'];
+				} else {
+					$this->cache_warehouses[$obj->rowid]['fk_barcode_type'] = $obj->fk_barcode_type;
+				}
 				$this->cache_warehouses[$obj->rowid]['stock'] = $obj->stock;
 				$this->cache_warehouses[$obj->rowid]['status'] = $obj->statut;
 				$this->cache_warehouses[$obj->rowid]['parent_id'] = $obj->fk_parent;
@@ -610,6 +632,28 @@ class ExtDirectFormProduct extends FormProduct
 			$error="Error ".$this->db->lasterror();
 			dol_syslog(get_class($this)."::readProductUnits ".$error, LOG_ERR);
 			return SQLERROR;
+		}
+	}
+
+	/**
+	 *    get id of first warehouse in database to have some non configured default value.
+	 *
+	 *    @return     int warehouse id or -1 if error
+	 */
+	public function getFirstWarehouseId()
+	{
+		$warehouse = new Entrepot($this->db);
+		$sql = "SELECT rowid";
+		$sql.= " FROM ".MAIN_DB_PREFIX.$warehouse->table_element;
+		$sql.= " ORDER BY rowid";
+		$sql.= $this->db->plimit(1, 0);
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			$obj = $this->db->fetch_object($resql);
+			return $obj->rowid;
+		} else {
+			$this->error="Error ".$this->db->lasterror();
+			return -1;
 		}
 	}
 }
