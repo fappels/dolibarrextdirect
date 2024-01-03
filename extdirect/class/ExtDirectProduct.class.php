@@ -1723,32 +1723,45 @@ class ExtDirectProduct extends ProductFournisseur
 		if (empty($conf->productbatch->enabled) || empty($id) || !isset($warehouseId)) return PARAMETERERROR;
 
 		$this->id = $id;
-		$res = $this->load_stock('novirtual, warehouseopen, warehouseinternal');
+		$res = $this->load_stock('novirtual, warehouseopen, warehouseinternal, nobatch');
 		if ($res < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 
 		if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
 			require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
 			$formProduct = new FormProduct($this->db);
-			$formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal');
-			foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
-				if ($includeNoBatch) {
-					$row = new stdClass;
-					$row->id = 'X_'.sprintf("%09d", $warehouseId);
-					$row->product_id = $id;
-					$row->batch_id = 0;
-					$row->batch = $langs->transnoentities('BatchDefaultNumber');
-					if (!empty($this->stock_warehouse[$warehouseId]->real)) {
-						$defaultStock = (float) $this->stock_warehouse[$warehouseId]->real;
-					} elseif (empty($warehouse['parent_id'])) {
-						$defaultStock = 1; // only allow add first batch to parent warehouse to avoid too many choises
-					} else {
-						$defaultStock = 0;
+			$formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal', true, array(), 1);
+			if (count($formProduct->cache_warehouses) > 0) {
+				foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
+					if ($includeNoBatch) {
+						$row = new stdClass;
+						$row->id = 'X_'.sprintf("%09d", $warehouseId);
+						$row->product_id = $id;
+						$row->batch_id = 0;
+						$row->batch = $langs->transnoentities('BatchDefaultNumber');
+						if (!empty($this->stock_warehouse[$warehouseId]->real)) {
+							$defaultStock = (float) $this->stock_warehouse[$warehouseId]->real;
+						} elseif (empty($warehouse['parent_id'])) {
+							$defaultStock = 1; // only allow add first batch to parent warehouse to avoid too many choises
+						} else {
+							$defaultStock = 0;
+						}
+						$row->stock_reel =$defaultStock;
+						$row->warehouse_id = $warehouseId;
 					}
-					$row->stock_reel =$defaultStock;
-					$row->warehouse_id = $warehouseId;
+					$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
+					if ($res < 0) return $res;
 				}
-				$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
-				if ($res < 0) return $res;
+			} elseif ($includeNoBatch) {
+				$formProduct = new ExtDirectFormProduct($this->db);
+				$warehouseId = (!empty($conf->global->MAIN_DEFAULT_WAREHOUSE) ? $conf->global->MAIN_DEFAULT_WAREHOUSE : $formProduct->getFirstWarehouseId());
+				$row = new stdClass;
+				$row->id = 'X_'.sprintf("%09d", $warehouseId);
+				$row->product_id = $id;
+				$row->batch_id = 0;
+				$row->batch = $langs->transnoentities('BatchDefaultNumber');
+				$row->stock_reel = 1;
+				$row->warehouse_id = $warehouseId;
+				array_push($results, $row);
 			}
 		} else {
 			if ($includeNoBatch) {
