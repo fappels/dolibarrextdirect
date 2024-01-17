@@ -72,7 +72,7 @@ if ($mode == $activities->mode) {
 	if ($extDirect->getDurations() < 0) $error++;
 } else {
 	$extDirect= new ExtDirect($db);
-	if ($extDirect->fetchList('', 'date_last_connect ASC') < 0) $error++;
+	if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
 }
 
 /*
@@ -132,7 +132,7 @@ if (!$error) {
 				if ($res < 0) $error++;
 			}
 		}
-		$extDirect->fetchList('', 'date_last_connect ASC');
+		$extDirect->fetchList('', 'datec ASC');
 	} elseif ($action == 'clear' && empty($refresh)) {
 		if (! empty($extDirect->dataset)) {
 			$db->begin();
@@ -143,7 +143,7 @@ if (!$error) {
 				if (! $res > 0) $error++;
 			}
 		}
-		if ($extDirect->fetchList('', 'rowid ASC') < 0) $error++;
+		if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
 	} elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
 		// validate if dolibarr version is in compatibility range
 		if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
