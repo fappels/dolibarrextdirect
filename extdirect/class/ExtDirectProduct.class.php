@@ -1712,7 +1712,7 @@ class ExtDirectProduct extends ProductFournisseur
 				foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
 					if ($includeNoBatch) {
 						$row = new stdClass;
-						$row->id = 'X_'.sprintf("%09d", $warehouseId);
+						$row->id = $id.'_'.sprintf("%09d", $warehouseId);
 						$row->product_id = $id;
 						$row->batch_id = 0;
 						$row->batch = $langs->transnoentities('BatchDefaultNumber');
@@ -1733,7 +1733,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$formProduct = new ExtDirectFormProduct($this->db);
 				$warehouseId = (!empty($conf->global->MAIN_DEFAULT_WAREHOUSE) ? $conf->global->MAIN_DEFAULT_WAREHOUSE : $formProduct->getFirstWarehouseId());
 				$row = new stdClass;
-				$row->id = 'X_'.sprintf("%09d", $warehouseId);
+				$row->id = $id.'_'.sprintf("%09d", $warehouseId);
 				$row->product_id = $id;
 				$row->batch_id = 0;
 				$row->batch = $langs->transnoentities('BatchDefaultNumber');
@@ -1743,7 +1743,7 @@ class ExtDirectProduct extends ProductFournisseur
 			}
 		} else {
 			if ($includeNoBatch) {
-				$row->id = 'X_'.sprintf("%09d", $warehouseId);
+				$row->id = $id.'_'.sprintf("%09d", $warehouseId);
 				$row->product_id = $id;
 				$row->batch_id = 0;
 				$row->batch = $langs->transnoentities('BatchDefaultNumber');
@@ -1753,7 +1753,13 @@ class ExtDirectProduct extends ProductFournisseur
 			$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
 			if ($res < 0) return $res;
 		}
-		if (isset($param->sort)) $results = ExtDirect::resultSort($results, $param->sort);
+		if (isset($param->sort)) {
+			// remove technical id from sort
+			foreach ($param->sort as $key => $sort) {
+				if ($sort->property == 'id') unset($param->sort[$key]);
+			}
+			$results = ExtDirect::resultSort($results, $param->sort);
+		}
 		return $results;
 	}
 
