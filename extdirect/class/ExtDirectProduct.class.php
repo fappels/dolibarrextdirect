@@ -1215,20 +1215,18 @@ class ExtDirectProduct extends ProductFournisseur
 						}
 					}
 					if (!empty($productBatch->id)) {
-						// TODO only update if changed
-						$currentBatch = $productBatch->batch;
-						isset($param->batch) ? $productBatch->batch = $param->batch : null;
-						isset($param->batch_info) ? $productBatch->import_key = $param->batch_info : null;
-						!empty($batchCorrectQty) ? $productBatch->qty = $productBatch->qty - $batchCorrectQty : null;
-						if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
 						// fetch lot data
 						$productLot = new Productlot($this->db);
-						if (($result = $productLot->fetch(0, $this->id, $currentBatch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+						if (($result = $productLot->fetch(0, $this->id, $productBatch->batch)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
 						if ($productLot->id > 0) {
-							isset($param->batch) ? $productLot->batch = $param->batch : null;
-							isset($param->sellby) ? $productLot->sellby = ExtDirect::dateTimeToDate($param->sellby) : null;
-							isset($param->eatby) ? $productLot->eatby = ExtDirect::dateTimeToDate($param->eatby) : null;
-							if (($result = $productLot->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+							!empty($batchCorrectQty) ? $param->batch_qty = $productBatch->qty - $batchCorrectQty : $param->batch_qty = null;
+							isset($param->sellby) ? $param->date_sellby = ExtDirect::dateTimeToDate($param->sellby) : $param->date_sellby = null;
+							isset($param->eatby) ? $param->date_eatby = ExtDirect::dateTimeToDate($param->eatby) : $param->date_eatby = null;
+							$updatedBatch = $this->prepareFieldsBatch($param, $productLot, $productBatch);
+							if ($updatedBatch) {
+								if (($result = $productBatch->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productBatch->errors, $productBatch->error);
+								if (($result = $productLot->update($this->_user)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+							}
 						}
 					}
 				}
@@ -1902,6 +1900,26 @@ class ExtDirectProduct extends ProductFournisseur
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_id', 'fourn_id');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'desiredstock', 'desiredstock');
 		$diff = ExtDirect::prepareField($diff, $param, $this, 'supplier_reputation', 'supplier_reputation');
+		return $diff;
+	}
+
+	/**
+	 * private method to copy batch fields into dolibarr object
+	 *
+	 * @param stdclass		$param object with fields
+	 * @param Productlot 	$productLot Productlot object
+	 * @param Productbatch 	$productBatch Productbatch object
+	 * @return boolean $diff true if changed
+	 */
+	private function prepareFieldsBatch($param, $productLot, $productBatch)
+	{
+		$diff = false; // difference flag, set to true if a param element diff detected
+		$diff = ExtDirect::prepareField($diff, $param, $productBatch, 'batch', 'batch');
+		$diff = ExtDirect::prepareField($diff, $param, $productBatch, 'batch_info', 'import_key');
+		$diff = ExtDirect::prepareField($diff, $param, $productBatch, 'batch_qty', 'qty');
+		$diff = ExtDirect::prepareField($diff, $param, $productLot, 'batch', 'batch');
+		$diff = ExtDirect::prepareField($diff, $param, $productLot, 'date_sellby', 'sellby');
+		$diff = ExtDirect::prepareField($diff, $param, $productLot, 'date_eatby', 'eatby');
 		return $diff;
 	}
 
