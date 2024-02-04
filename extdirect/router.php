@@ -254,10 +254,14 @@ function object_analyse_sql_and_script(&$var, $type)
  */
 function requestIsHTTPS()
 {
+	global $conf;
+
 	$isSecure = false;
 	if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
 		$isSecure = true;
 	} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https' || !empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on') {
+		$isSecure = true;
+	} elseif (!empty($conf->global->DIRECTCONNECT_FORCE_HTTPS)) {
 		$isSecure = true;
 	}
 	return $isSecure;
