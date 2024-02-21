@@ -25,7 +25,7 @@ $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
 if (version_compare(phpversion(), '7.3', '>=')) {
-	browserHasNoSamesite() ? $site_cookie_samesite = ini_get('session.cookie_samesite') : $site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
+	$site_cookie_samesite = ini_get('session.cookie_samesite');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
 	browserHasNoSamesite() ? $sessionParam = array('samesite' => null) : $sessionParam = array('samesite' => 'None');
