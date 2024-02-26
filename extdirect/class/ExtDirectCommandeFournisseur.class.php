@@ -168,7 +168,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				if ($myUser->fetch($this->user_author_id)>0) {
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
-				$row->user_valid_id = $this->user_valid_id;
 				$row->user_approve_id = $this->user_approve_id;
 				$row->create_date = $this->date;
 				$row->valid_date = $this->date_valid;
@@ -758,12 +757,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (!isset($this->db)) return CONNECTERROR;
 		$results = array();
 
+		$this->LibStatut(0); // set $this->labelStatus
 		for ($statut = 0; $statut < self::STATUS_END; $statut++) {
-			$result = $this->LibStatut($statut, 1);
-			$row = new stdClass;
-			$row->id = $statut;
-			$row->status = html_entity_decode($result);
-			array_push($results, $row);
+			if (array_key_exists($statut, $this->labelStatus)) {
+				$result = $this->LibStatut($statut, 1);
+				$row = new stdClass;
+				$row->id = $statut;
+				$row->status = html_entity_decode($result);
+				array_push($results, $row);
+			}
 		}
 		return $results;
 	}

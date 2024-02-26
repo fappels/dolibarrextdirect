@@ -734,7 +734,7 @@ class ExtDirectProduct extends ProductFournisseur
 			$origin_element = '';
 			$origin_id = null;
 			$disablestockchangeforsubproduct = 0;
-			if ($param->notrigger) $notrigger = $param->notrigger;
+			if (isset($param->notrigger)) $notrigger = $param->notrigger;
 			// prepare fields
 			$this->prepareFields($param);
 			$this->prepareFieldsBarcode($param);
@@ -985,12 +985,12 @@ class ExtDirectProduct extends ProductFournisseur
 					if (($result = $this->update($id, $this->_user, $notrigger)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				// check batch or non batch
+				$createNewBatchFromZeroStock = false;
 				if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
 					//! Stock
 					$this->load_stock('novirtual, warehouseopen, warehouseinternal');
 					$originalQty = $param->stock_reel;
 					$stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
-					$createNewBatchFromZeroStock = false;
 					$productBatch = new Productbatch($this->db);
 
 					if (($originalQty < 0) && ($param->batch_id > 0)) {
@@ -2155,7 +2155,8 @@ class ExtDirectProduct extends ProductFournisseur
 		// get photo
 		global $conf;
 
-		$maxNum = 0;
+		$row->has_photo = 0;
+		$row->photo_size = '';
 		if (empty($productObj)) $productObj=$this;
 		if (! empty($conf->global->PRODUCT_USE_OLD_PATH_FOR_PHOTO)) {
 			$pdir = get_exdir($productObj->id, 2, 0, 0, $productObj, 'product') . $productObj->id ."/photos/";

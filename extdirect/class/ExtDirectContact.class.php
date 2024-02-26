@@ -125,9 +125,7 @@ class ExtDirectContact extends Contact
 					$row->fax               = $this->fax;
 					$row->phone_perso       = $this->phone_perso;
 					$row->phone_mobile      = $this->phone_mobile;
-					$row->skype             = $this->skype;
 					$row->email             = $this->email;
-					$row->jabberid          = $this->jabberid;
 					$row->priv              = (int) $this->priv;
 					$row->birthday          = $this->birthday;
 					$row->birthday_alert    = $this->birthday_alert;

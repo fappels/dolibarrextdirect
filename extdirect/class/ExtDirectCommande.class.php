@@ -195,7 +195,6 @@ class ExtDirectCommande extends Commande
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
 				$row->order_date = $this->date;
-				$row->deliver_date= $this->date_livraison;
 				$row->deliver_date= $this->delivery_date;
 				$row->availability_id = $this->availability_id;
 				$row->availability_code = $this->availability_code;
@@ -210,7 +209,7 @@ class ExtDirectCommande extends Commande
 				$row->location_incoterms = $this->location_incoterms;
 				$row->customer_type = $thirdparty->typent_code;
 				//$row->has_signature = 0; not yet implemented
-				if ($this->remise == 0) {
+				if (empty($this->remise)) {
 					$row->reduction = 0;
 					foreach ($this->lines as $line) {
 						if ($line->remise_percent > 0) {
@@ -515,7 +514,7 @@ class ExtDirectCommande extends Commande
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if ($params->id) {
-				$this->id = $params->id;
+				$this->fetch($params->id);
 				// delete
 				if (($result = $this->delete($this->_user)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
 			} else {
