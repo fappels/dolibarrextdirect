@@ -72,8 +72,6 @@ class ExtDirectContact extends Contact
 	 */
 	public function readContact(stdClass $params)
 	{
-		global $conf;
-
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 
