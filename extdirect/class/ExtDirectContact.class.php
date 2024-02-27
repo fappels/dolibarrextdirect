@@ -72,6 +72,8 @@ class ExtDirectContact extends Contact
 	 */
 	public function readContact(stdClass $params)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 
@@ -125,6 +127,11 @@ class ExtDirectContact extends Contact
 					$row->fax               = $this->fax;
 					$row->phone_perso       = $this->phone_perso;
 					$row->phone_mobile      = $this->phone_mobile;
+					if (ExtDirect::checkDolVersion(0, '9.0', '')) {
+						$row->skype         = $this->socialnetworks['skype'];
+					} else {
+						$row->skype         = $this->skype;
+					}
 					$row->email             = $this->email;
 					$row->priv              = (int) $this->priv;
 					$row->birthday          = $this->birthday;
