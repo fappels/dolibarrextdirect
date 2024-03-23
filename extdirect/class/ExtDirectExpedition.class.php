@@ -41,6 +41,12 @@ class ExtDirectExpedition extends Expedition
 	private $_shipmentConstants = array('STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT', 'STOCK_CALCULATE_ON_SHIPMENT');
 	private $_enabled = false;
 
+	/** @var string $key_ship_line_order key of linked order to ship line */
+	public $key_ship_line_order = 'fk_element';
+
+	/** @var string $key_ship_line_order_line key of linked order line to ship line */
+	public $key_ship_line_order_line = 'fk_origin_line';
+
 	const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
 	const STATUS_CLOSED = 2;
@@ -600,7 +606,7 @@ class ExtDirectExpedition extends Expedition
 		}
 		if ($barcode) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."expeditiondet as ed ON e.rowid = ed.fk_expedition";
-			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON cd.rowid = ed.fk_origin_line";
+			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON cd.rowid = ed.".$this->key_ship_line_order_line;
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}

@@ -52,6 +52,9 @@ class ExtDirectProduct extends ProductFournisseur
 	 */
 	public $extParam;
 
+	/** @var string $table_element_reception_line table of order reception line */
+	public $table_element_reception_line = 'receptiondet_batch';
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -65,6 +68,9 @@ class ExtDirectProduct extends ProductFournisseur
 				$user->getrights();
 				$this->_enabled = !empty($conf->product->enabled) && isset($user->rights->produit->lire);
 				$this->_user = $user;  //product.class uses global user
+				if (ExtDirect::checkDolVersion(0, '', '19')) {
+					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
+				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
@@ -1442,7 +1448,7 @@ class ExtDirectProduct extends ProductFournisseur
 			if (ExtDirect::checkDolVersion(0, '5.0', '')) $sqlFields .= ', sp.supplier_reputation';
 			if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlFields .= ', sp.barcode as supplier_barcode';
 			$sqlFields .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
-			$sqlFields .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseur_dispatch as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
+			$sqlFields .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.$this->table_element_reception_line.' as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
 		} else {
 			if (! empty($conf->global->PRODUIT_MULTIPRICES)) {
 				$sqlFields .= ', pp.price as multi_price, pp.price_ttc as multi_price_ttc';

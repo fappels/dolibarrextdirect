@@ -63,6 +63,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 */
 	public $date_delivered;
 
+	/** @var string $table_element_reception_line table of order reception line */
+	public $table_element_reception_line = 'receptiondet_batch';
+
+	/** @var string $key_ship_line_order key of linked order to ship/receive line */
+	public $key_ship_line_order = 'fk_element';
+
+	/** @var string $key_ship_line_order_line key of linked order line to ship/receive line */
+	public $key_ship_line_order_line = 'fk_elementdet';
+
 	/**
 	 * end status to allow status itteration
 	 */
@@ -82,6 +91,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$user->getrights();
 				$this->_enabled = !empty($conf->fournisseur->enabled) && isset($user->rights->fournisseur->commande->lire);
 				$this->_user = $user;  //commande.class uses global user
+				if (ExtDirect::checkDolVersion(0, '', '19')) {
+					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
+					$this->key_ship_line_order = 'fk_commande';
+					$this->key_ship_line_order_line = 'fk_commandefourndet';
+				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
@@ -1706,10 +1720,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 
 		if ($productId) {
 			$sql = "SELECT sum(cfd.qty) as qty";
-			$sql.= " FROM ".MAIN_DB_PREFIX."commande_fournisseur_dispatch as cfd";
-			$sql.= " WHERE cfd.fk_commande = ".$this->id;
+			$sql.= " FROM ".MAIN_DB_PREFIX.$this->table_element_reception_line." as cfd";
+			$sql.= " WHERE cfd.".$this->key_ship_line_order." = ".$this->id;
 			$sql.= " AND cfd.fk_product = ".$productId;
-			$sql.= " AND cfd.fk_commandefourndet = ".$lineId;
+			$sql.= " AND cfd.".$this->key_ship_line_order_line." = ".$lineId;
 			if ($warehouseId > 0) {
 				$sql.= " AND cfd.fk_entrepot = ".$warehouseId;
 			}
