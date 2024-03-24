@@ -126,7 +126,7 @@ class ExtDirectContact extends Contact
 					$row->phone_perso       = $this->phone_perso;
 					$row->phone_mobile      = $this->phone_mobile;
 					if (ExtDirect::checkDolVersion(0, '9.0', '')) {
-						$row->skype         = $this->socialnetworks['skype'];
+						if(isset($this->socialnetworks['skype'])) $row->skype = $this->socialnetworks['skype'];
 					} else {
 						$row->skype         = $this->skype;
 					}

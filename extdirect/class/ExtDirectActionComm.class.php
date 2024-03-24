@@ -101,7 +101,7 @@ class ExtDirectActionComm extends ActionComm
 						$row->priority          = $this->priority;
 						$row->note              = $this->note;
 						$row->usertodo_id   = (int) $this->userownerid;
-						$row->userdone_id   = (int) $this->userdoneid;
+						if (isset($this->userdoneid)) $row->userdone_id   = (int) $this->userdoneid;
 						$row->company_id    = (int) $this->socid;
 						$row->contact_id    = (int) $this->contact_id;
 						$row->project_id        = (int) $this->fk_project;
@@ -466,7 +466,7 @@ class ExtDirectActionComm extends ActionComm
 					 return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				$this->_societe->id=$this->socid;
-				$this->_societe->add_commercial($this->_user, $this->userdoneid);
+				if (isset($this->userdoneid)) $this->_societe->add_commercial($this->_user, $this->userdoneid);
 			} else {
 				return PARAMETERERROR;
 			}
