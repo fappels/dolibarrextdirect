@@ -773,7 +773,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 
 		$this->LibStatut(0); // set $this->labelStatus
 		for ($statut = 0; $statut < self::STATUS_END; $statut++) {
-			if (array_key_exists($statut, $this->labelStatus)) {
+			if (!isset($this->labelStatus) || array_key_exists($statut, $this->labelStatus)) {
 				$result = $this->LibStatut($statut, 1);
 				$row = new stdClass;
 				$row->id = $statut;
