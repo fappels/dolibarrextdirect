@@ -91,7 +91,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$user->getrights();
 				$this->_enabled = !empty($conf->fournisseur->enabled) && isset($user->rights->fournisseur->commande->lire);
 				$this->_user = $user;  //commande.class uses global user
-				if (ExtDirect::checkDolVersion(0, '', '19')) {
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
 					$this->key_ship_line_order = 'fk_commande';
 					$this->key_ship_line_order_line = 'fk_commandefourndet';

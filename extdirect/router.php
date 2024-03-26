@@ -111,7 +111,7 @@ function doRpc($cdata)
 		);
 
 		$actionAvailable = true;
-		if (ExtDirect::checkDolVersion(0, '', '10') && $action == 'ExtDirectMo') $actionAvailable = false; // skip non existing classes
+		if (ExtDirect::checkDolVersion(0, '', '10.0') && $action == 'ExtDirectMo') $actionAvailable = false; // skip non existing classes
 		if ($actionAvailable) {
 			error_reporting(0); // comment for debugging or change 0 to E_ALL
 			dol_include_once("/extdirect/class/$action.class.php");

@@ -68,7 +68,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$user->getrights();
 				$this->_enabled = !empty($conf->product->enabled) && isset($user->rights->produit->lire);
 				$this->_user = $user;  //product.class uses global user
-				if (ExtDirect::checkDolVersion(0, '', '19')) {
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
 				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
