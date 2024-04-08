@@ -45,7 +45,7 @@ class ExtDirectExpedition extends Expedition
 	public $key_ship_line_order = 'fk_element';
 
 	/** @var string $key_ship_line_order_line key of linked order line to ship line */
-	public $key_ship_line_order_line = 'fk_origin_line';
+	public $key_ship_line_order_line = 'fk_elementdet';
 
 	const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
@@ -69,6 +69,9 @@ class ExtDirectExpedition extends Expedition
 				$user->getrights();
 				$this->_enabled = !empty($conf->expedition->enabled) && isset($user->rights->expedition->lire);
 				$this->_user = $user;  //commande.class uses global user
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$this->key_ship_line_order_line = 'fk_origin_line';
+				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
@@ -859,7 +862,11 @@ class ExtDirectExpedition extends Expedition
 					}
 					$row->id = $line->line_id;
 					$row->line_id = $line->line_id;
-					$row->origin_line_id = $line->fk_origin_line;
+					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+						$row->origin_line_id = $line->fk_origin_line;
+					} else {
+						$row->origin_line_id = $line->fk_elementdet;
+					}
 					$row->description = $line->description;
 					$row->product_id = $line->fk_product;
 					$row->product_ref = $line->product_ref; // deprecated
