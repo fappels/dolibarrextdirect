@@ -319,9 +319,10 @@ class ExtDirectContact extends Contact
 		$sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
+		$sqlWhere = ' WHERE c.entity IN ('.getEntity($this->element).')';
 		if ($filterSize > 0) {
 			// TODO improve sql command to allow random property type
-			$sqlWhere = ' WHERE (';
+			$sqlWhere .= ' AND (';
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'id')
 					$sqlWhere .= 'c.rowid = '.$filter->value;
