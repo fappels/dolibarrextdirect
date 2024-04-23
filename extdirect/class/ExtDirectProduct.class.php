@@ -1408,20 +1408,20 @@ class ExtDirectProduct extends ProductFournisseur
 		}
 		if (isset($param->filter)) {
 			$filterSize = count($param->filter);
+			foreach ($param->filter as $key => $filter) {
+				if ($filter->property == 'multiprices_index' && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
+				elseif ($filter->property == 'customer_id' && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
+				elseif ($filter->property == 'categorie_id') $categorieFilter=true;
+				elseif ($filter->property == 'supplier_id' && !empty($this->_user->rights->fournisseur->lire)) $supplierFilter=true;
+				elseif ($filter->property == 'warehouse_id') {
+					$warehouseFilter = true;
+					if ($filter->value > 0) $warehouseIds[] = $filter->value;
+					$checkWarehouseIds[] = $filter->value;
+				}
+			}
 		}
 		if (isset($param->include_total)) {
 			$includeTotal = $param->include_total;
-		}
-		foreach ($param->filter as $key => $filter) {
-			if ($filter->property == 'multiprices_index' && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;
-			elseif ($filter->property == 'customer_id' && ! empty($conf->global->PRODUIT_CUSTOMER_PRICES)) $socid=$filter->value;
-			elseif ($filter->property == 'categorie_id') $categorieFilter=true;
-			elseif ($filter->property == 'supplier_id' && !empty($this->_user->rights->fournisseur->lire)) $supplierFilter=true;
-			elseif ($filter->property == 'warehouse_id') {
-				$warehouseFilter = true;
-				if ($filter->value > 0) $warehouseIds[] = $filter->value;
-				$checkWarehouseIds[] = $filter->value;
-			}
 		}
 
 		if (isset($param->sort)) {
@@ -1635,12 +1635,21 @@ class ExtDirectProduct extends ProductFournisseur
 					$row->ref_supplier_id = $obj->ref_supplier_id;
 					$row->qty_supplier = $obj->qty_supplier;
 					$row->reduction_percent_supplier = $obj->reduction_percent_supplier;
-					$row->id        = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
-					$row->price     = $obj->price_supplier;
+					if ($warehouseFilter) {
+						$row->id = $obj->id.'_'.$obj->fk_entrepot.'_'.$obj->ref_supplier_id;
+					} else {
+						$row->id = $obj->id.'_'.$obj->ref_supplier_id;
+					}
+					$row->price = $obj->price_supplier;
 					if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
 					if (ExtDirect::checkDolVersion(0, '13.0', '') && !empty($obj->supplier_barcode)) $row->barcode = $obj->supplier_barcode;
+					$row->qty_ordered = $obj->ordered - $obj->dispatched;
 				} else {
-					$row->id        = $obj->id.'_'.$obj->fk_entrepot;
+					if ($warehouseFilter) {
+						$row->id    = $obj->id.'_'.$obj->fk_entrepot;
+					} else {
+						$row->id    = $obj->id;
+					}
 					$row->price_ttc = $obj->price_ttc;
 					$row->price     = $obj->price;
 					if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($obj->multi_price)) {
@@ -1650,8 +1659,8 @@ class ExtDirectProduct extends ProductFournisseur
 						$row->price_ttc = $obj->customer_price_ttc;
 						$row->price     = $obj->customer_price;
 					}
+					$row->qty_ordered = 0;
 				}
-				$row->qty_ordered = $obj->ordered - $obj->dispatched;
 				array_push($data, $row);
 			}
 			$this->db->free($resql);
