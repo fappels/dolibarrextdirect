@@ -1367,23 +1367,26 @@ class ExtDirectExpedition extends Expedition
 			} else {
 				$lineId = $params->line_id;
 			}
-			if (empty($params->origin_id)) {
-				$orderLine = new OrderLine($this->db);
-				$orderLine->fetch($lineId);
-				$this->id = $orderLine->fk_commande;
-			} else {
-				$this->id = $params->origin_id;
-			}
-			if (($result = $this->fetch($this->id)) < 0) {
-				return ExtDirect::getDolError($result, $this->errors, $this->error);
-			}
-			// Add a protection to refuse deleting if shipment is not in draft status
-			if ($this->statut == self::STATUS_DRAFT && $lineId) {
-				if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-					$line = new ExpeditionLigne($this->db);
+			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+				$line = new ExpeditionLigne($this->db);
+				if (empty($params->origin_id)) {
+					$line->fetch($lineId);
+					$this->id = $line->fk_expedition;
 				} else {
-					$line = new ExtDirectExpeditionLine($this->db);
+					$this->id = $params->origin_id;
 				}
+				if (($result = $this->fetch($this->id)) < 0) {
+					return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				// Add a protection to refuse deleting if shipment is not in draft status
+				if ($this->statut == self::STATUS_DRAFT && $lineId) {
+					$line->id = $lineId;
+					if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+				} else {
+					return PARAMETERERROR;
+				}
+			} elseif ($lineId) {
+				$line = new ExtDirectExpeditionLine($this->db);
 				$line->id = $lineId;
 				if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
 			} else {
