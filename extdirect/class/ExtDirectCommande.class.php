@@ -1785,11 +1785,17 @@ class ExtDirectCommande extends Commande
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
+		$lineId = 0;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if (empty($params->origin_line_id)) {
-				$lineId = $params->id;
+				$idArray = explode('_', $params->id);
+				if (!in_array($lineId, $idArray)) {
+					$lineId = $idArray[0];
+				} else {
+					continue;
+				}
 			} else {
 				$lineId = $params->origin_line_id;
 			}
