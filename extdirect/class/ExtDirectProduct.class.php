@@ -511,7 +511,7 @@ class ExtDirectProduct extends ProductFournisseur
 						if (is_array($optionsArray) && count($optionsArray) > 0) {
 							foreach ($optionsArray as $name => $label) {
 								$row = new stdClass;
-								$row->id = $index++;
+								$row->id = $index++ . '_' . $this->id;
 								$row->name = $name;
 								$row->value = '';
 								$row->object_id = $this->id;
@@ -524,7 +524,7 @@ class ExtDirectProduct extends ProductFournisseur
 						foreach ($this->array_options as $key => $value) {
 							$row = new stdClass;
 							$name = substr($key, 8); // strip options_
-							$row->id = $index++; // ExtJs needs id to be able to destroy records
+							$row->id = $index++ . '_' . $this->id; // ExtJs needs id to be able to destroy records
 							$row->name = $name;
 							$row->value = $extraFields->showOutputField($name, $value, '', $this->table_element); // display value
 							$row->object_id = $this->id;
@@ -546,7 +546,7 @@ class ExtDirectProduct extends ProductFournisseur
 						if (is_array($optionsArray) && count($optionsArray) > 0) {
 							foreach ($optionsArray as $name => $label) {
 								$row = new stdClass;
-								$row->id = $index++;
+								$row->id = $index++ . '_productlot_' . $productLot->id;
 								$row->name = $name;
 								$row->value = '';
 								$row->object_id = $productLot->id;
@@ -559,7 +559,7 @@ class ExtDirectProduct extends ProductFournisseur
 						foreach ($productLot->array_options as $key => $value) {
 							$row = new stdClass;
 							$name = substr($key, 8); // strip options_
-							$row->id = $index++;
+							$row->id = $index++ . '_productlot_' . $productLot->id;
 							$row->name = $name;
 							$row->value = $extraFields->showOutputField($name, $value, '', $productLot->table_element);
 							$row->object_id = $productLot->id;
@@ -633,22 +633,23 @@ class ExtDirectProduct extends ProductFournisseur
 	 */
 	public function destroyOptionals($params)
 	{
-		global $conf;
-
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->produit->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if (isset($param->element) && $param->element == 'productlot') {
+			$idArray = explode('_', $param->id);
+			if (isset($idArray[1]) && $idArray[1] == 'productlot' && isset($idArray[2])) {
+				$id = $idArray[2];
 				$productLot = new Productlot($this->db);
-				if (($result = $productLot->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
-			} else {
-				if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if (($result = $productLot->fetch($id)) < 0) return ExtDirect::getDolError($result, $productLot->errors, $productLot->error);
+			} elseif (isset($idArray[1])) {
+				$id = $idArray[1];
+				if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			}
 		}
 		if (isset($productLot)) {
-			if ($productLot->id != $param->object_id && ($result = $productLot->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if (($result = $productLot->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		} else {
 			if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		}
