@@ -1328,7 +1328,12 @@ class ExtDirectCommande extends Commande
 								array_push($results, $row);
 								$myprod->fetchSubProducts($results, clone $row, $photoSize);
 							} else {
-								if (($res = $myprod->fetchBatches($results, $row, $line->id, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id, false, null, '', $photoSize)) < 0) return $res;
+								if (!empty($line_warehouse_id) && !empty($myprod->stock_warehouse[$line_warehouse_id])) {
+									$productStockId = $myprod->stock_warehouse[$line_warehouse_id]->id;
+								} else {
+									$productStockId = null;
+								}
+								if (($res = $myprod->fetchBatches($results, $row, $line->id, $line_warehouse_id, $productStockId, false, null, '', $photoSize)) < 0) return $res;
 							}
 						}
 					} else {

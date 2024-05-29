@@ -2106,13 +2106,6 @@ class ExtDirectProduct extends ProductFournisseur
 				$num++;
 				array_push($results, clone $row);
 			}
-		} elseif (isset($row->id) && !empty($productStockId)) {
-			// no batch
-			$num++;
-			$row->is_sub_product = false;
-			array_push($results, clone $row);
-			$this->fetchSubProducts($results, $row, $photoFormat);
-			$this->fetch($product_id);
 		} elseif (empty($batchId) && !empty($batchValue) && $this->status_batch == 2) {
 			// new first serial number
 			$row->id = $id;
@@ -2127,6 +2120,13 @@ class ExtDirectProduct extends ProductFournisseur
 			$row->qty_toreceive = 1;
 			$num++;
 			array_push($results, clone $row);
+		} elseif (isset($row->id)) {
+			// no batch
+			$num++;
+			$row->is_sub_product = false;
+			array_push($results, clone $row);
+			$this->fetchSubProducts($results, $row, $photoFormat);
+			$this->fetch($product_id);
 		}
 
 		if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
