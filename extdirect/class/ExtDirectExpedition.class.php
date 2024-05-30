@@ -600,7 +600,7 @@ class ExtDirectExpedition extends Expedition
 			}
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode, e.date_delivery";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode, e.date_delivery, e.fk_shipping_method";
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "societe as s, " . MAIN_DB_PREFIX . "expedition as e";
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec ON e.rowid = ec.element_id";
 		if ($originId) {
@@ -667,6 +667,8 @@ class ExtDirectExpedition extends Expedition
 						$sortfield = 'e.date_delivery';
 					} elseif ($sort->property == 'customer') {
 						$sortfield = 's.nom';
+					} elseif ($sort->property == 'shipping_method_id') {
+						$sortfield = 'e.fk_shipping_method';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -718,6 +720,7 @@ class ExtDirectExpedition extends Expedition
 				$row->status        = $obj->status;
 				$row->mode          = $obj->mode;
 				$row->deliver_date  = $this->db->jdate($obj->date_delivery);
+                $row->shipping_method_id = (int) $obj->fk_shipping_method;
 				if ($barcode && !empty($conf->shipmentpackage->enabled)) {
 					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
 					$shipmentPackage = new ShipmentPackage($this->db);
