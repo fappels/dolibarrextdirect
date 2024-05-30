@@ -619,7 +619,8 @@ class ExtDirectCommande extends Commande
 			$start = 0;
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, u.firstname, u.lastname";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level";
+		$sqlFields .= ", c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, c.fk_shipping_method, u.firstname, u.lastname";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
@@ -688,6 +689,8 @@ class ExtDirectCommande extends Commande
 						$sortfield = 's.nom';
 					} elseif ($sort->property == 'user_name') {
 						$sortfield = 'u.lastname, u.firstname';
+					} elseif ($sort->property == 'shipping_method_id') {
+						$sortfield = 'c.fk_shipping_method';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -748,6 +751,7 @@ class ExtDirectCommande extends Commande
 				$row->total_inc     = $obj->total_ttc;
 				$row->deliver_date  = $this->db->jdate($obj->date_livraison);
 				$row->order_date    = $this->db->jdate($obj->date_commande);
+				$row->shipping_method_id = (int) $obj->fk_shipping_method;
 				if ($customStatus) {
 					if (in_array($row->orderstatus_id, $orderstatus_id)) {
 						array_push($data, $row);
