@@ -863,12 +863,14 @@ class ExtDirectExpedition extends Expedition
 						$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 						if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) $myprod->get_sousproduits_arbo();
 					}
-					$row->id = $line->line_id;
-					$row->line_id = $line->line_id;
 					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 						$row->origin_line_id = $line->fk_origin_line;
+						$row->id = $line->line_id;
+						$row->line_id = $line->line_id;
 					} else {
 						$row->origin_line_id = $line->fk_elementdet;
+						$row->id = $line->id;
+						$row->line_id = $line->id;
 					}
 					$row->description = $line->description;
 					$row->product_id = $line->fk_product;
@@ -1246,7 +1248,7 @@ class ExtDirectExpedition extends Expedition
 						$this->fetchObjectLinked($this->id, 'shipping', null, 'shipmentpackage');
 						$shipmentPackages = $this->linkedObjects['shipmentpackage'];
 						// get first draft package for shipment
-						if (count($shipmentPackages) > 0) {
+						if (!empty($shipmentPackages)) {
 							foreach ($shipmentPackages as $shipmentPackage) {
 								if ($shipmentPackage->id > 0 && $shipmentPackage->status == ShipmentPackage::STATUS_DRAFT) {
 									$package = $shipmentPackage;
