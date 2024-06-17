@@ -1690,7 +1690,23 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			$orderLine->fetch($lineId);
 			$this->id = $orderLine->fk_commande;
 			if ($lineId) {
-				// delete
+				// delete dispatched
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					dol_include_once('/fourn/class/fournisseur.commande.dispatch.class.php');
+					$dispatch = new CommandeFournisseurDispatch($this->db);
+				} else {
+					dol_include_once('/reception/class/receptionlinebatch.class.php');
+					$dispatch = new ReceptionLineBatch($this->db);
+				}
+				$dispatched = $dispatch->fetchAll('', '', 0, 0, array($this->key_ship_line_order_line => $lineId));
+				if ($dispatched > 0) {
+					foreach ($dispatch->lines as $line) {
+						/** @var CommandeFournisseurDispatch $line */
+						;
+						if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+					}
+				}
+				// delete line
 				if (($result = $this->deleteline($lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			} else {
 				return PARAMETERERROR;
