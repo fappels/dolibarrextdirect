@@ -3539,9 +3539,13 @@ describe("delete Purchase orders", function () {
 				callback: function (records) {
 					Ext.getStore('PurchaseOrderLine').remove(records);
 					Ext.getStore('PurchaseOrderLine').sync({
-						success: function(records) {
-							testresult = records.length;
-							flag = true;
+						success: function() {
+							Ext.getStore('PurchaseOrderLine').load({
+								callback: function (records) {
+									testresult = records.length;
+									flag = true;
+								}
+							});
 						},
 						failure: function(dataBatch) {
 							if (Array.isArray(dataBatch.getOperations()) && dataBatch.getOperations().length > 0) {
