@@ -264,7 +264,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			// fetch id
-			if (($res = $this->fetch($param->id, $param->app_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
+			if (($res = $this->fetch($param->id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 			// if found delete
 			if ($this->id) {
 				$this->_user->fetch($this->fk_user);

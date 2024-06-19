@@ -1044,7 +1044,7 @@ class ExtDirectSociete extends Societe
 
 				// update
 				if (($result = $this->update($id, $this->_user, $call_trigger, $allowmodcodeclient, $allowmodcodefournisseur)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if ($param->stcomm_id || $param->fk_prospectlevel) {
+				if (isset($param->stcomm_id) && isset($param->fk_prospectlevel)) {
 					if ($this->updateProspectStatLevel($id, $param->stcomm_id, $param->fk_prospectlevel) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				if (isset($param->reduction_percent)) {

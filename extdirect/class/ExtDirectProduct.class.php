@@ -996,7 +996,11 @@ class ExtDirectProduct extends ProductFournisseur
 				if (! empty($conf->productbatch->enabled) && !empty($param->batch)) {
 					//! Stock
 					$this->load_stock('novirtual, warehouseopen, warehouseinternal');
-					$originalQty = $param->stock_reel;
+					if (!empty($param->stock_reel)) {
+						$originalQty = $param->stock_reel;
+					} else {
+						$originalQty = $this->stock_reel;
+					}
 					$stockQty = $this->stock_warehouse[$param->warehouse_id]->real;
 					$productBatch = new Productbatch($this->db);
 
@@ -1327,8 +1331,10 @@ class ExtDirectProduct extends ProductFournisseur
 			if ($param->id) {
 				if (isset($param->notrigger)) $notrigger = $param->notrigger;
 				$id = $param->id;
-				$this->id = $id;
-				$this->ref = $param->ref;
+				$result = $this->fetch($id);
+				if ($result < 0) {
+					return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
