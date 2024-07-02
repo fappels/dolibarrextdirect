@@ -160,7 +160,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->id = (int) $this->id;
 			$result->ack_id = $this->ack_id;
 			$result->app_id = $this->app_id;
-			$result->fk_user = $this->fk_user;
+			$result->fk_user = $this->_user->id;
 			$result->app_name = $this->app_name;
 			$result->requestid = $this->requestid;
 			$result->datec = $this->datec;
