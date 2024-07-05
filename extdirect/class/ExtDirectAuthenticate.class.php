@@ -138,27 +138,27 @@ class ExtDirectAuthenticate extends ExtDirect
 			return ExtDirect::getDolError($res, $this->errors, $this->error);
 		} else {
 			// only login with valid access key
-			if ($ack_id == $this->ack_id) {
+			if ($ack_id == $this->ack_id && $this->_user->id) {
 				$_SESSION['dol_login'] = $this->_user->login;
-			}
-			$tmpEntity = $conf->entity;
-			if (isset($this->entity) && ($this->entity > 0)) {
-				$_SESSION['dol_entity'] = $this->entity;
-				$conf->entity = $this->entity;
-			} elseif (isset($this->_user->entity) && ($this->_user->entity > 0)) {
-				// backward compatiblity
-				$_SESSION['dol_entity'] = $this->_user->entity;
-				$conf->entity = $this->_user->entity;
-			} else {
-				$_SESSION['dol_entity'] = 1;
-				$conf->entity = 1;
-			}
-			if ($tmpEntity != $conf->entity) {
-				$conf->setValues($this->db);
-				$mysoc->setMysoc($conf); // get company name of entity
+				$tmpEntity = $conf->entity;
+				if (isset($this->entity) && ($this->entity > 0)) {
+					$_SESSION['dol_entity'] = $this->entity;
+					$conf->entity = $this->entity;
+				} elseif (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+					// backward compatiblity
+					$_SESSION['dol_entity'] = $this->_user->entity;
+					$conf->entity = $this->_user->entity;
+				} else {
+					$_SESSION['dol_entity'] = 1;
+					$conf->entity = 1;
+				}
+				if ($tmpEntity != $conf->entity) {
+					$conf->setValues($this->db);
+					$mysoc->setMysoc($conf); // get company name of entity
+				}
 			}
 			$result->id = (int) $this->id;
-			$result->ack_id = $this->ack_id;
+			$result->ack_id = ($this->_user->id > 0) ? $this->ack_id : 0;
 			$result->app_id = $this->app_id;
 			$result->fk_user = $this->_user->id;
 			$result->app_name = $this->app_name;
