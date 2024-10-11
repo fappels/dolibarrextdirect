@@ -122,9 +122,9 @@ class ExtDirect
 			$this->ack_id = uniqid('llx', true);
 			if ($this->fk_user > 0 && !empty($conf->multicompany->enabled)) {
 				require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
-				$user = new User($this->db);
-				$user->fetch($this->fk_user);
-				$this->entity = $user->entity;
+				$userEntity = new User($this->db);
+				$userEntity->fetch($this->fk_user);
+				$this->entity = $userEntity->entity;
 			}
 		}
 
@@ -325,8 +325,6 @@ class ExtDirect
 			$sql.= " WHERE t.app_id = '".$app_id."'";
 		} elseif (!empty($ack_id)) {
 			$sql.= " WHERE t.ack_id = '".$ack_id."'";
-		} elseif (!empty($requestid)) {
-			$sql.= " WHERE t.requestid = '".$requestid."'";
 		} else {
 			return PARAMETERERROR;
 		}
@@ -352,13 +350,11 @@ class ExtDirect
 				if (!empty($conf->multicompany->enabled)) {
 					$this->entity = $obj->entity;
 				}
-
+				$this->db->free($resql);
 				return 1;
 			} else {
 				return 0;
 			}
-
-			$this->db->free($resql);
 		} else {
 			$this->error="Error ".$this->db->lasterror();
 			dol_syslog(get_class($this)."::fetch ".$this->error, LOG_ERR);
@@ -721,11 +717,7 @@ class ExtDirect
 			$propertyIndex ? $object->{$propertyName}[$propertyIndex] = $paramValue : $object->$propertyName = $paramValue;
 			return true;
 		}
-		if ($diff) {
-			return true;
-		} else {
-			return false;
-		}
+		return $diff;
 	}
 
 	/**

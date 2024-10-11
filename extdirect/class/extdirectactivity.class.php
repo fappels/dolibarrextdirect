@@ -79,9 +79,6 @@ class ExtDirectActivity extends CommonObject
 		$error=0;
 		$this->fk_user = $user->id;
 		// Clean parameters
-
-		if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
-		if (isset($this->app_id)) $this->app_id=$this->app_id;
 		if (isset($this->app_version)) $this->app_version=trim($this->app_version);
 		if (isset($this->activity_name)) $this->activity_name=trim($this->activity_name);
 		if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);
@@ -323,9 +320,6 @@ class ExtDirectActivity extends CommonObject
 		$error=0;
 		$this->fk_user = $user->id;
 		// Clean parameters
-
-		if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
-		if (isset($this->app_id)) $this->app_id=$this->app_id;
 		if (isset($this->app_version)) $this->app_name=trim($this->app_version);
 		if (isset($this->activity_name)) $this->activity_name=trim($this->activity_name);
 		if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);

@@ -94,7 +94,6 @@ if (!$error) {
 				$extDirect->id=$user_app['rowid'];
 
 				$param='REMOVE_'.$user_app['app_id'].$i;
-				//print "param=".$param." - ".$_POST[$param];
 				if (GETPOST($param, 'alpha')) {
 					//delete
 					$res = $extDirect->delete($user);

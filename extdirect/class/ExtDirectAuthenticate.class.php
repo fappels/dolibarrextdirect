@@ -112,7 +112,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		$moduleInfo = new modExtDirect($this->db);
 
 		if (isset($param->filter)) {
-			foreach ($param->filter as $key => $filter) {
+			foreach ($param->filter as $filter) {
 				if ($filter->property == 'ack_id') $ack_id=$filter->value;
 				elseif ($filter->property == 'app_id') $app_id=$filter->value;
 				elseif ($filter->property == 'app_version') $app_version=$filter->value;
@@ -225,7 +225,7 @@ class ExtDirectAuthenticate extends ExtDirect
 					// update
 					$this->date_last_connect=dol_now();
 					if (($res = $this->update($this->_user)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
-				};
+				}
 				// only login with valid access key
 				$this->_user->fetch($this->fk_user);
 				if ($param->ack_id == $this->ack_id) {
