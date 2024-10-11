@@ -1099,4 +1099,74 @@ class ExtDirect
 
 		return $out;
 	}
+
+	/**
+	* Return Url link of activity origin object
+	*
+	* @param int $origintype Type origin
+	*
+	* @return CommonObject
+	*/
+	public function getOrigin($origintype)
+	{
+		$origin = null;
+		switch ($origintype) {
+			case 'Order':
+				require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
+				$origin = new Commande($this->db);
+				break;
+			case 'Picking':
+				require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
+				$origin = new Commande($this->db);
+				break;
+			case 'Shipment':
+				require_once DOL_DOCUMENT_ROOT.'/expedition/class/expedition.class.php';
+				$origin = new Expedition($this->db);
+				break;
+			case 'Dispatch':
+				require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
+				$origin = new CommandeFournisseur($this->db);
+				break;
+			case 'Purchase':
+				require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
+				$origin = new CommandeFournisseur($this->db);
+				break;
+			case 'Inventory':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'InventoryPlus':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'OrderProduct':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'ManufactureOrderProduct':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'Remove':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'PurchaseProducts':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'ManufactureOrder':
+				require_once DOL_DOCUMENT_ROOT.'/mrp/class/mo.class.php';
+				$origin = new Mo($this->db);
+				break;
+			case 'Prospect':
+				require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+				$origin = new Societe($this->db);
+				break;
+			default:
+				break;
+		}
+
+		return $origin;
+	}
 }

@@ -59,7 +59,10 @@ $action = GETPOST('action', 'alpha');
 $value = GETPOST('value', 'alpha');
 $refresh = GETPOST('refresh', 'alpha');
 
-if ($mode == $activities->mode) {
+$extDirect= new ExtDirect($db);
+if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
+
+if (!$error && $mode == $activities->mode) {
 	$userId = GETPOST('userid', 'int');
 	if ($userId > 0) {
 		$activityFilter = ' AND ea.fk_user = ' . $userId;
@@ -67,12 +70,9 @@ if ($mode == $activities->mode) {
 		$activityFilter = '';
 		$userId = -1;
 	}
-	$extDirect= new ExtDirectActivity($db);
-	if ($extDirect->fetchList($activityFilter, 'rowid ASC') < 0) $error++;
-	if ($extDirect->getDurations() < 0) $error++;
-} else {
-	$extDirect= new ExtDirect($db);
-	if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
+	$extDirectActivity = new ExtDirectActivity($db);
+	if ($extDirectActivity->fetchList($activityFilter, 'rowid ASC') < 0) $error++;
+	if ($extDirectActivity->getDurations() < 0) $error++;
 }
 
 /*
@@ -342,9 +342,9 @@ if ($mode == $tabs['tab1']->mode) {
 	}
 
 	print '</tr>'."\n";
-	if (! empty($extDirect->dataset)) {
+	if (! empty($extDirectActivity->dataset)) {
 		$i=0;
-		foreach ($extDirect->dataset as $data) {
+		foreach ($extDirectActivity->dataset as $data) {
 			$var=!$var;
 			print '<tr '.$bc[$var].'>';
 			print '<td>'.$data['requestid'].'</td>';
@@ -358,8 +358,13 @@ if ($mode == $tabs['tab1']->mode) {
 			if (!empty($activityFilter)) {
 				$originId = $data['activity_id'];
 				$originType = $data['activity_name'];
-				$origin = $extDirect->getActivityOrigin($originId, $originType);
-				print '<td>'.$origin.'</td>';
+				$origin = $extDirect->getOrigin($originType);
+				if ($origin && $originId > 0) {
+					$origin->fetch($originId);
+					print '<td>'.$origin->getNomUrl(1).'</td>';
+				} else {
+					print '<td></td>';
+				}
 			}
 			print '</tr>'."\n";
 			$i++;
