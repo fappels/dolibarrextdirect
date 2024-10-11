@@ -36,6 +36,8 @@ class ExtDirectAuthenticate extends ExtDirect
 {
 	private $_user;
 
+	private $_modulesAvailable = array('Dispatch', 'Purchase', 'Order', 'Picking', 'Shipment', 'Inventory', 'Remove', 'InventoryPlus', 'ManufactureOrder', 'Prospect');
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -184,6 +186,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->webview_name = $this->webview_name;
 			$result->webview_version = $this->webview_version;
 			$result->identify = $this->identify;
+			$result->modules = $this->getModules($this->_user);
 			// debug info can be removed for production
 			$result->site_cookie_samesite = $site_cookie_samesite;
 			$result->site_cookie_secure = $site_cookie_secure;
@@ -278,6 +281,42 @@ class ExtDirectAuthenticate extends ExtDirect
 		} else {
 			return $param;
 		}
+	}
+
+	/**
+	 * get allowed modules
+	 *
+	 * @param User	$user	Dolibarr user to get allowed modules from
+	 * @return String Comma separated string with allowed users
+	 */
+	private function getModules($user)
+	{
+		global $conf;
+
+		$modules = array();
+		$extdirect = new ExtDirect($this->db);
+		$user->loadRights('extdirect');
+		foreach ($this->_modulesAvailable as $module) {
+			$origin = $extdirect->getOrigin($module);
+			if (empty($origin->module) && !empty($origin->element)) {
+				$originModule = $origin->element;
+			} else {
+				$originModule = $origin->module;
+			}
+			if ($originModule == 'order_supplier') {
+				$originModule = 'supplier_order';
+			} elseif ($originModule == 'shipping') {
+				$originModule = 'expedition';
+			} elseif ($originModule == 'mo') {
+				$originModule = 'mrp';
+			}
+			$enabled = !empty($conf->$originModule->enabled);
+			$allowed = !empty($user->rights->extdirect->$module->allow);
+			if ($enabled && $allowed) {
+				$modules[] = $module;
+			}
+		}
+		return implode(',', $modules);
 	}
 
 	/**

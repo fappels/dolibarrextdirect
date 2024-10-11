@@ -117,14 +117,65 @@ class modExtDirect extends DolibarrModules
 		$this->rights = array();        // Permission array used by this module
 		$r=0;
 
-		// Add here list of permission defined by an id, a label, a boolean and two constant strings.
-		// Example:
-		// $this->rights[$r][0] = 2000;                 // Permission id (must not be already used)
-		// $this->rights[$r][1] = 'Permision label';    // Permission label
-		// $this->rights[$r][3] = 1;                    // Permission by default for new user (0/1)
-		// $this->rights[$r][4] = 'level1';             // In php code, permission will be checked by test if ($user->rights->permkey->level1->level2)
-		// $this->rights[$r][5] = 'level2';             // In php code, permission will be checked by test if ($user->rights->permkey->level1->level2)
-		// $r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowDispatch';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Dispatch';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowPurchase';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Purchase';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowOrder';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Order';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowPicking';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Picking';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowShipping';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Shipment';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowInventory';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Inventory';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowRemove';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Remove';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowInventoryPlus';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'InventoryPlus';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowManufactureOrder';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'ManufactureOrder';
+		$this->rights[$r][5] = 'allow';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + $r + 1);
+		$this->rights[$r][1] = 'AllowProspect';
+		$this->rights[$r][3] = 1;
+		$this->rights[$r][4] = 'Prospect';
+		$this->rights[$r][5] = 'allow';
 	}
 
 	/**
