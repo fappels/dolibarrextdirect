@@ -295,7 +295,11 @@ class ExtDirectAuthenticate extends ExtDirect
 
 		$modules = array();
 		$extdirect = new ExtDirect($this->db);
-		$user->loadRights('extdirect');
+		if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+			$user->getrights('extdirect');
+		} else {
+			$user->loadRights('extdirect');
+		}
 		foreach ($this->_modulesAvailable as $module) {
 			$origin = $extdirect->getOrigin($module);
 			if (empty($origin->module) && !empty($origin->element)) {
