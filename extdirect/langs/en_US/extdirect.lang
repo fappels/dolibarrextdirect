@@ -57,3 +57,4 @@ AllowRemove = Allow usage of Stock Exit module
 AllowInventoryPlus = Allow usage of Inventory Plus module
 AllowManufactureOrder = Allow usage of Manufacture Order Picking module
 AllowProspect = Allow usage of Third-Party module
+UseUserRightsToAllowModules = Use user rights for allowing module usage. You need to set righs for existing users. 

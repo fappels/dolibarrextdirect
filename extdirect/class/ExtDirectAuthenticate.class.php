@@ -315,7 +315,12 @@ class ExtDirectAuthenticate extends ExtDirect
 				$originModule = 'mrp';
 			}
 			$enabled = !empty($conf->$originModule->enabled);
-			$allowed = !empty($user->rights->extdirect->$module->allow);
+			if (!empty($conf->global->DIRECTCONNECT_USE_RIGHTS)) {
+				$allowed = !empty($user->rights->extdirect->$module->allow);
+			} else {
+				$allowed = true;
+			}
+
 			if ($enabled && $allowed) {
 				$modules[] = $module;
 			}

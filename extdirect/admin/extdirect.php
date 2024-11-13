@@ -85,6 +85,9 @@ if (!$error) {
 	} elseif ($action == 'autouser') {
 		$userId = GETPOST('userid', 'alpha');
 		$res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_USER", $userId, 'chaine', 0, '', $conf->entity);
+	} elseif ($action == 'userights') {
+		$userights = GETPOST('userights', 'alpha');
+		$res = dolibarr_set_const($db, "DIRECTCONNECT_USE_RIGHTS", $userights, 'yesno', 0, '', $conf->entity);
 	} elseif ($action == "save" && empty($refresh)) {
 		$i=0;
 
@@ -228,6 +231,22 @@ if ($mode == $tabs['tab1']->mode) {
 		print '</tr>';
 		print '</form>';
 	}
+
+	// use user rights for allowing modules on client
+	$var=!$var;
+	print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+	print '<input type="hidden" name="action" value="userights">';
+	print '<tr '.$bc[$var].'>';
+	print '<td>'.$langs->trans("UseUserRightsToAllowModules").'</td>';
+	print '<td width="60" align="right">';
+	print $form->selectyesno("userights", $conf->global->DIRECTCONNECT_USE_RIGHTS, 1);
+	print '</td><td align="right">';
+	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
+	print '</td>';
+	print '</tr>';
+	print '</form>';
+
 	// asign users to app uuid
 
 	print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">';
