@@ -1540,6 +1540,14 @@ class ExtDirectProduct extends ProductFournisseur
 					} elseif ($filter->property == 'content') {
 						$fields = array('p.ref', 'p.label', 'p.barcode');
 						if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $fields[] = 'sp.barcode';
+						if ($warehouseFilter) {
+							if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+								$fields[] = 'e.ref';
+								$fields[] = 'e.barcode';
+							} else {
+								$fields[] = 'e.label';
+							}
+						}
 						$sqlWhere .= natural_search($fields, $filter->value, 0, 1);
 					} elseif ($filter->property == 'photo_size' && !empty($value)) {
 						$sqlWhere .= '1 = 1';
