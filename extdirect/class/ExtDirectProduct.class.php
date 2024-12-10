@@ -2347,7 +2347,7 @@ class ExtDirectProduct extends ProductFournisseur
 			$barcode = substr($barcode, 1);
 		}
 
-		if (in_array($barcodeType, array('EAN8', 'EAN13', 'UPCA')) && !empty($barcode)) {
+		if (in_array($barcodeType, array('EAN8', 'EAN13', 'UPCA')) && !empty($barcode) && is_numeric($barcode)) {
 			include_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
 			$barcodeObj = new TCPDFBarcode($barcode, $barcodeType);
 			$barcode = $barcodeObj->getBarcodeArray();
