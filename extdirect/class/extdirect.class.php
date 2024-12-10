@@ -596,7 +596,7 @@ class ExtDirect
 
 		if ($validate) {
 			$minVersion = '4.0';
-			$maxVersion = '20.0'; // tested version
+			$maxVersion = '21.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
