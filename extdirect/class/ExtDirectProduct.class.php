@@ -1542,10 +1542,9 @@ class ExtDirectProduct extends ProductFournisseur
 						if (ExtDirect::checkDolVersion(0, '13.0', '') && $supplierFilter) $fields[] = 'sp.barcode';
 						if ($warehouseFilter) {
 							if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-								$fields[] = 'e.ref';
-								$fields[] = 'e.barcode';
+								$sqlWhere .= "(e.ref = '".$value. "' OR e.barcode = '".$value."') OR ";
 							} else {
-								$fields[] = 'e.label';
+								$sqlWhere .= "e.label = '".$value. "' OR ";
 							}
 						}
 						$sqlWhere .= natural_search($fields, $filter->value, 0, 1);
