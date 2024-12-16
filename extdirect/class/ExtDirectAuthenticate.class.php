@@ -307,18 +307,38 @@ class ExtDirectAuthenticate extends ExtDirect
 			} else {
 				$originModule = $origin->module;
 			}
+			$originModuleForRights = $originModule;
 			if ($originModule == 'order_supplier') {
 				$originModule = 'supplier_order';
+				$originModuleForRights = 'fournisseur';
 			} elseif ($originModule == 'shipping') {
 				$originModule = 'expedition';
+				$originModuleForRights = 'expedition';
 			} elseif ($originModule == 'mo') {
 				$originModule = 'mrp';
+				$originModuleForRights = 'mrp';
+			} elseif ($originModule == 'product') {
+				$originModuleForRights = 'produit';
 			}
 			$enabled = !empty($conf->$originModule->enabled);
+			if ($enabled) {
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights($originModuleForRights);
+				} else {
+					$user->loadRights($originModuleForRights);
+				}
+			}
 			if (!empty($conf->global->DIRECTCONNECT_USE_RIGHTS)) {
 				$allowed = !empty($user->rights->extdirect->$module->allow);
 			} else {
 				$allowed = true;
+			}
+			if ($allowed && method_exists($user, 'hasRight')) {
+				if ($user->hasRight($originModuleForRights, 'lire') || $user->hasRight($originModuleForRights, 'read')) {
+					$allowed = true;
+				} else {
+					$allowed = false;
+				}
 			}
 
 			if ($enabled && $allowed) {
