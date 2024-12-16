@@ -599,7 +599,6 @@ class ExtDirectFormProduct extends FormProduct
 		global $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 
 		$results = array();
 		if (ExtDirect::checkDolVersion(0, '10.0', '')) {
