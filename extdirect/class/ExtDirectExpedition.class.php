@@ -41,6 +41,12 @@ class ExtDirectExpedition extends Expedition
 	private $_shipmentConstants = array('STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT', 'STOCK_CALCULATE_ON_SHIPMENT');
 	private $_enabled = false;
 
+	/** @var string $key_ship_line_order key of linked order to ship line */
+	public $key_ship_line_order = 'fk_element';
+
+	/** @var string $key_ship_line_order_line key of linked order line to ship line */
+	public $key_ship_line_order_line = 'fk_elementdet';
+
 	const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
 	const STATUS_CLOSED = 2;
@@ -63,6 +69,9 @@ class ExtDirectExpedition extends Expedition
 				$user->getrights();
 				$this->_enabled = !empty($conf->expedition->enabled) && isset($user->rights->expedition->lire);
 				$this->_user = $user;  //commande.class uses global user
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$this->key_ship_line_order_line = 'fk_origin_line';
+				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
@@ -591,7 +600,7 @@ class ExtDirectExpedition extends Expedition
 			}
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode, e.date_delivery";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, e.rowid, e.ref, e.fk_statut, e.ref_ext, ea.status, csm.libelle as mode, e.date_delivery, e.fk_shipping_method";
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "societe as s, " . MAIN_DB_PREFIX . "expedition as e";
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec ON e.rowid = ec.element_id";
 		if ($originId) {
@@ -600,7 +609,7 @@ class ExtDirectExpedition extends Expedition
 		}
 		if ($barcode) {
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."expeditiondet as ed ON e.rowid = ed.fk_expedition";
-			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON cd.rowid = ed.fk_origin_line";
+			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."commandedet as cd ON cd.rowid = ed.".$this->key_ship_line_order_line;
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product as p ON p.rowid = cd.fk_product";
 			$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}
@@ -658,6 +667,8 @@ class ExtDirectExpedition extends Expedition
 						$sortfield = 'e.date_delivery';
 					} elseif ($sort->property == 'customer') {
 						$sortfield = 's.nom';
+					} elseif ($sort->property == 'shipping_method_id') {
+						$sortfield = 'e.fk_shipping_method';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -709,6 +720,7 @@ class ExtDirectExpedition extends Expedition
 				$row->status        = $obj->status;
 				$row->mode          = $obj->mode;
 				$row->deliver_date  = $this->db->jdate($obj->date_delivery);
+                $row->shipping_method_id = (int) $obj->fk_shipping_method;
 				if ($barcode && !empty($conf->shipmentpackage->enabled)) {
 					dol_include_once('/shipmentpackage/class/shipmentpackage.class.php');
 					$shipmentPackage = new ShipmentPackage($this->db);
@@ -851,9 +863,15 @@ class ExtDirectExpedition extends Expedition
 						$row->barcode_with_checksum = $myprod->barcode?$myprod->fetchBarcodeWithChecksum($myprod):'';
 						if (!empty($conf->global->PRODUIT_SOUSPRODUITS)) $myprod->get_sousproduits_arbo();
 					}
-					$row->id = $line->line_id;
-					$row->line_id = $line->line_id;
-					$row->origin_line_id = $line->fk_origin_line;
+					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+						$row->origin_line_id = $line->fk_origin_line;
+						$row->id = $line->line_id;
+						$row->line_id = $line->line_id;
+					} else {
+						$row->origin_line_id = $line->fk_elementdet;
+						$row->id = $line->id;
+						$row->line_id = $line->id;
+					}
 					$row->description = $line->description;
 					$row->product_id = $line->fk_product;
 					$row->product_ref = $line->product_ref; // deprecated
@@ -1230,7 +1248,7 @@ class ExtDirectExpedition extends Expedition
 						$this->fetchObjectLinked($this->id, 'shipping', null, 'shipmentpackage');
 						$shipmentPackages = $this->linkedObjects['shipmentpackage'];
 						// get first draft package for shipment
-						if (count($shipmentPackages) > 0) {
+						if (!empty($shipmentPackages)) {
 							foreach ($shipmentPackages as $shipmentPackage) {
 								if ($shipmentPackage->id > 0 && $shipmentPackage->status == ShipmentPackage::STATUS_DRAFT) {
 									$package = $shipmentPackage;
@@ -1354,23 +1372,26 @@ class ExtDirectExpedition extends Expedition
 			} else {
 				$lineId = $params->line_id;
 			}
-			if (empty($params->origin_id)) {
-				$orderLine = new OrderLine($this->db);
-				$orderLine->fetch($lineId);
-				$this->id = $orderLine->fk_commande;
-			} else {
-				$this->id = $params->origin_id;
-			}
-			if (($result = $this->fetch($this->id)) < 0) {
-				return ExtDirect::getDolError($result, $this->errors, $this->error);
-			}
-			// Add a protection to refuse deleting if shipment is not in draft status
-			if ($this->statut == self::STATUS_DRAFT && $lineId) {
-				if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-					$line = new ExpeditionLigne($this->db);
+			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
+				$line = new ExpeditionLigne($this->db);
+				if (empty($params->origin_id)) {
+					$line->fetch($lineId);
+					$this->id = $line->fk_expedition;
 				} else {
-					$line = new ExtDirectExpeditionLine($this->db);
+					$this->id = $params->origin_id;
 				}
+				if (($result = $this->fetch($this->id)) < 0) {
+					return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				// Add a protection to refuse deleting if shipment is not in draft status
+				if ($this->statut == self::STATUS_DRAFT && $lineId) {
+					$line->id = $lineId;
+					if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
+				} else {
+					return PARAMETERERROR;
+				}
+			} elseif ($lineId) {
+				$line = new ExtDirectExpeditionLine($this->db);
 				$line->id = $lineId;
 				if (($result = $line->delete($this->_user)) < 0) return ExtDirect::getDolError($result, $line->errors, $line->error);
 			} else {

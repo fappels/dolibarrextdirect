@@ -280,14 +280,13 @@ class ExtDirectMo extends Mo
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->mrp->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
-		$object = new Mo($this->db);
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			$this->prepareFields($params);
 
-			if (($result = $object->create($this->_user)) < 0) return ExtDirect::getDolError($result, $object->errors, $object->error);
-			$params->id = $object->id;
+			if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			$params->id = $this->id;
 		}
 
 		if (is_array($param)) {
@@ -519,6 +518,7 @@ class ExtDirectMo extends Mo
 		$status_id = array();
 		$contentFilter = null;
 		$customStatus = false;
+		$sorterSize = 0;
 
 		$includeTotal = true;
 
@@ -658,7 +658,7 @@ class ExtDirectMo extends Mo
 				$row->ref           = $obj->ref;
 				$row->ref_bom       = $obj->ref_bom;
 				$row->status_id = (int) $obj->status;
-				if ($customStatus && $obj->status > self::STATUS_DRAFT && $obj->fk_status < self::STATUS_PRODUCED) {
+				if ($customStatus && $obj->status > self::STATUS_DRAFT && $obj->status < self::STATUS_PRODUCED) {
 					$this->getProducible($row, $obj->product_qty);
 				}
 				$row->statusdisplay = html_entity_decode($this->LibStatut($row->status_id, 1));
@@ -670,8 +670,8 @@ class ExtDirectMo extends Mo
 				$rows[$row->id] = $row;
 			}
 			foreach ($rows as $key => &$row) {
-				$row->qty_toproduce = $qty_toproduce[$key];
-				$row->qty_produced = $qty_produced[$key];
+				!empty($qty_toproduce[$key]) ? $row->qty_toproduce = $qty_toproduce[$key] : $row->qty_toproduce = 0;
+				!empty($qty_produced[$key]) ? $row->qty_produced = $qty_produced[$key] : $row->qty_produced = 0;
 				if ($customStatus) {
 					if (in_array($row->status_id, $status_id)) {
 						array_push($data, $row);
@@ -869,6 +869,10 @@ class ExtDirectMo extends Mo
 		foreach ($this->fields as $field => $info) {
 			if ($field == 'fk_soc') {
 				isset($params->customer_id) ? $this->{$field} = $params->customer_id : (isset($this->{$field}) ? null : $this->{$field} = null);
+			} elseif ($field == 'fk_product') {
+				isset($params->product_id) ? $this->{$field} = $params->product_id : (isset($this->{$field}) ? null : $this->{$field} = null);
+			} elseif ($field == 'qty') {
+				isset($params->qty_toproduce) ? $this->{$field} = $params->qty_toproduce : (isset($this->{$field}) ? null : $this->{$field} = null);
 			} elseif ($field == 'fk_user_creat') {
 				isset($params->user_id) ? $this->{$field} = $params->user_id : (isset($this->{$field}) ? null : $this->{$field} = null);
 			} else {
@@ -908,12 +912,12 @@ class ExtDirectMo extends Mo
 					$isConsumeLine = false;
 				}
 				if (!isset($qtyToConsume[$line->id])) $qtyToConsume[$line->id] = 0;
-				if (!isset($qtyConsumed[$line->fk_mrp_production])) $qtyConsumed[$line->fk_mrp_production] = 0;
+				if (!isset($qtyConsumed[$line->id])) $qtyConsumed[$line->id] = 0;
 				if (!isset($productToConsume[$line->id]) && $isConsumeLine) $productToConsume[$line->id] = $line->fk_product;
 				if ($line->role == 'toconsume') {
 					$qtyToConsume[$line->id] += $line->qty;
 				} elseif ($line->role == 'consumed') {
-					$qtyConsumed[$line->fk_mrp_production] += $line->qty;
+					$qtyConsumed[$line->id] += $line->qty;
 				}
 				// store toproduce and produced
 				if ($line->role == 'toproduce') {
@@ -1022,6 +1026,7 @@ class ExtDirectMo extends Mo
 		$origin_id = 0;
 		$photoSize = 'mini';
 		$roleFilterCount = 0;
+		$warehouse_id = 0;
 		$roles = array();
 		$object = new Mo($this->db);
 
@@ -1182,7 +1187,7 @@ class ExtDirectMo extends Mo
 			if ($object->statut < Mo::STATUS_PRODUCED && $params->line_id > 0) {
 				$line = new MoLine($this->db);
 				$stockmove = new MouvementStock($this->db);
-				if (ExtDirect::checkDolVersion(0, '', '14')) {
+				if (ExtDirect::checkDolVersion(0, '', '14.0')) {
 					$stockmove->origin = $object;
 				} else {
 					$stockmove->setOrigin($object->element, $object->id);

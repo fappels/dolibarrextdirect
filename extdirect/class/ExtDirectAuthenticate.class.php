@@ -36,6 +36,8 @@ class ExtDirectAuthenticate extends ExtDirect
 {
 	private $_user;
 
+	private $_modulesAvailable = array('Dispatch', 'Purchase', 'Order', 'Picking', 'Shipment', 'Inventory', 'Remove', 'InventoryPlus', 'ManufactureOrder', 'Prospect');
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -110,7 +112,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		$moduleInfo = new modExtDirect($this->db);
 
 		if (isset($param->filter)) {
-			foreach ($param->filter as $key => $filter) {
+			foreach ($param->filter as $filter) {
 				if ($filter->property == 'ack_id') $ack_id=$filter->value;
 				elseif ($filter->property == 'app_id') $app_id=$filter->value;
 				elseif ($filter->property == 'app_version') $app_version=$filter->value;
@@ -138,29 +140,29 @@ class ExtDirectAuthenticate extends ExtDirect
 			return ExtDirect::getDolError($res, $this->errors, $this->error);
 		} else {
 			// only login with valid access key
-			if ($ack_id == $this->ack_id) {
+			if ($ack_id == $this->ack_id && $this->_user->id) {
 				$_SESSION['dol_login'] = $this->_user->login;
-			}
-			$tmpEntity = $conf->entity;
-			if (isset($this->entity) && ($this->entity > 0)) {
-				$_SESSION['dol_entity'] = $this->entity;
-				$conf->entity = $this->entity;
-			} elseif (isset($this->_user->entity) && ($this->_user->entity > 0)) {
-				// backward compatiblity
-				$_SESSION['dol_entity'] = $this->_user->entity;
-				$conf->entity = $this->_user->entity;
-			} else {
-				$_SESSION['dol_entity'] = 1;
-				$conf->entity = 1;
-			}
-			if ($tmpEntity != $conf->entity) {
-				$conf->setValues($this->db);
-				$mysoc->setMysoc($conf); // get company name of entity
+				$tmpEntity = $conf->entity;
+				if (isset($this->entity) && ($this->entity > 0)) {
+					$_SESSION['dol_entity'] = $this->entity;
+					$conf->entity = $this->entity;
+				} elseif (isset($this->_user->entity) && ($this->_user->entity > 0)) {
+					// backward compatiblity
+					$_SESSION['dol_entity'] = $this->_user->entity;
+					$conf->entity = $this->_user->entity;
+				} else {
+					$_SESSION['dol_entity'] = 1;
+					$conf->entity = 1;
+				}
+				if ($tmpEntity != $conf->entity) {
+					$conf->setValues($this->db);
+					$mysoc->setMysoc($conf); // get company name of entity
+				}
 			}
 			$result->id = (int) $this->id;
-			$result->ack_id = $this->ack_id;
+			$result->ack_id = ($this->_user->id > 0) ? $this->ack_id : 0;
 			$result->app_id = $this->app_id;
-			$result->fk_user = $this->fk_user;
+			$result->fk_user = $this->_user->id;
 			$result->app_name = $this->app_name;
 			$result->requestid = $this->requestid;
 			$result->datec = $this->datec;
@@ -184,6 +186,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->webview_name = $this->webview_name;
 			$result->webview_version = $this->webview_version;
 			$result->identify = $this->identify;
+			$result->modules = $this->getModules($this->_user);
 			// debug info can be removed for production
 			$result->site_cookie_samesite = $site_cookie_samesite;
 			$result->site_cookie_secure = $site_cookie_secure;
@@ -222,7 +225,7 @@ class ExtDirectAuthenticate extends ExtDirect
 					// update
 					$this->date_last_connect=dol_now();
 					if (($res = $this->update($this->_user)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
-				};
+				}
 				// only login with valid access key
 				$this->_user->fetch($this->fk_user);
 				if ($param->ack_id == $this->ack_id) {
@@ -264,7 +267,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			// fetch id
-			if (($res = $this->fetch($param->id, $param->app_id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
+			if (($res = $this->fetch($param->id)) < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 			// if found delete
 			if ($this->id) {
 				$this->_user->fetch($this->fk_user);
@@ -278,6 +281,71 @@ class ExtDirectAuthenticate extends ExtDirect
 		} else {
 			return $param;
 		}
+	}
+
+	/**
+	 * get allowed modules
+	 *
+	 * @param User	$user	Dolibarr user to get allowed modules from
+	 * @return String Comma separated string with allowed users
+	 */
+	private function getModules($user)
+	{
+		global $conf;
+
+		$modules = array();
+		$extdirect = new ExtDirect($this->db);
+		if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+			$user->getrights('extdirect');
+		} else {
+			$user->loadRights('extdirect');
+		}
+		foreach ($this->_modulesAvailable as $module) {
+			$origin = $extdirect->getOrigin($module);
+			if (empty($origin->module) && !empty($origin->element)) {
+				$originModule = $origin->element;
+			} else {
+				$originModule = $origin->module;
+			}
+			$originModuleForRights = $originModule;
+			if ($originModule == 'order_supplier') {
+				$originModule = 'supplier_order';
+				$originModuleForRights = 'fournisseur';
+			} elseif ($originModule == 'shipping') {
+				$originModule = 'expedition';
+				$originModuleForRights = 'expedition';
+			} elseif ($originModule == 'mo') {
+				$originModule = 'mrp';
+				$originModuleForRights = 'mrp';
+			} elseif ($originModule == 'product') {
+				$originModuleForRights = 'produit';
+			}
+			$enabled = !empty($conf->$originModule->enabled);
+			if ($enabled) {
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights($originModuleForRights);
+				} else {
+					$user->loadRights($originModuleForRights);
+				}
+			}
+			if (!empty($conf->global->DIRECTCONNECT_USE_RIGHTS)) {
+				$allowed = !empty($user->rights->extdirect->$module->allow);
+			} else {
+				$allowed = true;
+			}
+			if ($allowed && method_exists($user, 'hasRight')) {
+				if ($user->hasRight($originModuleForRights, 'lire') || $user->hasRight($originModuleForRights, 'read')) {
+					$allowed = true;
+				} else {
+					$allowed = false;
+				}
+			}
+
+			if ($enabled && $allowed) {
+				$modules[] = $module;
+			}
+		}
+		return implode(',', $modules);
 	}
 
 	/**

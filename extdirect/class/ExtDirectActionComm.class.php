@@ -101,7 +101,7 @@ class ExtDirectActionComm extends ActionComm
 						$row->priority          = $this->priority;
 						$row->note              = $this->note;
 						$row->usertodo_id   = (int) $this->userownerid;
-						$row->userdone_id   = (int) $this->userdoneid;
+						if (isset($this->userdoneid)) $row->userdone_id   = (int) $this->userdoneid;
 						$row->company_id    = (int) $this->socid;
 						$row->contact_id    = (int) $this->contact_id;
 						$row->project_id        = (int) $this->fk_project;
@@ -302,9 +302,10 @@ class ExtDirectActionComm extends ActionComm
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_actioncomm as ac ON a.fk_action = ac.id';
+		$sqlWhere = ' WHERE a.entity IN ('.getEntity('agenda').')';
 		if ($filterSize > 0) {
 			// TODO improve sql command to allow random property type
-			$sqlWhere = ' WHERE (';
+			$sqlWhere .= ' AND (';
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'id')
 					$sqlWhere .= 'a.id = '.$filter->value;
@@ -466,7 +467,7 @@ class ExtDirectActionComm extends ActionComm
 					 return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
 				$this->_societe->id=$this->socid;
-				$this->_societe->add_commercial($this->_user, $this->userdoneid);
+				if (isset($this->userdoneid)) $this->_societe->add_commercial($this->_user, $this->userdoneid);
 			} else {
 				return PARAMETERERROR;
 			}

@@ -195,7 +195,6 @@ class ExtDirectCommande extends Commande
 					$row->user_name = $myUser->firstname . ' ' . $myUser->lastname;
 				}
 				$row->order_date = $this->date;
-				$row->deliver_date= $this->date_livraison;
 				$row->deliver_date= $this->delivery_date;
 				$row->availability_id = $this->availability_id;
 				$row->availability_code = $this->availability_code;
@@ -210,7 +209,7 @@ class ExtDirectCommande extends Commande
 				$row->location_incoterms = $this->location_incoterms;
 				$row->customer_type = $thirdparty->typent_code;
 				//$row->has_signature = 0; not yet implemented
-				if ($this->remise == 0) {
+				if (empty($this->remise)) {
 					$row->reduction = 0;
 					foreach ($this->lines as $line) {
 						if ($line->remise_percent > 0) {
@@ -515,7 +514,7 @@ class ExtDirectCommande extends Commande
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if ($params->id) {
-				$this->id = $params->id;
+				$this->fetch($params->id);
 				// delete
 				if (($result = $this->delete($this->_user)) < 0)    return ExtDirect::getDolError($result, $this->errors, $this->error);
 			} else {
@@ -620,7 +619,8 @@ class ExtDirectCommande extends Commande
 			$start = 0;
 		}
 
-		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level, c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, u.firstname, u.lastname";
+		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level";
+		$sqlFields .= ", c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, c.fk_shipping_method, u.firstname, u.lastname";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
@@ -689,6 +689,8 @@ class ExtDirectCommande extends Commande
 						$sortfield = 's.nom';
 					} elseif ($sort->property == 'user_name') {
 						$sortfield = 'u.lastname, u.firstname';
+					} elseif ($sort->property == 'shipping_method_id') {
+						$sortfield = 'c.fk_shipping_method';
 					} else {
 						$sortfield = $sort->property;
 					}
@@ -749,6 +751,7 @@ class ExtDirectCommande extends Commande
 				$row->total_inc     = $obj->total_ttc;
 				$row->deliver_date  = $this->db->jdate($obj->date_livraison);
 				$row->order_date    = $this->db->jdate($obj->date_commande);
+				$row->shipping_method_id = (int) $obj->fk_shipping_method;
 				if ($customStatus) {
 					if (in_array($row->orderstatus_id, $orderstatus_id)) {
 						array_push($data, $row);
@@ -1329,7 +1332,12 @@ class ExtDirectCommande extends Commande
 								array_push($results, $row);
 								$myprod->fetchSubProducts($results, clone $row, $photoSize);
 							} else {
-								if (($res = $myprod->fetchBatches($results, $row, $line->id, $line_warehouse_id, $myprod->stock_warehouse[$line_warehouse_id]->id, false, null, '', $photoSize)) < 0) return $res;
+								if (!empty($line_warehouse_id) && !empty($myprod->stock_warehouse[$line_warehouse_id])) {
+									$productStockId = $myprod->stock_warehouse[$line_warehouse_id]->id;
+								} else {
+									$productStockId = null;
+								}
+								if (($res = $myprod->fetchBatches($results, $row, $line->id, $line_warehouse_id, $productStockId, false, null, '', $photoSize)) < 0) return $res;
 							}
 						}
 					} else {
@@ -1786,11 +1794,17 @@ class ExtDirectCommande extends Commande
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
+		$lineId = 0;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
 			if (empty($params->origin_line_id)) {
-				$lineId = $params->id;
+				$idArray = explode('_', $params->id);
+				if (!in_array($lineId, $idArray)) {
+					$lineId = $idArray[0];
+				} else {
+					continue;
+				}
 			} else {
 				$lineId = $params->origin_line_id;
 			}

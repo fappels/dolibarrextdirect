@@ -79,9 +79,6 @@ class ExtDirectActivity extends CommonObject
 		$error=0;
 		$this->fk_user = $user->id;
 		// Clean parameters
-
-		if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
-		if (isset($this->app_id)) $this->app_id=$this->app_id;
 		if (isset($this->app_version)) $this->app_version=trim($this->app_version);
 		if (isset($this->activity_name)) $this->activity_name=trim($this->activity_name);
 		if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);
@@ -323,9 +320,6 @@ class ExtDirectActivity extends CommonObject
 		$error=0;
 		$this->fk_user = $user->id;
 		// Clean parameters
-
-		if (isset($this->fk_user)) $this->fk_user=$this->fk_user;
-		if (isset($this->app_id)) $this->app_id=$this->app_id;
 		if (isset($this->app_version)) $this->app_name=trim($this->app_version);
 		if (isset($this->activity_name)) $this->activity_name=trim($this->activity_name);
 		if (isset($this->activity_id)) $this->activity_id=trim($this->activity_id);
@@ -432,67 +426,5 @@ class ExtDirectActivity extends CommonObject
 			$this->db->commit();
 			return 1;
 		}
-	}
-
-	/**
-	* Return Url link of activity origin object
-	*
-	* @param int $fk_origin  Id origin
-	* @param int $origintype Type origin
-	*
-	* @return string
-	*/
-	public function getActivityOrigin($fk_origin, $origintype)
-	{
-		$origin='';
-		switch ($origintype) {
-			case 'Order':
-				require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
-				$origin = new Commande($this->db);
-				break;
-			case 'Picking':
-				require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
-				$origin = new Commande($this->db);
-				break;
-			case 'Shipping':
-				require_once DOL_DOCUMENT_ROOT.'/expedition/class/expedition.class.php';
-				$origin = new Expedition($this->db);
-				break;
-			case 'Dispatch':
-				require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
-				$origin = new CommandeFournisseur($this->db);
-				break;
-			case 'Purchase':
-				require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
-				$origin = new CommandeFournisseur($this->db);
-				break;
-			case 'Inventory':
-				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
-				$origin = new Product($this->db);
-				break;
-			case 'OrderProduct':
-				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
-				$origin = new Product($this->db);
-				break;
-			case 'Remove':
-				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
-				$origin = new Product($this->db);
-				break;
-			case 'PurchaseProducts':
-				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
-				$origin = new Product($this->db);
-				break;
-
-			default:
-				break;
-		}
-
-		if (empty($origin) || ! is_object($origin)) return '';
-
-		if ($origin->fetch($fk_origin) > 0) {
-			return $origin->getNomUrl(1);
-		}
-
-		return '';
 	}
 }

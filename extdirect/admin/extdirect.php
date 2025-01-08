@@ -59,7 +59,10 @@ $action = GETPOST('action', 'alpha');
 $value = GETPOST('value', 'alpha');
 $refresh = GETPOST('refresh', 'alpha');
 
-if ($mode == $activities->mode) {
+$extDirect= new ExtDirect($db);
+if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
+
+if (!$error && $mode == $activities->mode) {
 	$userId = GETPOST('userid', 'int');
 	if ($userId > 0) {
 		$activityFilter = ' AND ea.fk_user = ' . $userId;
@@ -67,12 +70,9 @@ if ($mode == $activities->mode) {
 		$activityFilter = '';
 		$userId = -1;
 	}
-	$extDirect= new ExtDirectActivity($db);
-	if ($extDirect->fetchList($activityFilter, 'rowid ASC') < 0) $error++;
-	if ($extDirect->getDurations() < 0) $error++;
-} else {
-	$extDirect= new ExtDirect($db);
-	if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
+	$extDirectActivity = new ExtDirectActivity($db);
+	if ($extDirectActivity->fetchList($activityFilter, 'rowid ASC') < 0) $error++;
+	if ($extDirectActivity->getDurations() < 0) $error++;
 }
 
 /*
@@ -85,6 +85,9 @@ if (!$error) {
 	} elseif ($action == 'autouser') {
 		$userId = GETPOST('userid', 'alpha');
 		$res = dolibarr_set_const($db, "DIRECTCONNECT_AUTO_USER", $userId, 'chaine', 0, '', $conf->entity);
+	} elseif ($action == 'userights') {
+		$userights = GETPOST('userights', 'alpha');
+		$res = dolibarr_set_const($db, "DIRECTCONNECT_USE_RIGHTS", $userights, 'yesno', 0, '', $conf->entity);
 	} elseif ($action == "save" && empty($refresh)) {
 		$i=0;
 
@@ -94,7 +97,6 @@ if (!$error) {
 				$extDirect->id=$user_app['rowid'];
 
 				$param='REMOVE_'.$user_app['app_id'].$i;
-				//print "param=".$param." - ".$_POST[$param];
 				if (GETPOST($param, 'alpha')) {
 					//delete
 					$res = $extDirect->delete($user);
@@ -229,6 +231,22 @@ if ($mode == $tabs['tab1']->mode) {
 		print '</tr>';
 		print '</form>';
 	}
+
+	// use user rights for allowing modules on client
+	$var=!$var;
+	print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+	print '<input type="hidden" name="action" value="userights">';
+	print '<tr '.$bc[$var].'>';
+	print '<td>'.$langs->trans("UseUserRightsToAllowModules").'</td>';
+	print '<td width="60" align="right">';
+	print $form->selectyesno("userights", $conf->global->DIRECTCONNECT_USE_RIGHTS, 1);
+	print '</td><td align="right">';
+	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
+	print '</td>';
+	print '</tr>';
+	print '</form>';
+
 	// asign users to app uuid
 
 	print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">';
@@ -342,9 +360,9 @@ if ($mode == $tabs['tab1']->mode) {
 	}
 
 	print '</tr>'."\n";
-	if (! empty($extDirect->dataset)) {
+	if (! empty($extDirectActivity->dataset)) {
 		$i=0;
-		foreach ($extDirect->dataset as $data) {
+		foreach ($extDirectActivity->dataset as $data) {
 			$var=!$var;
 			print '<tr '.$bc[$var].'>';
 			print '<td>'.$data['requestid'].'</td>';
@@ -358,8 +376,13 @@ if ($mode == $tabs['tab1']->mode) {
 			if (!empty($activityFilter)) {
 				$originId = $data['activity_id'];
 				$originType = $data['activity_name'];
-				$origin = $extDirect->getActivityOrigin($originId, $originType);
-				print '<td>'.$origin.'</td>';
+				$origin = $extDirect->getOrigin($originType);
+				if ($origin && $originId > 0) {
+					$origin->fetch($originId);
+					print '<td>'.$origin->getNomUrl(1).'</td>';
+				} else {
+					print '<td></td>';
+				}
 			}
 			print '</tr>'."\n";
 			$i++;

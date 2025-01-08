@@ -125,9 +125,12 @@ class ExtDirectContact extends Contact
 					$row->fax               = $this->fax;
 					$row->phone_perso       = $this->phone_perso;
 					$row->phone_mobile      = $this->phone_mobile;
-					$row->skype             = $this->skype;
+					if (ExtDirect::checkDolVersion(0, '9.0', '')) {
+						if(isset($this->socialnetworks['skype'])) $row->skype = $this->socialnetworks['skype'];
+					} else {
+						$row->skype         = $this->skype;
+					}
 					$row->email             = $this->email;
-					$row->jabberid          = $this->jabberid;
 					$row->priv              = (int) $this->priv;
 					$row->birthday          = $this->birthday;
 					$row->birthday_alert    = $this->birthday_alert;
@@ -316,9 +319,10 @@ class ExtDirectContact extends Contact
 		$sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
+		$sqlWhere = ' WHERE c.entity IN ('.getEntity($this->element).')';
 		if ($filterSize > 0) {
 			// TODO improve sql command to allow random property type
-			$sqlWhere = ' WHERE (';
+			$sqlWhere .= ' AND (';
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'id')
 					$sqlWhere .= 'c.rowid = '.$filter->value;
@@ -545,33 +549,33 @@ class ExtDirectContact extends Contact
 	 */
 	private function prepareFields($params)
 	{
-		($params->civility_id) ? ($this->civilite_id = $params->civility_id) : null;
-		($params->lastname) ? ($this->lastname = $params->lastname) : null;
-		($params->firstname) ? ($this->firstname = $params->firstname) : null;
-		($params->address) ? ($this->address = $params->address) : null;
-		($params->zip) ? ($this->zip = $params->zip) : null;
-		($params->town) ? ($this->town = $params->town) : null;
-		($params->fax) ? ($this->fax = $params->fax) : null;
-		($params->phone_perso) ? ($this->phone_perso = $params->phone_perso) : null;
-		($params->skype) ? ($this->skype = $params->skype) : null;
-		($params->email) ? ($this->email = $params->email) : null;
-		($params->state) ? ($this->state=$params->state) : null;
-		($params->state_id) ? ($this->state_id=$params->state_id) : null;
-		($params->country) ? ($this->country=$params->country) : null;
-		($params->country_id) ? ($this->country_id=$params->country_id) : null;
-		($params->company_id) ? ($this->socid=$params->company_id) : null;
-		($params->companyname) ? ($this->socname=$params->companyname) :  null;
-		($params->poste) ? ($this->poste=$params->poste) : null;
-		($params->phone_pro) ? ($this->phone_pro=$params->phone_pro) : null;
-		($params->phone_mobile) ? ($this->phone_mobile=$params->phone_mobile) : null;
-		($params->jabberid) ? ($this->jabberid=$params->jabberid) : null;
-		($params->priv) ? ($this->priv=$params->priv) : null;
-		($params->birthday) ? ($this->birthday=$params->birthday) : null;
-		($params->birthday_alert) ? ($this->birthday_alert=$params->birthday_alert) : null;
-		($params->note) ? ($this->note=$params->note) : null;
-		($params->default_lang) ? ($this->default_lang=$params->default_lang) : null;
-		($params->user_id) ? ($this->user_id=$params->user_id) : null;
-		($params->user_login) ? ($this->user_login=$params->user_login) : null;
-		($params->canvas) ? ($this->canvas=$params->canvas) : null;
+		isset($params->civility_id) ? ($this->civilite_id = $params->civility_id) : null;
+		isset($params->lastname) ? ($this->lastname = $params->lastname) : null;
+		isset($params->firstname) ? ($this->firstname = $params->firstname) : null;
+		isset($params->address) ? ($this->address = $params->address) : null;
+		isset($params->zip) ? ($this->zip = $params->zip) : null;
+		isset($params->town) ? ($this->town = $params->town) : null;
+		isset($params->fax) ? ($this->fax = $params->fax) : null;
+		isset($params->phone_perso) ? ($this->phone_perso = $params->phone_perso) : null;
+		isset($params->skype) ? ($this->skype = $params->skype) : null;
+		isset($params->email) ? ($this->email = $params->email) : null;
+		isset($params->state) ? ($this->state=$params->state) : null;
+		isset($params->state_id) ? ($this->state_id=$params->state_id) : null;
+		isset($params->country) ? ($this->country=$params->country) : null;
+		isset($params->country_id) ? ($this->country_id=$params->country_id) : null;
+		isset($params->company_id) ? ($this->socid=$params->company_id) : null;
+		isset($params->companyname) ? ($this->socname=$params->companyname) :  null;
+		isset($params->poste) ? ($this->poste=$params->poste) : null;
+		isset($params->phone_pro) ? ($this->phone_pro=$params->phone_pro) : null;
+		isset($params->phone_mobile) ? ($this->phone_mobile=$params->phone_mobile) : null;
+		isset($params->jabberid) ? ($this->jabberid=$params->jabberid) : null;
+		isset($params->priv) ? ($this->priv=$params->priv) : null;
+		isset($params->birthday) ? ($this->birthday=$params->birthday) : null;
+		isset($params->birthday_alert) ? ($this->birthday_alert=$params->birthday_alert) : null;
+		isset($params->note) ? ($this->note=$params->note) : null;
+		isset($params->default_lang) ? ($this->default_lang=$params->default_lang) : null;
+		isset($params->user_id) ? ($this->user_id=$params->user_id) : null;
+		isset($params->user_login) ? ($this->user_login=$params->user_login) : null;
+		isset($params->canvas) ? ($this->canvas=$params->canvas) : null;
 	}
 }

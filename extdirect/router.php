@@ -25,7 +25,7 @@ $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
 if (version_compare(phpversion(), '7.3', '>=')) {
-	browserHasNoSamesite() ? $site_cookie_samesite = ini_get('session.cookie_samesite') : $site_cookie_samesite = ini_set('session.cookie_samesite', 'None');
+	$site_cookie_samesite = ini_get('session.cookie_samesite');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
 	browserHasNoSamesite() ? $sessionParam = array('samesite' => null) : $sessionParam = array('samesite' => 'None');
@@ -111,7 +111,7 @@ function doRpc($cdata)
 		);
 
 		$actionAvailable = true;
-		if (ExtDirect::checkDolVersion(0, '', '10') && $action == 'ExtDirectMo') $actionAvailable = false; // skip non existing classes
+		if (ExtDirect::checkDolVersion(0, '', '10.0') && $action == 'ExtDirectMo') $actionAvailable = false; // skip non existing classes
 		if ($actionAvailable) {
 			error_reporting(0); // comment for debugging or change 0 to E_ALL
 			dol_include_once("/extdirect/class/$action.class.php");
@@ -254,10 +254,14 @@ function object_analyse_sql_and_script(&$var, $type)
  */
 function requestIsHTTPS()
 {
+	global $conf;
+
 	$isSecure = false;
 	if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
 		$isSecure = true;
 	} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https' || !empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on') {
+		$isSecure = true;
+	} elseif (!empty($conf->global->DIRECTCONNECT_FORCE_HTTPS)) {
 		$isSecure = true;
 	}
 	return $isSecure;

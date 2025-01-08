@@ -122,9 +122,9 @@ class ExtDirect
 			$this->ack_id = uniqid('llx', true);
 			if ($this->fk_user > 0 && !empty($conf->multicompany->enabled)) {
 				require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
-				$user = new User($this->db);
-				$user->fetch($this->fk_user);
-				$this->entity = $user->entity;
+				$userEntity = new User($this->db);
+				$userEntity->fetch($this->fk_user);
+				$this->entity = $userEntity->entity;
 			}
 		}
 
@@ -325,8 +325,6 @@ class ExtDirect
 			$sql.= " WHERE t.app_id = '".$app_id."'";
 		} elseif (!empty($ack_id)) {
 			$sql.= " WHERE t.ack_id = '".$ack_id."'";
-		} elseif (!empty($requestid)) {
-			$sql.= " WHERE t.requestid = '".$requestid."'";
 		} else {
 			return PARAMETERERROR;
 		}
@@ -352,13 +350,11 @@ class ExtDirect
 				if (!empty($conf->multicompany->enabled)) {
 					$this->entity = $obj->entity;
 				}
-
+				$this->db->free($resql);
 				return 1;
 			} else {
 				return 0;
 			}
-
-			$this->db->free($resql);
 		} else {
 			$this->error="Error ".$this->db->lasterror();
 			dol_syslog(get_class($this)."::fetch ".$this->error, LOG_ERR);
@@ -600,13 +596,13 @@ class ExtDirect
 
 		if ($validate) {
 			$minVersion = '4.0';
-			$maxVersion = '19.0'; // tested version
+			$maxVersion = '21.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
 		} else {
 			if (empty($minVersion)) $minVersion = '4.0';
-			if (empty($maxVersion)) $maxVersion = '19.0'; // debugging version
+			if (empty($maxVersion)) $maxVersion = '21.0'; // debugging version
 			if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
 				return 1;
 			} else {
@@ -642,6 +638,7 @@ class ExtDirect
 		$langs->load("categories");
 		$langs->load("productbatch");
 		$langs->load("sendings");
+		$langs->load("mrp");
 
 		if (is_array($errors) && (count($errors) > 0)) {
 			foreach ($errors as $error) {
@@ -720,11 +717,7 @@ class ExtDirect
 			$propertyIndex ? $object->{$propertyName}[$propertyIndex] = $paramValue : $object->$propertyName = $paramValue;
 			return true;
 		}
-		if ($diff) {
-			return true;
-		} else {
-			return false;
-		}
+		return $diff;
 	}
 
 	/**
@@ -1097,5 +1090,75 @@ class ExtDirect
 		}
 
 		return $out;
+	}
+
+	/**
+	* Return Url link of activity origin object
+	*
+	* @param int $origintype Type origin
+	*
+	* @return CommonObject
+	*/
+	public function getOrigin($origintype)
+	{
+		$origin = null;
+		switch ($origintype) {
+			case 'Order':
+				require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
+				$origin = new Commande($this->db);
+				break;
+			case 'Picking':
+				require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
+				$origin = new Commande($this->db);
+				break;
+			case 'Shipment':
+				require_once DOL_DOCUMENT_ROOT.'/expedition/class/expedition.class.php';
+				$origin = new Expedition($this->db);
+				break;
+			case 'Dispatch':
+				require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
+				$origin = new CommandeFournisseur($this->db);
+				break;
+			case 'Purchase':
+				require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
+				$origin = new CommandeFournisseur($this->db);
+				break;
+			case 'Inventory':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'InventoryPlus':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'OrderProduct':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'ManufactureOrderProduct':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'Remove':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'PurchaseProducts':
+				require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+				$origin = new Product($this->db);
+				break;
+			case 'ManufactureOrder':
+				require_once DOL_DOCUMENT_ROOT.'/mrp/class/mo.class.php';
+				$origin = new Mo($this->db);
+				break;
+			case 'Prospect':
+				require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+				$origin = new Societe($this->db);
+				break;
+			default:
+				break;
+		}
+
+		return $origin;
 	}
 }
