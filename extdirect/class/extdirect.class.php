@@ -1148,8 +1148,10 @@ class ExtDirect
 				$origin = new Product($this->db);
 				break;
 			case 'ManufactureOrder':
-				require_once DOL_DOCUMENT_ROOT.'/mrp/class/mo.class.php';
-				$origin = new Mo($this->db);
+				if (self::checkDolVersion(0, '11.0', '')) {
+					require_once DOL_DOCUMENT_ROOT.'/mrp/class/mo.class.php';
+					$origin = new Mo($this->db);
+				}
 				break;
 			case 'Prospect':
 				require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
