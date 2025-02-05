@@ -93,11 +93,7 @@ class ExtDirectFormProduct extends FormProduct
 		$limit = 0;
 		$start = 0;
 		$contentValue = '';
-		if (ExtDirect::checkDolVersion(0, '5.0')) {
-			$statusFilter = 'warehouseopen, warehouseinternal';
-		} else {
-			$statusFilter = '';
-		}
+		$statusFilter = 'warehouseopen, warehouseinternal';
 
 		$includeTotal = false; // keep default false for mobilid full warehouse list store
 
@@ -568,22 +564,20 @@ class ExtDirectFormProduct extends FormProduct
 		}
 		$results = array();
 
-		if (ExtDirect::checkDolVersion(0, '5.0', '')) {
-			dol_include_once('/fourn/class/fournisseur.product.class.php');
+		dol_include_once('/fourn/class/fournisseur.product.class.php');
 
-			$supplierProduct = new ProductFournisseur($this->db);
-			if (! is_array($result = $supplierProduct->reputations)) {
-				return ExtDirect::getDolError($result, $this->errors, $this->error);
-			}
-			// add empty type
-			$id = 0;
-			foreach ($result as $code => $label) {
-				$row = new stdClass;
-				$row->id = $id++;
-				$row->code = $code;
-				$row->label = html_entity_decode($label);
-				$results[]= $row;
-			}
+		$supplierProduct = new ProductFournisseur($this->db);
+		if (! is_array($result = $supplierProduct->reputations)) {
+			return ExtDirect::getDolError($result, $this->errors, $this->error);
+		}
+		// add empty type
+		$id = 0;
+		foreach ($result as $code => $label) {
+			$row = new stdClass;
+			$row->id = $id++;
+			$row->code = $code;
+			$row->label = html_entity_decode($label);
+			$results[]= $row;
 		}
 
 		return $results;

@@ -472,9 +472,7 @@ class ExtDirectCommande extends Commande
 				} else {
 					if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				if (ExtDirect::checkDolVersion(0, '', '4.0') && ($this->availability_id > 0) &&
-					($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (ExtDirect::checkDolVersion(0, '5.0', '') && ($this->availability_id > 0) &&
+				if ($this->availability_id > 0 &&
 					($result = $this->availability($this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
 				if (isset($this->remise_percent) &&
 					($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -1818,11 +1816,7 @@ class ExtDirectCommande extends Commande
 			}
 			if ($lineId && $this->id) {
 				// delete
-				if (ExtDirect::checkDolVersion(0, '5.0', '')) {
-					if (($result = $this->deleteline($this->_user, $lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				} else {
-					if (($result = $this->deleteline($lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				}
+				if (($result = $this->deleteline($this->_user, $lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			} else {
 				return PARAMETERERROR;
 			}

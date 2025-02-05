@@ -150,18 +150,10 @@ class ExtDirectActionComm extends ActionComm
 
 		if ($id > 0) {
 			$extraFields = new ExtraFields($this->db);
-			if (ExtDirect::checkDolVersion(0, '', '5.0')) {
-				if (($result = $this->fetch($id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-			} else {
-				$this->id = $id;
-			}
+			$this->id = $id;
 			if (! $this->error || $this->id) {
-				$extraLabels = $extraFields->fetch_name_optionals_label($this->table_element);
-				if (ExtDirect::checkDolVersion(0, '', '5.0')) {
-					$this->fetch_optionals($id, $extraLabels);
-				} else {
-					$this->fetch_optionals();
-				}
+				$extraFields->fetch_name_optionals_label($this->table_element);
+				$this->fetch_optionals();
 				$index = 1;
 				if (empty($this->array_options)) {
 					// create empty optionals to be able to add optionals

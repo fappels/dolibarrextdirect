@@ -1345,11 +1345,8 @@ class ExtDirectProduct extends ProductFournisseur
 					// End call triggers
 				}
 				// delete product
-				if (ExtDirect::checkDolVersion(0, '6.0', '')) {
-					if (($result = $this->delete($this->_user, $notrigger)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				} else {
-					if (($result = $this->delete($id)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				}
+				if (($result = $this->delete($this->_user, $notrigger)) <= 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
@@ -1452,7 +1449,7 @@ class ExtDirectProduct extends ProductFournisseur
 		}
 		if ($supplierFilter) {
 			$sqlFields .= ', sp.unitprice as price_supplier, sp.ref_fourn as ref_supplier, sp.rowid as ref_supplier_id, sp.quantity as qty_supplier, sp.remise_percent as reduction_percent_supplier';
-			if (ExtDirect::checkDolVersion(0, '5.0', '')) $sqlFields .= ', sp.supplier_reputation';
+			$sqlFields .= ', sp.supplier_reputation';
 			if (ExtDirect::checkDolVersion(0, '13.0', '')) $sqlFields .= ', sp.barcode as supplier_barcode';
 			$sqlFields .= ', (SELECT SUM(cfdet.qty) FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet as cfdet WHERE cfdet.fk_product = p.rowid) as ordered';
 			$sqlFields .= ', (SELECT SUM(cfdis.qty) FROM '.MAIN_DB_PREFIX.$this->table_element_reception_line.' as cfdis WHERE cfdis.fk_product = p.rowid) as dispatched';
@@ -1657,7 +1654,7 @@ class ExtDirectProduct extends ProductFournisseur
 						$row->id = $obj->id.'_'.$obj->ref_supplier_id;
 					}
 					$row->price = $obj->price_supplier;
-					if (ExtDirect::checkDolVersion(0, '5.0', '')) $row->supplier_reputation = $obj->supplier_reputation;
+					$row->supplier_reputation = $obj->supplier_reputation;
 					if (ExtDirect::checkDolVersion(0, '13.0', '') && !empty($obj->supplier_barcode)) $row->barcode = $obj->supplier_barcode;
 					$row->qty_ordered = $obj->ordered - $obj->dispatched;
 				} else {
