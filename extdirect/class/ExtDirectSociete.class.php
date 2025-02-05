@@ -141,7 +141,6 @@ class ExtDirectSociete extends Societe
 		if (!isset($this->db)) return CONNECTERROR;
 		$results = array();
 
-		$sql = "SELECT rowid, code, libelle as label";
 		$sql = "SELECT rowid, code, label";
 		$sql.= " FROM ".MAIN_DB_PREFIX."c_country";
 		$sql.= " WHERE active = 1";
@@ -281,7 +280,7 @@ class ExtDirectSociete extends Societe
 
 		$sql = "SELECT rowid, code, libelle";
 		$sql.= " FROM ".MAIN_DB_PREFIX.'c_payment_term';
-		$sql.= " WHERE active=1";
+		$sql.= " WHERE entity IN (".getEntity('c_payment_term').") AND active=1";
 		$sql.= " ORDER BY sortorder";
 		$resql = $this->db->query($sql);
 		if ($resql) {
@@ -321,7 +320,7 @@ class ExtDirectSociete extends Societe
 
 		$sql = "SELECT id, code, libelle, type";
 		$sql.= " FROM ".MAIN_DB_PREFIX."c_paiement";
-		$sql.= " WHERE active > 0";
+		$sql.= " WHERE entity IN (".getEntity('c_paiement').") AND active > 0";
 		$sql.= " ORDER BY id";
 		$resql = $this->db->query($sql);
 		if ($resql) {

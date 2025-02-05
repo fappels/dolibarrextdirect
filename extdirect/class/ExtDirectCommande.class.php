@@ -929,6 +929,7 @@ class ExtDirectCommande extends Commande
 		$sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
 		$sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
 		$sql .= ' WHERE csm.active > 0';
+		if (ExtDirect::checkDolVersion(0, '10.0')) $sql .= ' AND csm.entity IN ('.getEntity('c_shipment_mode').')';
 		$sql .= ' ORDER BY csm.rowid';
 
 		$resql=$this->db->query($sql);
