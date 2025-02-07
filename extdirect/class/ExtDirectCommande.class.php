@@ -1480,17 +1480,15 @@ class ExtDirectCommande extends Commande
 					}
 				} else {
 					foreach ($orderLine->array_options as $key => $value) {
-						if (!empty($value)) {
-							$row = new stdClass;
-							$name = substr($key, 8); // strip options_
-							$row->id = $index++; // ExtJs needs id to be able to destroy records
-							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
-							$row->object_id = $orderLine->id;
-							$row->object_element = $orderLine->element;
-							$row->raw_value = $value;
-							$results[] = $row;
-						}
+						$row = new stdClass;
+						$name = substr($key, 8); // strip options_
+						$row->id = $index++; // ExtJs needs id to be able to destroy records
+						$row->name = $name;
+						$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
+						$row->object_id = $orderLine->id;
+						$row->object_element = $orderLine->element;
+						$row->raw_value = $value;
+						$results[] = $row;
 					}
 				}
 			}
