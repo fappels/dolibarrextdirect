@@ -821,6 +821,8 @@ class ExtDirectExpedition extends Expedition
 		$origin_id = 0;
 		$hasSubProductFilter = false;
 		$photoSize = '';
+		$packageLine = null;
+		$packagedQty = 0;
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
@@ -1421,6 +1423,7 @@ class ExtDirectExpedition extends Expedition
 		global $conf;
 
 		$batches = array();
+		$packagedQty = 0;
 
 		if (ExtDirect::checkDolVersion(0, '15.0', '')) {
 			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';

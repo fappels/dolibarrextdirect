@@ -692,13 +692,13 @@ class ExtDirect
 		$paramValue = null;
 		$propertyValue = null;
 		if (!empty($propertyName) && isset($object->$propertyName)) {
-			$propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
+			$propertyIndex ? (isset($object->{$propertyName}[$propertyIndex]) ? $propertyValue = $object->{$propertyName}[$propertyIndex] : null) : $propertyValue = $object->$propertyName;
 		} elseif (!is_object($object)) {
 			$propertyValue = $object;
 		}
 
 		if (!empty($paramName) && isset($param->$paramName)) {
-			$paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
+			$paramIndex ? (isset($param->{$paramName}[$paramIndex]) ? $paramValue = $param->{$paramName}[$paramIndex] : null) : $paramValue = $param->$paramName;
 		} elseif (!is_object($param)) {
 			$paramValue = $param;
 		}
