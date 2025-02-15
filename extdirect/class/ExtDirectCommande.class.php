@@ -1517,7 +1517,7 @@ class ExtDirectCommande extends Commande
 			}
 			$orderLine->array_options['options_'.$param->name] = $param->raw_value;
 		}
-		if (($result = $orderLine->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+		if (($result = $orderLine->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
