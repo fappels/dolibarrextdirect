@@ -797,17 +797,15 @@ class ExtDirectFichinter extends Fichinter
 					}
 				} else {
 					foreach ($line->array_options as $key => $value) {
-						if (!empty($value)) {
-							$row = new stdClass;
-							$name = substr($key, 8); // strip options_
-							$row->id = $index++; // ExtJs needs id to be able to destroy records
-							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value, '', $line->table_element);
-							$row->object_id = $line->id;
-							$row->object_element = $line->element;
-							$row->raw_value = $value;
-							$results[] = $row;
-						}
+						$row = new stdClass;
+						$name = substr($key, 8); // strip options_
+						$row->id = $index++; // ExtJs needs id to be able to destroy records
+						$row->name = $name;
+						$row->value = $extraFields->showOutputField($name, $value, '', $line->table_element);
+						$row->object_id = $line->id;
+						$row->object_element = $line->element;
+						$row->raw_value = $value;
+						$results[] = $row;
 					}
 				}
 			}

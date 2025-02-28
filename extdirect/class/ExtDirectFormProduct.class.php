@@ -49,9 +49,14 @@ class ExtDirectFormProduct extends FormProduct
 	{
 		global $conf, $langs, $user, $db;
 
+		/** @var DoliDB $db */
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -90,14 +95,12 @@ class ExtDirectFormProduct extends FormProduct
 		$fkBatch = 0;
 		$batch = '';
 		$sumStock = true;
+		$exclude = array();
+		$stockMin = false;
 		$limit = 0;
 		$start = 0;
 		$contentValue = '';
-		if (ExtDirect::checkDolVersion(0, '5.0')) {
-			$statusFilter = 'warehouseopen, warehouseinternal';
-		} else {
-			$statusFilter = '';
-		}
+		$statusFilter = 'warehouseopen, warehouseinternal';
 
 		$includeTotal = false; // keep default false for mobilid full warehouse list store
 
@@ -115,26 +118,28 @@ class ExtDirectFormProduct extends FormProduct
 		}
 
 		if (isset($params->filter)) {
-			foreach ($params->filter as $key => $filter) {
+			foreach ($params->filter as $filter) {
 				if ($filter->property == 'product_id') $fkProduct=$filter->value;
 				if ($filter->property == 'batch_id') $fkBatch=$filter->value;
 				if ($filter->property == 'batch') $batch=$this->db->escape($filter->value);
 				if ($filter->property == 'sumstock') $sumStock=$filter->value;
+				if ($filter->property == 'exclude') $exclude = explode(',', $filter->value);
+				if ($filter->property == 'stockmin') $stockMin = $filter->value;
 				if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));
 				if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);
 			}
 		}
 
 		if ($includeTotal) {
-			$res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock);
+			$res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin);
 			$total = $res;
 		} else {
-			$res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $limit, $start);
+			$res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin, $limit, $start);
 		}
 
 		$this->_makeNumericLabelSortable();
 
-		if ($start == 0) {
+		if ($start == 0 && !in_array(0, $exclude)) {
 			// create allwarehouse record with total warehouse stock, only for first page
 			$row = new stdClass;
 			$row->id = self::ALLWAREHOUSE_ID;
@@ -377,8 +382,7 @@ class ExtDirectFormProduct extends FormProduct
 	}
 
 	/**
-	 * OVERRIDE from dolibarr loadWarehouses, can be removed when patched in Dolibarr
-	 * TODO add units
+	 * OVERRIDE from dolibarr loadWarehouses because we need paging, more filter and more fields
 	 *
 	 * Load in cache array list of warehouses
 	 * If fk_product is not 0, we do not use cache
@@ -396,7 +400,7 @@ class ExtDirectFormProduct extends FormProduct
 	 * @param   int     $start          paging start
 	 * @return  int  		    		Nb of loaded lines, 0 if already loaded, <0 if KO
 	 */
-	private function _loadWarehouses($fk_product = 0, $fk_batch = 0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $limit = 0, $start = 0)
+	private function _loadWarehouses($fk_product = 0, $fk_batch = 0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $exclude = array(), $stockMin = false, $limit = 0, $start = 0)
 	{
 		dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
 
@@ -451,6 +455,22 @@ class ExtDirectFormProduct extends FormProduct
 		} else {
 			$sql.= " AND e.statut > 0";
 		}
+
+		if (is_array($exclude) && !empty($exclude)) {
+			$sql .= ' AND e.rowid NOT IN('.$this->db->sanitize(implode(',', $exclude)).')';
+		}
+
+		// minimum stock
+		if ($stockMin !== false) {
+			if (!empty($fk_product) && $fk_product > 0) {
+				if (!empty($batch)) {
+					$sql .= " AND pb.qty > ".((float) $stockMin);
+				} else {
+					$sql .= " AND ps.reel > ".((float) $stockMin);
+				}
+			}
+		}
+
 		if (!empty($contentValue)) {
 			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
 				$fields = array('e.ref', 'e.description');
@@ -464,6 +484,11 @@ class ExtDirectFormProduct extends FormProduct
 				$sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut, e.fk_parent";
 			} else {
 				$sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
+			}
+
+			// minimum stock
+			if ($stockMin !== false) {
+				$sql .= " HAVING sum(ps.reel) > ".((float) $stockMin);
 			}
 		}
 		if (ExtDirect::checkDolVersion(0, '7.0', '')) {
@@ -568,22 +593,20 @@ class ExtDirectFormProduct extends FormProduct
 		}
 		$results = array();
 
-		if (ExtDirect::checkDolVersion(0, '5.0', '')) {
-			dol_include_once('/fourn/class/fournisseur.product.class.php');
+		dol_include_once('/fourn/class/fournisseur.product.class.php');
 
-			$supplierProduct = new ProductFournisseur($this->db);
-			if (! is_array($result = $supplierProduct->reputations)) {
-				return ExtDirect::getDolError($result, $this->errors, $this->error);
-			}
-			// add empty type
-			$id = 0;
-			foreach ($result as $code => $label) {
-				$row = new stdClass;
-				$row->id = $id++;
-				$row->code = $code;
-				$row->label = html_entity_decode($label);
-				$results[]= $row;
-			}
+		$supplierProduct = new ProductFournisseur($this->db);
+		if (! is_array($result = $supplierProduct->reputations)) {
+			return ExtDirect::getDolError($result, $this->errors, $this->error);
+		}
+		// add empty type
+		$id = 0;
+		foreach ($result as $code => $label) {
+			$row = new stdClass;
+			$row->id = $id++;
+			$row->code = $code;
+			$row->label = html_entity_decode($label);
+			$results[]= $row;
 		}
 
 		return $results;

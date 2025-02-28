@@ -821,6 +821,8 @@ class ExtDirectExpedition extends Expedition
 		$origin_id = 0;
 		$hasSubProductFilter = false;
 		$photoSize = '';
+		$packageLine = null;
+		$packagedQty = 0;
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
@@ -1023,17 +1025,15 @@ class ExtDirectExpedition extends Expedition
 					}
 				} else {
 					foreach ($line->array_options as $key => $value) {
-						if (!empty($value)) {
-							$row = new stdClass;
-							$name = substr($key, 8); // strip options_
-							$row->id = $index++; // ExtJs needs id to be able to destroy records
-							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value, '', $line->table_element);
-							$row->object_id = $line->id;
-							$row->object_element = $line->element;
-							$row->raw_value = $value;
-							$results[] = $row;
-						}
+						$row = new stdClass;
+						$name = substr($key, 8); // strip options_
+						$row->id = $index++; // ExtJs needs id to be able to destroy records
+						$row->name = $name;
+						$row->value = $extraFields->showOutputField($name, $value, '', $line->table_element);
+						$row->object_id = $line->id;
+						$row->object_element = $line->element;
+						$row->raw_value = $value;
+						$results[] = $row;
 					}
 				}
 			}
@@ -1423,6 +1423,7 @@ class ExtDirectExpedition extends Expedition
 		global $conf;
 
 		$batches = array();
+		$packagedQty = 0;
 
 		if (ExtDirect::checkDolVersion(0, '15.0', '')) {
 			require_once DOL_DOCUMENT_ROOT . '/expedition/class/expeditionlinebatch.class.php';

@@ -472,9 +472,7 @@ class ExtDirectCommande extends Commande
 				} else {
 					if (($result = $this->set_date_livraison($this->_user, $this->date_livraison)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				if (ExtDirect::checkDolVersion(0, '', '4.0') && ($this->availability_id > 0) &&
-					($result = $this->set_availability($this->_user, $this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (ExtDirect::checkDolVersion(0, '5.0', '') && ($this->availability_id > 0) &&
+				if ($this->availability_id > 0 &&
 					($result = $this->availability($this->availability_id)) < 0)  return ExtDirect::getDolError($result, $this->errors, $this->error);
 				if (isset($this->remise_percent) &&
 					($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
@@ -929,6 +927,7 @@ class ExtDirectCommande extends Commande
 		$sql = 'SELECT csm.rowid, csm.code , csm.libelle as label';
 		$sql .= ' FROM '.MAIN_DB_PREFIX.'c_shipment_mode as csm';
 		$sql .= ' WHERE csm.active > 0';
+		if (ExtDirect::checkDolVersion(0, '10.0')) $sql .= ' AND csm.entity IN ('.getEntity('c_shipment_mode').')';
 		$sql .= ' ORDER BY csm.rowid';
 
 		$resql=$this->db->query($sql);
@@ -1481,17 +1480,15 @@ class ExtDirectCommande extends Commande
 					}
 				} else {
 					foreach ($orderLine->array_options as $key => $value) {
-						if (!empty($value)) {
-							$row = new stdClass;
-							$name = substr($key, 8); // strip options_
-							$row->id = $index++; // ExtJs needs id to be able to destroy records
-							$row->name = $name;
-							$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
-							$row->object_id = $orderLine->id;
-							$row->object_element = $orderLine->element;
-							$row->raw_value = $value;
-							$results[] = $row;
-						}
+						$row = new stdClass;
+						$name = substr($key, 8); // strip options_
+						$row->id = $index++; // ExtJs needs id to be able to destroy records
+						$row->name = $name;
+						$row->value = $extraFields->showOutputField($name, $value, '', $orderLine->table_element);
+						$row->object_id = $orderLine->id;
+						$row->object_element = $orderLine->element;
+						$row->raw_value = $value;
+						$results[] = $row;
 					}
 				}
 			}
@@ -1520,7 +1517,7 @@ class ExtDirectCommande extends Commande
 			}
 			$orderLine->array_options['options_'.$param->name] = $param->raw_value;
 		}
-		if (($result = $orderLine->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+		if (($result = $orderLine->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $orderLine->errors, $orderLine->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
@@ -1817,11 +1814,7 @@ class ExtDirectCommande extends Commande
 			}
 			if ($lineId && $this->id) {
 				// delete
-				if (ExtDirect::checkDolVersion(0, '5.0', '')) {
-					if (($result = $this->deleteline($this->_user, $lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				} else {
-					if (($result = $this->deleteline($lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				}
+				if (($result = $this->deleteline($this->_user, $lineId)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			} else {
 				return PARAMETERERROR;
 			}

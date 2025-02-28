@@ -334,6 +334,10 @@ class ExtDirectAuthenticate extends ExtDirect
 				$allowed = true;
 			}
 			if ($allowed && method_exists($user, 'hasRight')) {
+				if (ExtDirect::checkDolVersion(0, '15.0', '16.0') && $originModule == 'product') {
+					// hasRight for v15 and v16 need 'product' else product module not found
+					$originModuleForRights = 'product';
+				}
 				if ($user->hasRight($originModuleForRights, 'lire') || $user->hasRight($originModuleForRights, 'read')) {
 					$allowed = true;
 				} else {

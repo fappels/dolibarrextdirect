@@ -595,14 +595,14 @@ class ExtDirect
 		$dolMajorMinorVersion = $dolVersion[0].'.'.$dolVersion[1];
 
 		if ($validate) {
-			$minVersion = '4.0';
+			$minVersion = '6.0';
 			$maxVersion = '21.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
 		} else {
-			if (empty($minVersion)) $minVersion = '4.0';
-			if (empty($maxVersion)) $maxVersion = '21.0'; // debugging version
+			if (empty($minVersion)) $minVersion = '6.0';
+			if (empty($maxVersion)) $maxVersion = '22.0'; // debugging version
 			if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
 				return 1;
 			} else {
@@ -692,13 +692,13 @@ class ExtDirect
 		$paramValue = null;
 		$propertyValue = null;
 		if (!empty($propertyName) && isset($object->$propertyName)) {
-			$propertyIndex ? $propertyValue = $object->{$propertyName}[$propertyIndex] : $propertyValue = $object->$propertyName;
+			$propertyIndex ? (isset($object->{$propertyName}[$propertyIndex]) ? $propertyValue = $object->{$propertyName}[$propertyIndex] : null) : $propertyValue = $object->$propertyName;
 		} elseif (!is_object($object)) {
 			$propertyValue = $object;
 		}
 
 		if (!empty($paramName) && isset($param->$paramName)) {
-			$paramIndex ? $paramValue = $param->{$paramName}[$paramIndex] : $paramValue = $param->$paramName;
+			$paramIndex ? (isset($param->{$paramName}[$paramIndex]) ? $paramValue = $param->{$paramName}[$paramIndex] : null) : $paramValue = $param->$paramName;
 		} elseif (!is_object($param)) {
 			$paramValue = $param;
 		}
@@ -1148,8 +1148,10 @@ class ExtDirect
 				$origin = new Product($this->db);
 				break;
 			case 'ManufactureOrder':
-				require_once DOL_DOCUMENT_ROOT.'/mrp/class/mo.class.php';
-				$origin = new Mo($this->db);
+				if (self::checkDolVersion(0, '11.0', '')) {
+					require_once DOL_DOCUMENT_ROOT.'/mrp/class/mo.class.php';
+					$origin = new Mo($this->db);
+				}
 				break;
 			case 'Prospect':
 				require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
