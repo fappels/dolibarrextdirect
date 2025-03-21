@@ -394,7 +394,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	public function updateOrder($param)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
 		$currentStatus = 0;
 		$newstatus = 0;
@@ -404,7 +404,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$this->id = $params->id;
 				if (($result = $this->fetch($this->id)) < 0)   return $result;
 				$currentStatus = $this->statut;
-				$this->prepareOrderFields($params);
+				$orderUpdated = $this->prepareOrderFields($params);
 				// update
 				switch ($this->statut) {
 					case 0: //
@@ -445,17 +445,20 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						break;
 				}
 				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (function_exists('setDeliveryDate')) {
+				if (method_exists($this, 'setDeliveryDate')) {
 					if (($result = $this->setDeliveryDate($this->_user, $this->delivery_date)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				if (isset($this->cond_reglement_id) &&
-					($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (isset($this->mode_reglement_id) &&
-					($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (isset($this->remise_percent) &&
-					($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (isset($this->ref_supplier) &&
-					($result = $this->setValueFrom('ref_supplier', $this->ref_supplier, '', null, 'text', '', $this->_user, 'ORDER_SUPPLIER_MODIFY')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if ($orderUpdated) {
+					if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+					if (isset($this->cond_reglement_id) &&
+						($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (isset($this->mode_reglement_id) &&
+						($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (isset($this->remise_percent) &&
+						($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (isset($this->ref_supplier) &&
+						($result = $this->setValueFrom('ref_supplier', $this->ref_supplier, '', null, 'text', '', $this->_user, 'ORDER_SUPPLIER_MODIFY')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
 			} else {
 				return PARAMETERERROR;
 			}
@@ -535,25 +538,28 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 * private method to copy order fields into dolibarr object
 	 *
 	 * @param stdclass $params object with fields
-	 * @return null
+	 * @return boolean $diff true if changed
 	 */
 	private function prepareOrderFields($params)
 	{
-		isset($params->ref) ? ( $this->ref = $params->ref ) : ( isset($this->ref) ? null : ( $this->ref = null));
-		isset($params->ref_supplier) ? ( $this->ref_supplier = $params->ref_supplier) : ( isset($this->ref_supplier) ? null : ( $this->ref_supplier = null));
-		isset($params->supplier_id) ? ( $this->socid = $params->supplier_id) : ( isset($this->socid) ? null : ( $this->socid = null));
-		isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ( isset($this->statut) ? null : ($this->statut  = 0));
-		isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( isset($this->note_private) ? null : ( $this->note_private= null));
-		isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
-		isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
-		isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
-		isset($params->date_delivered) ? ( $this->date_delivered =$params->date_delivered) : ( isset($this->date_delivered) ? null : ($this->date_delivered = null));
-		isset($params->deliver_date) ? ( $this->delivery_date = $params->deliver_date) : ( isset($this->delivery_date) ? null : ($this->delivery_date = null));
-		isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
-		isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
-		isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
-		isset($params->order_date) ? ($this->date_commande = $params->order_date) : null;
-		isset($params->order_method_id) ? ($this->methode_commande_id = $params->order_method_id) : null;
+		$diff = false; // difference flag, set to true if a param element diff detected
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'ref', 'ref');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'ref_supplier', 'ref_supplier');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'supplier_id', 'socid');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'orderstatus_id', 'statut');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'note_private', 'note_private');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'note_public', 'note_public');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'user_id', 'user_author_id');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'order_date', 'date_commande');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'date_delivered', 'date_delivered');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'deliver_date', 'delivery_date');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'reduction_percent', 'remise_percent');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'payment_condition_id', 'cond_reglement_id');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'payment_type_id', 'mode_reglement_id');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'order_date', 'date_commande');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'order_method_id', 'methode_commande_id');
+
+		return $diff;
 	}
 
 	/**
@@ -823,7 +829,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		// phpcs:enable
 		$remise=trim($remise)?trim($remise):0;
 
-		if ($user->rights->commande->creer) {
+		if ($user->rights->fournisseur->commande->creer) {
 			$error=0;
 
 			$this->db->begin();
@@ -913,9 +919,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			if (!$this->error) {
 				foreach ($this->lines as $line) {
 					if (!isset($id) || ($id == $line->id)) {
+						$myprod = new ExtDirectProduct($this->_user->login);
 						if ($line->fk_product) {
 							$isFreeLine = false;
-							$myprod = new ExtDirectProduct($this->_user->login);
 							$result = $myprod->fetch($line->fk_product);
 							if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
 							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
@@ -1428,7 +1434,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * private method to copy order fields into reception object
 	 *
-	 * @param Object $reception reception object
+	 * @param Reception $reception reception object
 	 * @param stdclass $params object with app fields
 	 *
 	 * @return null

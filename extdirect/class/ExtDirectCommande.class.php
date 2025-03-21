@@ -418,7 +418,7 @@ class ExtDirectCommande extends Commande
 		global $conf, $langs;
 
 		if (!isset($this->db)) return CONNECTERROR;
-
+		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
 
 		foreach ($paramArray as &$params) {
