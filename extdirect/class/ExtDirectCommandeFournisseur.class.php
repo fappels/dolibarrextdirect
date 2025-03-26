@@ -455,7 +455,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
 					$reception = new Reception($this->db);
 					$reception->fetch($params->reception_id);
-					if ($reception->id) {
+					if ($reception->id && $params->receptionstatus_id == Reception::STATUS_VALIDATED) {
 						$reception->valid($this->_user);
 					}
 				}
@@ -1057,9 +1057,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 								$row->unit_id = $line->fk_unit;
 								if (isset($receptionLines[$line->id])) {
-									$row->receptionline_id = $receptionLines[$line->id];
 									$dispatch->fetch($receptionLines[$line->id]);
-									$row->reception_id = $dispatch->fk_reception;
+									if ($dispatch->fk_reception) {
+										$reception = new Reception($this->db);
+										$reception->fetch($dispatch->fk_reception);
+										$row->receptionstatus_id = $reception->status;
+										$row->reception_id = $dispatch->fk_reception;
+										$row->receptionline_id = $receptionLines[$line->id];
+									}
 								}
 								array_push($results, $row);
 							} else {
@@ -1141,9 +1146,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 								$row->unit_id = $line->fk_unit;
 								if (isset($receptionLines[$line->id])) {
-									$row->receptionline_id = $receptionLines[$line->id];
 									$dispatch->fetch($receptionLines[$line->id]);
-									$row->reception_id = $dispatch->fk_reception;
+									if ($dispatch->fk_reception) {
+										$reception = new Reception($this->db);
+										$reception->fetch($dispatch->fk_reception);
+										$row->receptionstatus_id = $reception->status;
+										$row->reception_id = $dispatch->fk_reception;
+										$row->receptionline_id = $receptionLines[$line->id];
+									}
 								}
 								if (empty($batchId)) {
 									if (empty($batch)) {
@@ -1237,9 +1247,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									}
 									$row->unit_id = $line->fk_unit;
 									if (isset($receptionLines[$line->id])) {
-										$row->receptionline_id = $receptionLines[$line->id];
 										$dispatch->fetch($receptionLines[$line->id]);
-										$row->reception_id = $dispatch->fk_reception;
+										if ($dispatch->fk_reception) {
+											$reception = new Reception($this->db);
+											$reception->fetch($dispatch->fk_reception);
+											$row->receptionstatus_id = $reception->status;
+											$row->reception_id = $dispatch->fk_reception;
+											$row->receptionline_id = $receptionLines[$line->id];
+										}
 									}
 									if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
 										if (empty($batchId)) {
@@ -1649,14 +1664,22 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
 									require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.dispatch.class.php';
 
-									$reception = null;
-									// check if draft reception exist for order
-									$this->fetchObjectLinked(null, 'order_supplier');
-									if (!empty($this->linkedObjects)) {
-										foreach ($this->linkedObjects['reception'] as $element) {
-											if ($element->statut == Reception::STATUS_DRAFT) $reception = $element;
+									if ($params->reception_id > 0) {
+										$reception = new Reception($this->db);
+										$reception->fetch($params->reception_id);
+										if ($reception->status != Reception::STATUS_DRAFT) {
+											$reception = null;
+										}
+									} else {
+										// backward compatibiliti, check if draft reception exist for order
+										$this->fetchObjectLinked(null, 'order_supplier');
+										if (!empty($this->linkedObjects)) {
+											foreach ($this->linkedObjects['reception'] as $element) {
+												if ($element->statut == Reception::STATUS_DRAFT) $reception = $element;
+											}
 										}
 									}
+
 									if (!isset($reception)) {
 										// create reception
 										$reception = new Reception($this->db);
