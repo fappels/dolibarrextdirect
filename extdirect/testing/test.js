@@ -412,18 +412,17 @@ describe("Supplier Reputations", function () {
 		testresults = [];
 
 	it("load Supplier Reputations", function () {
-		if (dolibarrVersion >= 5.0)
-			runs(function () {
-				flag = false;
-				Ext.getStore("SupplierReputations").load({
-					callback: function (records) {
-						Ext.Array.each(records, function (record, index) {
-							testresults[index] = record.get('code');
-						});
-						flag = true;
-					}
-				});
+		runs(function () {
+			flag = false;
+			Ext.getStore("SupplierReputations").load({
+				callback: function (records) {
+					Ext.Array.each(records, function (record, index) {
+						testresults[index] = record.get('code');
+					});
+					flag = true;
+				}
 			});
+		});
 
 		waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
 
@@ -1194,6 +1193,27 @@ describe("products", function () {
 		productStore = Ext.getStore('product');
 	});
 
+	it("read productconstants", function () {
+
+		runs(function () {
+			flag = false;
+			Ext.getStore('ProductConstants').load({
+				callback: function (records) {
+					Ext.Array.each(records, function (record, index) {
+						testresults[index] = record.get('constant');
+					});
+					flag = true;
+				}
+			});
+		});
+
+		waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
+
+		runs(function () {
+			expect(testresults).toContain('PRODUCT_USE_SUPPLIER_PACKAGING');
+		});
+	});
+
 	it("read Optional Model", function () {
 		runs(function () {
 			var optional = {};
@@ -1565,7 +1585,7 @@ describe("products", function () {
 			expect(testresults).toContain('connectortested');
 			expect(testresults).toContain(5);//stock
 			expect(testresults).toContain(12.5);//pmp 50 + 75 / 10
-			if (dolibarrVersion >= 5.0) expect(testresults).toContain(20);// desiredstock
+			expect(testresults).toContain(20);// desiredstock
 		});
 	});
 
@@ -3065,9 +3085,7 @@ describe("Purchase Order", function () {
 			expect(testresults).not.toContain(warehouseIds[2]);
 			expect(testresults.length).toBe(3);
 			expect(stock).toBe(19);
-			if (dolibarrVersion >= 5.0) {
-				expect(desiredStock).toBe(60);
-			}
+			expect(desiredStock).toBe(60);
 		});
 	});
 
@@ -3462,7 +3480,11 @@ describe("Manufacture Order", function () {
 		waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
 
 		runs(function () {
-			expect(testresults).toContain('STOCK_ALLOW_NEGATIVE_TRANSFER');
+			if (dolibarrVersion >= 22.0) {
+				expect(testresults).toContain('STOCK_DISALLOW_NEGATIVE_TRANSFER');
+			} else {
+				expect(testresults).toContain('STOCK_ALLOW_NEGATIVE_TRANSFER');
+			}
 		});
 	});
 

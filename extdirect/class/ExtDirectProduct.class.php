@@ -44,6 +44,7 @@ class ExtDirectProduct extends ProductFournisseur
 {
 	private $_user;
 	private $_enabled = false;
+	private $_productConstants = array('PRODUCT_USE_SUPPLIER_PACKAGING');
 
 	/**
 	 * parameters received from client
@@ -93,6 +94,24 @@ class ExtDirectProduct extends ProductFournisseur
 				parent::__construct($db);
 			}
 		}
+	}
+
+	/**
+	 * Load product related constants
+	 *
+	 * @param   stdClass    $params filter with elements
+	 *                              constant    name of specific constant
+	 *
+	 * @return  stdClass result data with specific constant value
+	 */
+	public function readConstants(stdClass $params)
+	{
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+
+		$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_productConstants);
+
+		return $results;
 	}
 
 	/**
