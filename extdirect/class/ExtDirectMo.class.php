@@ -40,7 +40,7 @@ dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 class ExtDirectMo extends Mo
 {
 	private $_user;
-	private $_moConstants = array('STOCK_ALLOW_NEGATIVE_TRANSFER');
+	private $_moConstants = array('STOCK_DISALLOW_NEGATIVE_TRANSFER');
 	private $_enabled = false;
 	private $_productstock_cache = array();
 
@@ -92,6 +92,9 @@ class ExtDirectMo extends Mo
 				$user->getrights();
 				$this->_enabled = !empty($conf->mrp->enabled) && isset($user->rights->mrp->read);
 				$this->_user = $user;  //commande.class uses global user
+				if (ExtDirect::checkDolVersion(0, '', '21.0')) {
+					$this->_moConstants[0] = 'STOCK_ALLOW_NEGATIVE_TRANSFER';
+				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {

@@ -51,7 +51,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		'STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER',
 		'SUPPLIER_ORDER_USE_DISPATCH_STATUS',
 		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO',
-		'STOCK_ALLOW_NEGATIVE_TRANSFER',
+		'STOCK_DISALLOW_NEGATIVE_TRANSFER',
 		'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE',
 		'MAIN_MODULE_RECEPTION');
 	private $_enabled = false;
@@ -95,6 +95,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
 					$this->key_ship_line_order = 'fk_commande';
 					$this->key_ship_line_order_line = 'fk_commandefourndet';
+				}
+				if (ExtDirect::checkDolVersion(0, '', '21.0')) {
+					$this->_orderConstants[6] = 'STOCK_ALLOW_NEGATIVE_TRANSFER';
 				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
