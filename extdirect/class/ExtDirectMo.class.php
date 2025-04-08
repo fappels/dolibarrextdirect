@@ -257,7 +257,7 @@ class ExtDirectMo extends Mo
 	public function destroyOptionals($params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->mrp->mrp->write)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->mrp->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$object = new Mo($this->db);
 
