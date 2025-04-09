@@ -705,11 +705,23 @@ class ExtDirectInventory extends Inventory
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->stock->lire)) return PERMISSIONERROR;
-		$results = array();
+		$result = new stdClass;
+		$data = array();
+		$rows = array();
 		$product_id = 0;
 		$photoSize = 'mini';
 		$warehouse_id = 0;
 		$object = new Inventory($this->db);
+
+		$includeTotal = true;
+
+		if (isset($params->limit)) {
+			$limit = $params->limit;
+			$start = $params->start;
+		}
+		if (isset($params->include_total)) {
+			$includeTotal = $params->include_total;
+		}
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $filter) {
@@ -722,21 +734,55 @@ class ExtDirectInventory extends Inventory
 
 		if ($origin_id > 0) {
 			$product = new ExtDirectProduct($this->_user->login);
-			$result = $object->fetch($origin_id);
-			if ($result < 0) return ExtDirect::getDolError($result, $object->errors, $object->error);
-			$result = $object->fetchLinesCommon();
-			if ($result < 0) return ExtDirect::getDolError($result, $object->errors, $object->error);
-			if (is_array($object->lines) && count($object->lines) > 0) {
-				foreach ($object->lines as $line) {
+			$object->fetch($origin_id);
+			$sqlFields = 'SELECT id.rowid as id, id.datec, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
+			$sqlFields .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real, id.pmp_expected';
+			$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+			$sqlWhere = ' WHERE id.fk_inventory = '.((int) $origin_id);
+			$sqlOrder = ' ORDER BY id.rowid';
+			if ($limit) {
+				$sqlLimit = $this->db->plimit($limit, $start);
+			}
+
+			if ($includeTotal) {
+				$sqlTotal = 'SELECT COUNT(*) as total' . $sqlFrom . $sqlWhere;
+				$resql = $this->db->query($sqlTotal);
+
+				if ($resql) {
+					$obj = $this->db->fetch_object($resql);
+					$total = $obj->total;
+					$this->db->free($resql);
+				} else {
+					return SQLERROR;
+				}
+			}
+			$sql = $sqlFields . $sqlFrom . $sqlWhere . $sqlOrder . $sqlLimit;
+
+			$resql = $this->db->query($sql);
+			if ($resql) {
+				$num = $this->db->num_rows($resql);
+				for ($i = 0; $i < $num; $i++) {
+					$line = $this->db->fetch_object($resql);
 					if ($warehouse_id > 0 && $warehouse_id != $line->fk_warehouse) continue;
 					if ($product_id > 0 && $product_id != $line->fk_product) continue;
 					$product->fetch($line->fk_product);
 					$row = $this->getLineData($line, $object, $product, $photoSize);
-					array_push($results, $row);
+					$rows[$row->id] = $row;
 				}
 			}
+			foreach ($rows as $key => &$row) {
+				array_push($data, $row);
+			}
+			$this->db->free($resql);
+			if (!empty($params->sort)) $data = ExtDirect::resultSort($data, $params->sort);
+			if ($includeTotal) {
+				$result->total = $total;
+				$result->data = $data;
+				return $result;
+			} else {
+				return $data;
+			}
 		}
-		return $results;
 	}
 
 	/**
@@ -874,16 +920,18 @@ class ExtDirectInventory extends Inventory
 	 * get line data from object
 	 *
 	 * @param InventoryLine		$object		object
-	 * @param Inventory			$inventory	Manufacturing order object
+	 * @param Object			$inventory	Inventory line object
 	 * @param ExtDirectProduct	$product	product object
 	 * @param String			$photoSize	format size of photo 'mini', 'small' or 'full' to add to line
 	 * @return stdClass object with data
 	 */
-	private function getLineData(InventoryLine $object, Inventory $inventory, ExtDirectProduct $product, $photoSize = '')
+	private function getLineData($object, Inventory $inventory, ExtDirectProduct $product, $photoSize = '')
 	{
 		$data = new stdClass;
 
-		foreach ($object->fields as $field => $info) {
+		$inventoryLine = new InventoryLine($this->db);
+
+		foreach ($inventoryLine->fields as $field => $info) {
 			if ($field == 'rowid') {
 				$data->line_id = (int) $object->id;
 				$data->id = (int) $object->id;

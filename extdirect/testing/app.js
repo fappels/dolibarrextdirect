@@ -55406,7 +55406,7 @@ Ext.define('ConnectorTest.controller.MainView', {extend:Ext.app.Controller, debu
   Ext.getStore('ManufactureOrderStatus').setProxy({type:'direct', directFn:ExtDirectMo.readStatus});
   Ext.getStore('ProductConstants').setProxy({type:'direct', directFn:ExtDirectProduct.readConstants});
   Ext.getStore('Inventory').setProxy({type:'direct', api:{create:ExtDirectInventory.extCreate, read:ExtDirectInventory.extRead, update:ExtDirectInventory.extUpdate, destroy:ExtDirectInventory.extDestroy}});
-  Ext.getStore('InventoryLines').setProxy({type:'direct', api:{create:ExtDirectInventory.extCreateLines, read:ExtDirectInventory.extReadLines, update:ExtDirectInventory.extUpdateLines, destroy:ExtDirectInventory.extDestroyLines}});
+  Ext.getStore('InventoryLines').setProxy({type:'direct', api:{create:ExtDirectInventory.extCreateLines, read:ExtDirectInventory.extReadLines, update:ExtDirectInventory.extUpdateLines, destroy:ExtDirectInventory.extDestroyLines},reader:{rootProperty:'data'}});
   Ext.getStore('InventoryList').setProxy({type:'direct', directFn:ExtDirectInventory.extList, reader:{rootProperty:'data'}});
   Ext.getStore('InventoryStatus').setProxy({type:'direct', directFn:ExtDirectInventory.readStatus});
   Ext.getStore('InventoryConstants').setProxy({type:'direct', directFn:ExtDirectInventory.readConstants});
