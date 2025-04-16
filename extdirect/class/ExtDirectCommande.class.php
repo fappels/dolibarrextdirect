@@ -1171,9 +1171,12 @@ class ExtDirectCommande extends Commande
 						}
 						$myprod->fetch_barcode();
 					}
-					if ($line->product_type == 1) {
+					if (ExtDirect::checkDolVersion(0, '', '18.0') && $line->product_type == 1) {
+						$isService = true;
+					} elseif (!$isFreeLine && !$myprod->isStockManaged()) {
 						$isService = true;
 					}
+
 					if ($isService || $isFreeLine || isset($warehouse_id) || $myprod->stock_reel == 0) {
 						if ($isService || $isFreeLine || $warehouse_id == -1) {
 							// get orderline with complete stock

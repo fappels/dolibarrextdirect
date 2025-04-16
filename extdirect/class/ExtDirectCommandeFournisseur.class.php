@@ -950,6 +950,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				}
 				foreach ($this->lines as $line) {
 					if (!isset($id) || ($id == $line->id)) {
+						$isService = false;
 						$myprod = new ExtDirectProduct($this->_user->login);
 						if ($line->fk_product) {
 							$isFreeLine = false;
@@ -974,10 +975,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						} else {
 							$isFreeLine = true;
 						}
-						if ($line->product_type == 1) {
+						if (ExtDirect::checkDolVersion(0, '18.0') && $line->product_type == 1) {
 							$isService = true;
-						} else {
-							$isService = false;
+						} elseif (!$isFreeLine && !$myprod->isStockManaged()) {
+							$isService = true;
 						}
 						if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0)) {
 							if (($warehouse_id == -1 || $isService || $isFreeLine )) {

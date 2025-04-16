@@ -192,8 +192,12 @@ class ExtDirectProduct extends ProductFournisseur
 				$row->ref= $this->ref;
 				$row->label= $this->label;
 				$row->description= $this->description?html_entity_decode($this->description):'';
-				//! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
-				$row->type= $this->type;
+				//! Type 0 for regular product or stock managed service, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
+				$row->type = $this->type;
+				if (ExtDirect::checkDolVersion(0, '19.0') && $this->isStockManaged()) {
+					$row->type = 0;
+				}
+
 				$row->note= $this->note;
 				//! Selling price
 				$row->price= $this->price?$this->price:'';              // Price net
