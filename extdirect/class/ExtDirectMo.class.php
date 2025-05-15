@@ -519,6 +519,7 @@ class ExtDirectMo extends Mo
 		$contactTypeId = 0;
 		$originId = 0;
 		$status_id = array();
+		$barcode = null;
 		$contentFilter = null;
 		$customStatus = false;
 		$sorterSize = 0;
@@ -540,6 +541,7 @@ class ExtDirectMo extends Mo
 				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'origin_id') $originId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
 				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
@@ -596,6 +598,10 @@ class ExtDirectMo extends Mo
 		if ($contactTypeId > 0) {
 			$sqlWhere .= " AND ec.fk_c_type_contact = " . $contactTypeId;
 			$sqlWhere .= " AND ec.fk_socpeople = " . $contactId;
+		}
+
+		if ($barcode) {
+			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR mo.ref = '".$this->db->escape($barcode)."')";
 		}
 
 		if ($contentFilter) {
