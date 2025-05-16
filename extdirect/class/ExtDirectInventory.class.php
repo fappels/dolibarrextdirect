@@ -770,7 +770,7 @@ class ExtDirectInventory extends Inventory
 					$rows[$row->id] = $row;
 				}
 			}
-			foreach ($rows as $key => &$row) {
+			foreach ($rows as &$row) {
 				array_push($data, $row);
 			}
 			$this->db->free($resql);
@@ -947,6 +947,7 @@ class ExtDirectInventory extends Inventory
 					$data->barcode = $product->barcode ? $product->barcode : '';
 					$data->barcode_type = $product->barcode_type ? $product->barcode_type : 0;
 					$data->barcode_with_checksum = $product->barcode ? $product->fetchBarcodeWithChecksum($product) : '';
+					$data->unit_id = $product->fk_unit;
 					$data->has_photo = 0;
 					if (!empty($photoSize)) {
 						$product->fetchPhoto($data, $photoSize);
