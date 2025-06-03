@@ -975,9 +975,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						} else {
 							$isFreeLine = true;
 						}
-						if (ExtDirect::checkDolVersion(0, '18.0') && $line->product_type == 1) {
+						if (ExtDirect::checkDolVersion(0, '', '18.0') && $line->product_type == 1) {
 							$isService = true;
-						} elseif (!$isFreeLine && !$myprod->isStockManaged()) {
+						} elseif (!$isFreeLine && ExtDirect::checkDolVersion(0, '19.0') && !$myprod->isStockManaged()) {
 							$isService = true;
 						}
 						if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0)) {
