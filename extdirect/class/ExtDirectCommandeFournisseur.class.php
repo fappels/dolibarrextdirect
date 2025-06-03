@@ -933,7 +933,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			if (($result = $this->fetch($this->id)) < 0)  return $result;
 			if (!$this->error) {
 				$receptionLines = array();
-				if (!empty($conf->reception->enabled)) {
+				if (!empty($conf->reception->enabled) && ExtDirect::checkDolVersion(0, '18.0')) {
 					// use reception mode
 					require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
 					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
