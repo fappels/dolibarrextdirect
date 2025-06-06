@@ -483,7 +483,7 @@ class ExtDirectInventory extends Inventory
 			}
 		}
 
-		$sqlFields = "SELECT inv.rowid, inv.ref, inv.title, inv.status,e.rowid as warehouse_id, e.ref as ref_warehouse, p.rowid as product_id, p.ref as ref_product, ea.activity_status, inv.date_inventory";
+		$sqlFields = "SELECT inv.rowid, inv.ref, inv.title, inv.status,e.rowid as warehouse_id, e.ref as ref_warehouse, p.rowid as product_id, p.ref as ref_product, ea.activity_status, inv.date_inventory, inv.date_validation";
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "inventory as inv";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "entrepot as e ON inv.fk_warehouse = e.rowid";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "product as p ON inv.fk_product = p.rowid";
@@ -575,11 +575,12 @@ class ExtDirectInventory extends Inventory
 				$row->ref_product   = $obj->ref_product;
 				$row->product_id    = (int) $obj->product_id;
 				$row->ref           = $obj->ref;
-				$row->decription    = $obj->title;
+				$row->description    = $obj->title;
 				$row->status_id     = (int) $obj->status;
 				$row->statusdisplay = html_entity_decode($this->LibStatut($row->status_id, 1));
 				$row->status        = $obj->activity_status;
 				$row->date_inventory= $this->db->jdate($obj->date_inventory);
+				$row->date_validation= $this->db->jdate($obj->date_validation);
 				$rows[$row->id] = $row;
 			}
 			foreach ($rows as $key => &$row) {
