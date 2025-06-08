@@ -479,6 +479,7 @@ class ExtDirectInventory extends Inventory
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'status_id') $status_id[$statusFilterCount++] = $filter->value;
 				elseif ($filter->property == 'ref') $ref = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
 				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
@@ -510,6 +511,10 @@ class ExtDirectInventory extends Inventory
 		}
 		if ($ref) {
 			$sqlWhere .= " AND inv.ref = '" . $ref . "'";
+		}
+
+		if ($barcode) {
+			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR inv.ref = '".$this->db->escape($barcode)."' OR e.ref = '".$this->db->escape($barcode)."' OR e.barcode = '".$this->db->escape($barcode)."')";
 		}
 
 		if ($contentFilter) {
