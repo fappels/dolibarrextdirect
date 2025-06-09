@@ -90,6 +90,7 @@ class ExtDirect
 	public $webview_name;
 	public $webview_version;
 	public $identify;
+	public $inventory_mode;
 	public $entity;
 	// array with multiple records
 	public $dataset=array();
@@ -156,7 +157,8 @@ class ExtDirect
 		$sql.= "dev_type,";
 		$sql.= "webview_name,";
 		$sql.= "webview_version,";
-		$sql.= "identify";
+		$sql.= "identify,";
+		$sql.= "inventory_mode";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ",entity";
 		}
@@ -173,6 +175,7 @@ class ExtDirect
 		$sql.= " ".(! isset($this->webview_name)?'NULL':"'".$this->db->escape($this->webview_name)."'").",";
 		$sql.= " ".(! isset($this->webview_version)?'NULL':"'".$this->db->escape($this->webview_version)."'").",";
 		$sql.= " ".(! isset($this->identify)?'NULL':"'".(int) $this->identify."'")."";
+		$sql.= ", ".(! isset($this->inventory_mode)?'NULL':"'".(int) $this->inventory_mode."'")."";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", ".(! isset($this->entity)?'NULL':"'".(int) $this->entity."'")."";
 		}
@@ -241,6 +244,7 @@ class ExtDirect
 		$sql.= " t.webview_name,";
 		$sql.= " t.webview_version,";
 		$sql.= " t.identify";
+		$sql.= ", t.inventory_mode";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", t.entity";
 		}
@@ -273,6 +277,7 @@ class ExtDirect
 				$this->dataset[$i]['webview_name']  = $obj->webview_name;
 				$this->dataset[$i]['webview_version']  = $obj->webview_version;
 				$this->dataset[$i]['identify']  = $obj->identify;
+				$this->dataset[$i]['inventory_mode']  = $obj->inventory_mode;
 				if (!empty($conf->multicompany->enabled)) {
 					$this->dataset[$i]['entity']  = $obj->entity;
 				}
@@ -314,6 +319,7 @@ class ExtDirect
 		$sql.= " t.webview_name,";
 		$sql.= " t.webview_version,";
 		$sql.= " t.identify";
+		$sql.= ", t.inventory_mode";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", t.entity";
 		}
@@ -347,6 +353,7 @@ class ExtDirect
 				$this->webview_name = $obj->webview_name;
 				$this->webview_version = $obj->webview_version;
 				$this->identify = $obj->identify;
+				$this->inventory_mode = $obj->inventory_mode;
 				if (!empty($conf->multicompany->enabled)) {
 					$this->entity = $obj->entity;
 				}
@@ -402,6 +409,7 @@ class ExtDirect
 		$sql.= " webview_name=".(isset($this->webview_name)?"'".$this->db->escape($this->webview_name)."'":"null").",";
 		$sql.= " webview_version=".(isset($this->webview_version)?"'".$this->db->escape($this->webview_version)."'":"null").",";
 		$sql.= " identify=".(isset($this->identify)?"'".(int) $this->identify."'":"null")."";
+		$sql.= ", inventory_mode=".(isset($this->inventory_mode)?"'".(int) $this->inventory_mode."'":"null")."";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", entity=".(isset($this->entity)?"'".(int) $this->entity."'":"null")."";
 		}

@@ -108,16 +108,19 @@ if (!$error) {
 
 						if ($extDirect->fk_user != $user_entity[0] ||
 							$extDirect->entity != $user_entity[1] ||
-							$extDirect->identify != GETPOST('identify'.$i, 'int')
+							$extDirect->identify != GETPOST('identify'.$i, 'int') ||
+							$extDirect->inventory_mode != GETPOST('inventory_mode'.$i, 'int')
 						) {
 							$extDirect->fk_user = $user_entity[0];
 							$extDirect->entity = $user_entity[1];
 							$extDirect->identify = GETPOST('identify'.$i, 'int');
+							$extDirect->inventory_mode = GETPOST('inventory_mode'.$i, 'int');
 							$res = $extDirect->update($user, 1);
 						}
 					} else {
 						if ($extDirect->fk_user != GETPOST('userid'.$i, 'alpha') ||
-							$extDirect->identify != GETPOST('identify'.$i, 'int')
+							$extDirect->identify != GETPOST('identify'.$i, 'int') ||
+							$extDirect->inventory_mode != GETPOST('inventory_mode'.$i, 'int')
 						) {
 							$extDirect->fk_user = GETPOST('userid'.$i, 'alpha');
 							if (!empty($conf->multicompany->enabled)) {
@@ -126,6 +129,7 @@ if (!$error) {
 								$extDirect->entity = $extUser->entity;
 							}
 							$extDirect->identify = GETPOST('identify'.$i, 'int');
+							$extDirect->inventory_mode = GETPOST('inventory_mode'.$i, 'int');
 							$res = $extDirect->update($user, 1);
 						}
 					}
@@ -263,6 +267,7 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<td>'.$langs->trans("User").'</td>';
 	print '<td>'.$langs->trans("Ack").'</td>';
 	print '<td>'.$langs->trans("Identify").'</td>';
+	print '<td>'.$langs->trans("InventoryMode").'</td>';
 	print '<td><a href="'.$_SERVER['PHP_SELF'].'?action=selectall">'.$langs->trans("removeAll");
 	print '</a>/<a href="'.$_SERVER['PHP_SELF'].'?action=selectnone">'.$langs->trans("None").'</a>';
 	print '</tr>'."\n";
@@ -301,6 +306,10 @@ if ($mode == $tabs['tab1']->mode) {
 			print '<td align="right" width="40">';
 			print '<input '.$bc[$var].' type="checkbox" name="identify'.$i.'" value="1"';
 			print ((!empty($user_app['identify']))?' checked="checked"':'').'>';
+			print '</td>';
+			print '<td align="right" width="40">';
+			print '<input '.$bc[$var].' type="checkbox" name="inventory_mode'.$i.'" value="1"';
+			print ((!empty($user_app['inventory_mode']))?' checked="checked"':'').'>';
 			print '</td>';
 			print '<td align="right" width="40">';
 			$key='REMOVE_'.$user_app['app_id'].$i;
