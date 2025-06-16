@@ -925,17 +925,20 @@ class ExtDirectInventory extends Inventory
 	/**
 	 * get line data from object
 	 *
-	 * @param InventoryLine		$object		object
-	 * @param Object			$inventory	Inventory line object
+	 * @param InventoryLine		$object		Inventory line object
+	 * @param Inventory			$inventory	Inventory object
 	 * @param ExtDirectProduct	$product	product object
 	 * @param String			$photoSize	format size of photo 'mini', 'small' or 'full' to add to line
 	 * @return stdClass object with data
 	 */
 	private function getLineData($object, Inventory $inventory, ExtDirectProduct $product, $photoSize = '')
 	{
+		global $conf;
 		$data = new stdClass;
 
 		$inventoryLine = new InventoryLine($this->db);
+
+		$data->qty_expected = $object->qty_stock;
 
 		foreach ($inventoryLine->fields as $field => $info) {
 			if ($field == 'rowid') {
@@ -946,6 +949,14 @@ class ExtDirectInventory extends Inventory
 			} elseif ($field == 'fk_product') {
 				$data->product_id = (int) $object->{$field};
 				if ($product) {
+					if ($inventory->status == Inventory::STATUS_VALIDATED || $inventory->status == Inventory::STATUS_DRAFT) {
+						$product->load_stock('novirtual');
+					}
+					if (!empty($conf->productbatch->enabled) && (!empty($object->batch))) {
+						$data->qty_expected = $product->stock_warehouse[$object->fk_warehouse]->detail_batch[$object->batch]->qty ?? 0;
+					} else {
+						$data->qty_expected = $product->stock_warehouse[$object->fk_warehouse]->real ?? 0;
+					}
 					$data->ref_product = $product->ref;
 					$data->product_label = $product->label;
 					$data->product_desc = $product->description;
