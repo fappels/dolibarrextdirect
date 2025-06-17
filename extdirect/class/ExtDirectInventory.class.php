@@ -951,11 +951,13 @@ class ExtDirectInventory extends Inventory
 				if ($product) {
 					if ($inventory->status == Inventory::STATUS_VALIDATED || $inventory->status == Inventory::STATUS_DRAFT) {
 						$product->load_stock('novirtual');
-					}
-					if (!empty($conf->productbatch->enabled) && (!empty($object->batch))) {
-						$data->qty_expected = $product->stock_warehouse[$object->fk_warehouse]->detail_batch[$object->batch]->qty ?? 0;
-					} else {
-						$data->qty_expected = $product->stock_warehouse[$object->fk_warehouse]->real ?? 0;
+						if (!empty($conf->productbatch->enabled) && (!empty($object->batch))) {
+							$data->qty_expected = $product->stock_warehouse[$object->fk_warehouse]->detail_batch[$object->batch]->qty ?? 0;
+						} else {
+							$data->qty_expected = $product->stock_warehouse[$object->fk_warehouse]->real ?? 0;
+						}
+					} elseif ($inventory->status == Inventory::STATUS_RECORDED) {
+						$data->qty_expected = $object->qty_stock;
 					}
 					$data->ref_product = $product->ref;
 					$data->product_label = $product->label;
