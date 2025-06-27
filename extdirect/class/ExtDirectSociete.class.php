@@ -1001,6 +1001,8 @@ class ExtDirectSociete extends Societe
 
 		foreach ($paramArray as &$param) {
 			// prepare fields
+			$this->code_client = -1; // for automatic code generation
+			$this->code_fournisseur = -1; // for automatic code generation
 			$this->prepareFields($param);
 			// create
 
