@@ -1,5 +1,5 @@
 -- ============================================================================
--- 
+--
 -- Copyright (C) 2012      Francis Appels        <francis.appels@z-application.com>
 --
 -- This program is free software; you can redistribute it and/or modify
@@ -18,5 +18,5 @@
 -- ============================================================================
 
 
-ALTER TABLE `llx_extdirect_user` ADD UNIQUE KEY `uk_app_id` (`app_id`);
-ALTER TABLE `llx_extdirect_user` ADD KEY `ack_id` (`ack_id`);
+ALTER TABLE llx_extdirect_user ADD UNIQUE KEY uk_app_id (app_id);
+ALTER TABLE llx_extdirect_user ADD KEY ack_id (ack_id);
