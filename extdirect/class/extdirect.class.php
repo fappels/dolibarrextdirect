@@ -855,6 +855,14 @@ class ExtDirect
 						// Create thumbs
 						$file_osencoded=dol_osencode($newfile);
 						if (file_exists($file_osencoded)) {
+							if (function_exists('getDefaultImageSizes')) {
+								$tmparraysize = getDefaultImageSizes();
+								$maxwidthsmall = $tmparraysize['maxwidthsmall'];
+								$maxheightsmall = $tmparraysize['maxheightsmall'];
+								$maxwidthmini = $tmparraysize['maxwidthmini'];
+								$maxheightmini = $tmparraysize['maxheightmini'];
+								$quality = $tmparraysize['quality'];
+							}
 							// Create small thumbs (Ratio is near 16/9)
 							// Used on logon for example
 							vignette($file_osencoded, $maxwidthsmall, $maxheightsmall, '_small', $quality);
