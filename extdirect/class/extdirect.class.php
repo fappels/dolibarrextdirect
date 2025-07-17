@@ -848,8 +848,11 @@ class ExtDirect
 				$result = dol_move_uploaded_file($param['file']['tmp_name'], $newfile, 0, 0, $param['file']['error']);
 
 				if (is_string($result)) {
-					$errors[] = $result;
-					$response = ExtDirect::getDolError($result, $errors, $result);
+					$errors[] = $result . ' - file: ' . $param['file']['name'];
+					$response['message'] = ExtDirect::getDolError($result, $errors);
+				} elseif ($result < 0) {
+					$errors[] = 'Upload error: ' . $param['file']['name'];
+					$response['message'] = ExtDirect::getDolError($result, $errors);
 				} else {
 					if (image_format_supported($newfile) > 0) {
 						// Create thumbs
@@ -877,6 +880,8 @@ class ExtDirect
 						'message' => 'Successful upload: ' . $param['file']['name']
 					);
 				}
+			} else {
+				$response['message'] = 'Directory: ' . $dir . ' not found.';
 			}
 		} elseif ($param['file']['error'] == 1 || $param['file']['error'] == 2) {
 			$response['message'] = 'File: ' . $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
