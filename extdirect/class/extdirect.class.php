@@ -833,7 +833,7 @@ class ExtDirect
 		$langs->load("errors");
 		$response = array(
 			'success' => false,
-			'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
+			'message' => $langs->trans('ErrorFileNotUploaded') . ' - ' . $param['file']['name']
 		);
 
 		if (empty($conf->global->MAIN_UPLOAD_DOC)) {
@@ -848,11 +848,11 @@ class ExtDirect
 				$result = dol_move_uploaded_file($param['file']['tmp_name'], $newfile, 0, 0, $param['file']['error']);
 
 				if (is_string($result)) {
-					$errors[] = $result . ' - file: ' . $param['file']['name'];
-					$response['message'] = ExtDirect::getDolError($result, $errors);
+					$errors[] = $result;
+					$response['message'] = ExtDirect::getDolError($result, $errors) . ' - ' . $param['file']['name'];
 				} elseif ($result < 0) {
-					$errors[] = 'Upload error: ' . $param['file']['name'];
-					$response['message'] = ExtDirect::getDolError($result, $errors);
+					$errors[] = $langs->trans('ErrorFileNotUploaded');
+					$response['message'] = ExtDirect::getDolError($result, $errors) . ' - ' . $param['file']['name'];
 				} else {
 					if (image_format_supported($newfile) > 0) {
 						// Create thumbs
@@ -877,14 +877,14 @@ class ExtDirect
 					}
 					$response = array(
 						'success' => true,
-						'message' => 'Successful upload: ' . $param['file']['name']
+						'message' => $langs->trans('FileUploaded') . ': ' . $param['file']['name']
 					);
 				}
 			} else {
-				$response['message'] = 'Directory: ' . $dir . ' not found.';
+				$response['message'] = $langs->trans('ErrorFailedToWriteInDir', $dir);
 			}
 		} elseif ($param['file']['error'] == 1 || $param['file']['error'] == 2) {
-			$response['message'] = 'File: ' . $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
+			$response['message'] = $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
 		}
 		return $response;
 	}
