@@ -2026,6 +2026,10 @@ class ExtDirectProduct extends ProductFournisseur
 		if ($couldBeEAN) {
 			$this->barcode = substr($barcode, 0, -1);
 			if ($this->fetchBarcodeWithChecksum($this) == $barcode) {
+				if (strlen($barcode) == 12 && $this->barcode_type == $barcodeTypes['UPC']) {
+					// UPC code, so we have to add a leading 0, because barcode readers interprete ean13 with leading 0 as a UPC code and return a 12 digit UPC.
+					$barcode = '0'.$barcode;
+				}
 				$couldBeEAN = true;
 			} else {
 				$couldBeEAN = false;
@@ -2033,7 +2037,7 @@ class ExtDirectProduct extends ProductFournisseur
 		}
 
 		if ($couldBeEAN) {
-			$sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
+			$sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR barcode ='".$this->db->escape(substr($barcode, 1))."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
 		} else {
 			$sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
 		}
