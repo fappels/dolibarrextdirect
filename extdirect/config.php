@@ -203,6 +203,9 @@ $API = array(
 			),
 			'readAttributes' => array(
 				'len' => 1
+			),
+			'readConstants' => array(
+				'len' => 1
 			)
 		)
 	),
@@ -662,6 +665,61 @@ $API = array(
 				'len' => 1
 			),
 			'updateOptionals' => array(
+				'len' => 1
+			),
+			'destroyOptionals' => array(
+				'len' => 1
+			),
+			'fileUpload' => array(
+				'formHandler' => true
+			),
+			'extReadLines' => array(
+				'len' => 1
+			),
+			'extCreateLines' => array(
+				'len' => 1
+			),
+			'extUpdateLines' => array(
+				'len' => 1
+			),
+			'extDestroyLines' => array(
+				'len' => 1
+			)
+		)
+	),
+	'ExtDirectInventory' => array(
+		'methods' => array(
+			'extRead' => array(
+				'len' => 1
+			),
+			'extCreate' => array(
+				'len' => 1
+			),
+			'extUpdate' => array(
+				'len' => 1
+			),
+			'extDestroy' => array(
+				'len' => 1
+			),
+			'extList' => array(
+				'len' => 1
+			),
+			'readStatus' => array(
+				'len' => 1
+			),
+			'readConstants' => array(
+				'len' => 1
+			),
+			'readOptionalModel' => array(
+				'len' => 1
+			),
+			'readOptionals' => array(
+				'len' => 1
+			),
+			'updateOptionals' => array(
+				'len' => 1
+			),
+			'createOptionals' => array(
 				'len' => 1
 			),
 			'destroyOptionals' => array(

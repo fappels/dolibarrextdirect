@@ -1,5 +1,5 @@
 -- ============================================================================
--- 
+--
 -- Copyright (C) 2013      Francis Appels        <francis.appels@z-application.com>
 --
 -- This program is free software; you can redistribute it and/or modify
@@ -18,5 +18,5 @@
 -- ============================================================================
 
 
-ALTER TABLE `llx_extdirect_activity` ADD INDEX `idx_activity_name` (`activity_name`);
-ALTER TABLE `llx_extdirect_activity` ADD INDEX `idx_activity_id` (`activity_id`);
+ALTER TABLE llx_extdirect_activity ADD INDEX idx_activity_name (activity_name);
+ALTER TABLE llx_extdirect_activity ADD INDEX idx_activity_id (activity_id);

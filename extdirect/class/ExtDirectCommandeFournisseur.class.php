@@ -51,7 +51,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		'STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER',
 		'SUPPLIER_ORDER_USE_DISPATCH_STATUS',
 		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO',
-		'STOCK_ALLOW_NEGATIVE_TRANSFER',
+		'STOCK_DISALLOW_NEGATIVE_TRANSFER',
 		'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE',
 		'MAIN_MODULE_RECEPTION');
 	private $_enabled = false;
@@ -95,6 +95,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
 					$this->key_ship_line_order = 'fk_commande';
 					$this->key_ship_line_order_line = 'fk_commandefourndet';
+				}
+				if (ExtDirect::checkDolVersion(0, '', '21.0')) {
+					$this->_orderConstants[6] = 'STOCK_ALLOW_NEGATIVE_TRANSFER';
 				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -393,8 +396,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 */
 	public function updateOrder($param)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
 		$currentStatus = 0;
 		$newstatus = 0;
@@ -404,7 +409,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$this->id = $params->id;
 				if (($result = $this->fetch($this->id)) < 0)   return $result;
 				$currentStatus = $this->statut;
-				$this->prepareOrderFields($params);
+				$orderUpdated = $this->prepareOrderFields($params);
 				// update
 				switch ($this->statut) {
 					case 0: //
@@ -445,17 +450,29 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						break;
 				}
 				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (function_exists('setDeliveryDate')) {
+				if (method_exists($this, 'setDeliveryDate')) {
 					if (($result = $this->setDeliveryDate($this->_user, $this->delivery_date)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
-				if (isset($this->cond_reglement_id) &&
-					($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (isset($this->mode_reglement_id) &&
-					($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (isset($this->remise_percent) &&
-					($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (isset($this->ref_supplier) &&
-					($result = $this->setValueFrom('ref_supplier', $this->ref_supplier, '', null, 'text', '', $this->_user, 'ORDER_SUPPLIER_MODIFY')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if (!empty($conf->reception->enabled) && in_array($this->statut, array(Self::STATUS_RECEIVED_COMPLETELY, Self::STATUS_RECEIVED_PARTIALLY)) && $params->reception_id) {
+					// validate reception object
+					require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
+					$reception = new Reception($this->db);
+					$reception->fetch($params->reception_id);
+					if ($reception->id && $params->receptionstatus_id == Reception::STATUS_VALIDATED) {
+						$reception->valid($this->_user);
+					}
+				}
+				if ($orderUpdated) {
+					if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
+					if (isset($this->cond_reglement_id) &&
+						($result = $this->setPaymentTerms($this->cond_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (isset($this->mode_reglement_id) &&
+						($result = $this->setPaymentMethods($this->mode_reglement_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (isset($this->remise_percent) &&
+						($result = $this->set_remise($this->_user, $this->remise_percent)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+					if (isset($this->ref_supplier) &&
+						($result = $this->setValueFrom('ref_supplier', $this->ref_supplier, '', null, 'text', '', $this->_user, 'ORDER_SUPPLIER_MODIFY')) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
 			} else {
 				return PARAMETERERROR;
 			}
@@ -535,25 +552,28 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 * private method to copy order fields into dolibarr object
 	 *
 	 * @param stdclass $params object with fields
-	 * @return null
+	 * @return boolean $diff true if changed
 	 */
 	private function prepareOrderFields($params)
 	{
-		isset($params->ref) ? ( $this->ref = $params->ref ) : ( isset($this->ref) ? null : ( $this->ref = null));
-		isset($params->ref_supplier) ? ( $this->ref_supplier = $params->ref_supplier) : ( isset($this->ref_supplier) ? null : ( $this->ref_supplier = null));
-		isset($params->supplier_id) ? ( $this->socid = $params->supplier_id) : ( isset($this->socid) ? null : ( $this->socid = null));
-		isset($params->orderstatus_id) ? ( $this->statut = $params->orderstatus_id) : ( isset($this->statut) ? null : ($this->statut  = 0));
-		isset($params->note_private) ? ( $this->note_private =$params->note_private) : ( isset($this->note_private) ? null : ( $this->note_private= null));
-		isset($params->note_public) ? ( $this->note_public = $params->note_public ) : ( isset($this->note_public) ? null : ($this->note_public = null));
-		isset($params->user_id) ? ( $this->user_author_id = $params->user_id) : ( isset($this->user_author_id) ? null : ($this->user_author_id = null));
-		isset($params->order_date) ? ( $this->date_commande =$params->order_date) : ( isset($this->date_commande) ? null : ($this->date_commande = null));
-		isset($params->date_delivered) ? ( $this->date_delivered =$params->date_delivered) : ( isset($this->date_delivered) ? null : ($this->date_delivered = null));
-		isset($params->deliver_date) ? ( $this->delivery_date = $params->deliver_date) : ( isset($this->delivery_date) ? null : ($this->delivery_date = null));
-		isset($params->reduction_percent) ? ($this->remise_percent = $params->reduction_percent) : null;
-		isset($params->payment_condition_id) ? ($this->cond_reglement_id = $params->payment_condition_id) : null;
-		isset($params->payment_type_id) ? ($this->mode_reglement_id = $params->payment_type_id) : null;
-		isset($params->order_date) ? ($this->date_commande = $params->order_date) : null;
-		isset($params->order_method_id) ? ($this->methode_commande_id = $params->order_method_id) : null;
+		$diff = false; // difference flag, set to true if a param element diff detected
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'ref', 'ref');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'ref_supplier', 'ref_supplier');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'supplier_id', 'socid');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'orderstatus_id', 'statut');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'note_private', 'note_private');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'note_public', 'note_public');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'user_id', 'user_author_id');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'order_date', 'date_commande');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'date_delivered', 'date_delivered');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'deliver_date', 'delivery_date');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'reduction_percent', 'remise_percent');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'payment_condition_id', 'cond_reglement_id');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'payment_type_id', 'mode_reglement_id');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'order_date', 'date_commande');
+		$diff = ExtDirect::prepareField($diff, $params, $this, 'order_method_id', 'methode_commande_id');
+
+		return $diff;
 	}
 
 	/**
@@ -698,6 +718,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			$sqlOrder .= "c.date_commande DESC";
 		}
 
+		$sqlLimit = '';
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
 		}
@@ -823,7 +844,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		// phpcs:enable
 		$remise=trim($remise)?trim($remise):0;
 
-		if ($user->rights->commande->creer) {
+		if ($user->rights->fournisseur->commande->creer) {
 			$error=0;
 
 			$this->db->begin();
@@ -911,11 +932,28 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			$this->id=$order_id;
 			if (($result = $this->fetch($this->id)) < 0)  return $result;
 			if (!$this->error) {
+				$receptionLines = array();
+				if (!empty($conf->reception->enabled) && ExtDirect::checkDolVersion(0, '18.0')) {
+					// use reception mode
+					require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
+					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+						dol_include_once('/fourn/class/fournisseur.commande.dispatch.class.php');
+						$dispatch = new CommandeFournisseurDispatch($this->db);
+					} else {
+						dol_include_once('/reception/class/receptionlinebatch.class.php');
+						$dispatch = new ReceptionLineBatch($this->db);
+					}
+					$dispatchedLines = $this->getDispachedLines();
+					foreach ($dispatchedLines as $dispatchedLine) {
+						$receptionLines[$dispatchedLine['orderlineid']] = $dispatchedLine['id'];
+					}
+				}
 				foreach ($this->lines as $line) {
 					if (!isset($id) || ($id == $line->id)) {
+						$isService = false;
+						$myprod = new ExtDirectProduct($this->_user->login);
 						if ($line->fk_product) {
 							$isFreeLine = false;
-							$myprod = new ExtDirectProduct($this->_user->login);
 							$result = $myprod->fetch($line->fk_product);
 							if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
 							if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
@@ -937,10 +975,10 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						} else {
 							$isFreeLine = true;
 						}
-						if ($line->product_type == 1) {
+						if (ExtDirect::checkDolVersion(0, '', '18.0') && $line->product_type == 1) {
 							$isService = true;
-						} else {
-							$isService = false;
+						} elseif (!$isFreeLine && ExtDirect::checkDolVersion(0, '19.0') && !$myprod->isStockManaged()) {
+							$isService = true;
 						}
 						if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0)) {
 							if (($warehouse_id == -1 || $isService || $isFreeLine )) {
@@ -1022,6 +1060,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$myprod->fetchPhoto($row, $photoSize);
 								}
 								$row->unit_id = $line->fk_unit;
+								if (isset($receptionLines[$line->id])) {
+									$dispatch->fetch($receptionLines[$line->id]);
+									if ($dispatch->fk_reception) {
+										$reception = new Reception($this->db);
+										$reception->fetch($dispatch->fk_reception);
+										$row->receptionstatus_id = $reception->status;
+										$row->reception_id = $dispatch->fk_reception;
+										$row->receptionline_id = $receptionLines[$line->id];
+									}
+								}
 								array_push($results, $row);
 							} else {
 								// get orderline with stock of warehouse
@@ -1101,6 +1149,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$myprod->fetchPhoto($row, $photoSize);
 								}
 								$row->unit_id = $line->fk_unit;
+								if (isset($receptionLines[$line->id])) {
+									$dispatch->fetch($receptionLines[$line->id]);
+									if ($dispatch->fk_reception) {
+										$reception = new Reception($this->db);
+										$reception->fetch($dispatch->fk_reception);
+										$row->receptionstatus_id = $reception->status;
+										$row->reception_id = $dispatch->fk_reception;
+										$row->receptionline_id = $receptionLines[$line->id];
+									}
+								}
 								if (empty($batchId)) {
 									if (empty($batch)) {
 										if ($myprod->status_batch == 2) {
@@ -1192,6 +1250,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$myprod->fetchPhoto($row, $photoSize);
 									}
 									$row->unit_id = $line->fk_unit;
+									if (isset($receptionLines[$line->id])) {
+										$dispatch->fetch($receptionLines[$line->id]);
+										if ($dispatch->fk_reception) {
+											$reception = new Reception($this->db);
+											$reception->fetch($dispatch->fk_reception);
+											$row->receptionstatus_id = $reception->status;
+											$row->reception_id = $dispatch->fk_reception;
+											$row->receptionline_id = $receptionLines[$line->id];
+										}
+									}
 									if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
 										if (empty($batchId)) {
 											if (empty($batch)) {
@@ -1428,7 +1496,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * private method to copy order fields into reception object
 	 *
-	 * @param Object $reception reception object
+	 * @param Reception $reception reception object
 	 * @param stdclass $params object with app fields
 	 *
 	 * @return null
@@ -1600,14 +1668,22 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
 									require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.dispatch.class.php';
 
-									$reception = null;
-									// check if draft reception exist for order
-									$this->fetchObjectLinked(null, 'order_supplier');
-									if (!empty($this->linkedObjects)) {
-										foreach ($this->linkedObjects['reception'] as $element) {
-											if ($element->statut == Reception::STATUS_DRAFT) $reception = $element;
+									if ($params->reception_id > 0) {
+										$reception = new Reception($this->db);
+										$reception->fetch($params->reception_id);
+										if ($reception->status != Reception::STATUS_DRAFT) {
+											$reception = null;
+										}
+									} else {
+										// backward compatibiliti, check if draft reception exist for order
+										$this->fetchObjectLinked(null, 'order_supplier');
+										if (!empty($this->linkedObjects)) {
+											foreach ($this->linkedObjects['reception'] as $element) {
+												if ($element->statut == Reception::STATUS_DRAFT) $reception = $element;
+											}
 										}
 									}
+
 									if (!isset($reception)) {
 										// create reception
 										$reception = new Reception($this->db);
@@ -1636,7 +1712,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
 									// create dispatch from line created by addline
 									$result = $reception->lines[$lineIndex]->create($this->_user);
-									if ($result < 0) return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+									if ($result < 0) {
+										return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+									} else {
+										$params->receptionline_id = $result;
+										$params->reception_id = $reception->id;
+									}
 								} else {
 									// use dispatch mode
 									if (($result = $this->DispatchProduct(

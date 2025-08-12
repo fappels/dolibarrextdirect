@@ -90,6 +90,7 @@ class ExtDirect
 	public $webview_name;
 	public $webview_version;
 	public $identify;
+	public $inventory_mode;
 	public $entity;
 	// array with multiple records
 	public $dataset=array();
@@ -156,7 +157,8 @@ class ExtDirect
 		$sql.= "dev_type,";
 		$sql.= "webview_name,";
 		$sql.= "webview_version,";
-		$sql.= "identify";
+		$sql.= "identify,";
+		$sql.= "inventory_mode";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ",entity";
 		}
@@ -173,6 +175,7 @@ class ExtDirect
 		$sql.= " ".(! isset($this->webview_name)?'NULL':"'".$this->db->escape($this->webview_name)."'").",";
 		$sql.= " ".(! isset($this->webview_version)?'NULL':"'".$this->db->escape($this->webview_version)."'").",";
 		$sql.= " ".(! isset($this->identify)?'NULL':"'".(int) $this->identify."'")."";
+		$sql.= ", ".(! isset($this->inventory_mode)?'NULL':"'".(int) $this->inventory_mode."'")."";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", ".(! isset($this->entity)?'NULL':"'".(int) $this->entity."'")."";
 		}
@@ -241,6 +244,7 @@ class ExtDirect
 		$sql.= " t.webview_name,";
 		$sql.= " t.webview_version,";
 		$sql.= " t.identify";
+		$sql.= ", t.inventory_mode";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", t.entity";
 		}
@@ -273,6 +277,7 @@ class ExtDirect
 				$this->dataset[$i]['webview_name']  = $obj->webview_name;
 				$this->dataset[$i]['webview_version']  = $obj->webview_version;
 				$this->dataset[$i]['identify']  = $obj->identify;
+				$this->dataset[$i]['inventory_mode']  = $obj->inventory_mode;
 				if (!empty($conf->multicompany->enabled)) {
 					$this->dataset[$i]['entity']  = $obj->entity;
 				}
@@ -314,6 +319,7 @@ class ExtDirect
 		$sql.= " t.webview_name,";
 		$sql.= " t.webview_version,";
 		$sql.= " t.identify";
+		$sql.= ", t.inventory_mode";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", t.entity";
 		}
@@ -347,6 +353,7 @@ class ExtDirect
 				$this->webview_name = $obj->webview_name;
 				$this->webview_version = $obj->webview_version;
 				$this->identify = $obj->identify;
+				$this->inventory_mode = $obj->inventory_mode;
 				if (!empty($conf->multicompany->enabled)) {
 					$this->entity = $obj->entity;
 				}
@@ -402,6 +409,7 @@ class ExtDirect
 		$sql.= " webview_name=".(isset($this->webview_name)?"'".$this->db->escape($this->webview_name)."'":"null").",";
 		$sql.= " webview_version=".(isset($this->webview_version)?"'".$this->db->escape($this->webview_version)."'":"null").",";
 		$sql.= " identify=".(isset($this->identify)?"'".(int) $this->identify."'":"null")."";
+		$sql.= ", inventory_mode=".(isset($this->inventory_mode)?"'".(int) $this->inventory_mode."'":"null")."";
 		if (!empty($conf->multicompany->enabled)) {
 			$sql.= ", entity=".(isset($this->entity)?"'".(int) $this->entity."'":"null")."";
 		}
@@ -596,7 +604,7 @@ class ExtDirect
 
 		if ($validate) {
 			$minVersion = '6.0';
-			$maxVersion = '21.0'; // tested version
+			$maxVersion = '22.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
@@ -825,7 +833,7 @@ class ExtDirect
 		$langs->load("errors");
 		$response = array(
 			'success' => false,
-			'message' => 'File: ' . $param['file']['name'] . ' not uploaded.'
+			'message' => $langs->trans('ErrorFileNotUploaded') . ' - ' . $param['file']['name']
 		);
 
 		if (empty($conf->global->MAIN_UPLOAD_DOC)) {
@@ -841,12 +849,23 @@ class ExtDirect
 
 				if (is_string($result)) {
 					$errors[] = $result;
-					$response = ExtDirect::getDolError($result, $errors, $result);
+					$response['message'] = ExtDirect::getDolError($result, $errors) . ' - ' . $param['file']['name'];
+				} elseif ($result < 0) {
+					$errors[] = $langs->trans('ErrorFileNotUploaded');
+					$response['message'] = ExtDirect::getDolError($result, $errors) . ' - ' . $param['file']['name'];
 				} else {
 					if (image_format_supported($newfile) > 0) {
 						// Create thumbs
 						$file_osencoded=dol_osencode($newfile);
 						if (file_exists($file_osencoded)) {
+							if (function_exists('getDefaultImageSizes')) {
+								$tmparraysize = getDefaultImageSizes();
+								$maxwidthsmall = $tmparraysize['maxwidthsmall'];
+								$maxheightsmall = $tmparraysize['maxheightsmall'];
+								$maxwidthmini = $tmparraysize['maxwidthmini'];
+								$maxheightmini = $tmparraysize['maxheightmini'];
+								$quality = $tmparraysize['quality'];
+							}
 							// Create small thumbs (Ratio is near 16/9)
 							// Used on logon for example
 							vignette($file_osencoded, $maxwidthsmall, $maxheightsmall, '_small', $quality);
@@ -858,12 +877,14 @@ class ExtDirect
 					}
 					$response = array(
 						'success' => true,
-						'message' => 'Successful upload: ' . $param['file']['name']
+						'message' => $langs->trans('FileUploaded') . ': ' . $param['file']['name']
 					);
 				}
+			} else {
+				$response['message'] = $langs->trans('ErrorFailedToWriteInDir', $dir);
 			}
 		} elseif ($param['file']['error'] == 1 || $param['file']['error'] == 2) {
-			$response['message'] = 'File: ' . $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
+			$response['message'] = $param['file']['name'] . ' ' . $langs->trans("ErrorFileSizeTooLarge");
 		}
 		return $response;
 	}

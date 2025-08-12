@@ -114,6 +114,29 @@ class ExtDirectTranslate
 				}
 				$results[] = $row;
 			}
+			// some required system translations
+			$this->_translate = new Translate('', $conf);
+			if (isset($this->_user->conf->MAIN_LANG_DEFAULT)
+				&& ($this->_user->conf->MAIN_LANG_DEFAULT != 'auto')
+			) {
+				$this->_translate->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
+			} else {
+				$this->_translate->setDefaultLang($langs->getDefaultLang());
+			}
+			$this->_translate->load('main');
+			// user date and number format
+			$row = new stdClass;
+			$row->name = 'FormatDateShort';
+			$row->value = $this->_translate->tab_translate['FormatDateShort'];
+			$results[] = $row;
+			$row = new stdClass;
+			$row->name = 'SeparatorDecimal';
+			$row->value = $this->_translate->tab_translate['SeparatorDecimal'];
+			$results[] = $row;
+			$row = new stdClass;
+			$row->name = 'SeparatorThousand';
+			$row->value = $this->_translate->tab_translate['SeparatorThousand'];
+			$results[] = $row;
 			return $results;
 		}
 	}

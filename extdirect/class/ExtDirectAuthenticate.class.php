@@ -186,6 +186,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->webview_name = $this->webview_name;
 			$result->webview_version = $this->webview_version;
 			$result->identify = $this->identify;
+			$result->inventory_mode = $this->inventory_mode;
 			$result->modules = $this->getModules($this->_user);
 			// debug info can be removed for production
 			$result->site_cookie_samesite = $site_cookie_samesite;
@@ -370,6 +371,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		$diff = self::prepareField($diff, $param, $this, 'webview_name', 'webview_name');
 		$diff = self::prepareField($diff, $param, $this, 'webview_version', 'webview_version');
 		$diff = self::prepareField($diff, $param, $this, 'identify', 'identify');
+		$diff = self::prepareField($diff, $param, $this, 'inventory_mode', 'inventory_mode');
 
 		return $diff;
 	}

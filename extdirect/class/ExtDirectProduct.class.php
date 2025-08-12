@@ -44,6 +44,7 @@ class ExtDirectProduct extends ProductFournisseur
 {
 	private $_user;
 	private $_enabled = false;
+	private $_productConstants = array('PRODUCT_USE_SUPPLIER_PACKAGING');
 
 	/**
 	 * parameters received from client
@@ -93,6 +94,24 @@ class ExtDirectProduct extends ProductFournisseur
 				parent::__construct($db);
 			}
 		}
+	}
+
+	/**
+	 * Load product related constants
+	 *
+	 * @param   stdClass    $params filter with elements
+	 *                              constant    name of specific constant
+	 *
+	 * @return  stdClass result data with specific constant value
+	 */
+	public function readConstants(stdClass $params)
+	{
+		if (!isset($this->db)) return CONNECTERROR;
+		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
+
+		$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_productConstants);
+
+		return $results;
 	}
 
 	/**
@@ -150,6 +169,7 @@ class ExtDirectProduct extends ProductFournisseur
 				elseif ($filter->property == 'ref_supplier_id') $refSupplierId = $filter->value;
 				elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
 				elseif ($filter->property == 'customer_id' && !empty($filter->value)) $socid = $filter->value;
+				elseif ($filter->property == 'get_virtual_stock' && !empty($filter->value)) $conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO = $filter->value;
 			}
 		}
 
@@ -167,12 +187,17 @@ class ExtDirectProduct extends ProductFournisseur
 				$this->fetch_barcode();
 				$row->id = $this->id ;
 				$row->is_virtual_stock = false;
+				$row->is_virtual_total_stock = false;
 				//! Ref
 				$row->ref= $this->ref;
 				$row->label= $this->label;
 				$row->description= $this->description?html_entity_decode($this->description):'';
-				//! Type 0 for regular product, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
-				$row->type= $this->type;
+				//! Type 0 for regular product or stock managed service, 1 for service (Advanced feature: 2 for assembly kit, 3 for stock kit)
+				$row->type = $this->type;
+				if (ExtDirect::checkDolVersion(0, '19.0') && $this->isStockManaged()) {
+					$row->type = 0;
+				}
+
 				$row->note= $this->note;
 				//! Selling price
 				$row->price= $this->price?$this->price:'';              // Price net
@@ -246,7 +271,11 @@ class ExtDirectProduct extends ProductFournisseur
 
 				//! Stock
 				if (isset($warehouse) && $warehouse != ExtDirectFormProduct::ALLWAREHOUSE_ID) {
-					$this->load_stock('novirtual, warehouseopen, warehouseinternal');
+					if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+						$this->load_stock('warehouseopen, warehouseinternal', ($refSupplierId > 0) ? 1 : null);
+					} else {
+						$this->load_stock('novirtual, warehouseopen, warehouseinternal');
+					}
 					$row->pmp = $this->pmp;
 					if (!empty($conf->productbatch->enabled) && (!empty($batch) || isset($batchId))) {
 						// TODO if warehouse is a parent warehouse get all batches from childs
@@ -290,7 +319,7 @@ class ExtDirectProduct extends ProductFournisseur
 						// fetch qty and warehouse of first batch found
 						$formProduct = new FormProduct($this->db);
 						if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-							$this->load_stock('warehouseopen, warehouseinternal');
+							$this->load_stock('warehouseopen, warehouseinternal', ($refSupplierId > 0) ? 1 : null);
 						} else {
 							$this->load_stock('novirtual, warehouseopen, warehouseinternal');
 						}
@@ -321,7 +350,7 @@ class ExtDirectProduct extends ProductFournisseur
 						}
 					} else {
 						if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
-							$this->load_stock('warehouseopen, warehouseinternal');
+							$this->load_stock('warehouseopen, warehouseinternal', ($refSupplierId > 0) ? 1 : null);
 							$row->is_virtual_stock = true;
 							$row->stock_reel = (float) $this->stock_theorique;
 						} else {
@@ -341,6 +370,7 @@ class ExtDirectProduct extends ProductFournisseur
 				// add compatibility with orderline model
 				$row->stock = $row->stock_reel;
 				if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
+					$row->is_virtual_total_stock = true;
 					$row->total_stock = (float) $this->stock_theorique;
 				} else {
 					$row->total_stock = (float) $this->stock_reel;
@@ -1422,6 +1452,7 @@ class ExtDirectProduct extends ProductFournisseur
 					if ($filter->value > 0) $warehouseIds[] = $filter->value;
 					$checkWarehouseIds[] = $filter->value;
 				}
+				elseif ($filter->property == 'get_virtual_stock' && !empty($filter->value)) $conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO = $filter->value;
 			}
 		}
 		if (isset($param->include_total)) {
@@ -1627,10 +1658,10 @@ class ExtDirectProduct extends ProductFournisseur
 				} else {
 					$row->stock = (float) $obj->stock;
 				}
-				if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO) && !$warehouseFilter) {
+				if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO) && empty($warehouseIds)) {
 					$product = new Product($this->db);
 					$product->fetch($row->product_id);
-					$product->load_stock('warehouseopen, warehouseinternal');
+					$product->load_stock('warehouseopen, warehouseinternal', $supplierFilter ? 1 : null);
 					$row->is_virtual_stock = true;
 					$row->total_stock = (float) $product->stock_theorique;
 				} else {
@@ -1995,6 +2026,10 @@ class ExtDirectProduct extends ProductFournisseur
 		if ($couldBeEAN) {
 			$this->barcode = substr($barcode, 0, -1);
 			if ($this->fetchBarcodeWithChecksum($this) == $barcode) {
+				if (strlen($barcode) == 12 && $this->barcode_type == $barcodeTypes['UPC']) {
+					// UPC code, so we have to add a leading 0, because barcode readers interprete ean13 with leading 0 as a UPC code and return a 12 digit UPC.
+					$barcode = '0'.$barcode;
+				}
 				$couldBeEAN = true;
 			} else {
 				$couldBeEAN = false;
@@ -2002,7 +2037,7 @@ class ExtDirectProduct extends ProductFournisseur
 		}
 
 		if ($couldBeEAN) {
-			$sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
+			$sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR barcode ='".$this->db->escape(substr($barcode, 0, -1))."' OR barcode ='".$this->db->escape(substr($barcode, 1))."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
 		} else {
 			$sql = "SELECT rowid, fk_barcode_type".$fkProductField." FROM ".MAIN_DB_PREFIX.$table." WHERE barcode ='".$this->db->escape($barcode)."' OR " . $refField . " = '".$this->db->escape($barcode)."'";
 		}

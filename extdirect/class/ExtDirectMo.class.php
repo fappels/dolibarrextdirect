@@ -40,7 +40,7 @@ dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 class ExtDirectMo extends Mo
 {
 	private $_user;
-	private $_moConstants = array('STOCK_ALLOW_NEGATIVE_TRANSFER');
+	private $_moConstants = array('STOCK_DISALLOW_NEGATIVE_TRANSFER');
 	private $_enabled = false;
 	private $_productstock_cache = array();
 
@@ -92,6 +92,9 @@ class ExtDirectMo extends Mo
 				$user->getrights();
 				$this->_enabled = !empty($conf->mrp->enabled) && isset($user->rights->mrp->read);
 				$this->_user = $user;  //commande.class uses global user
+				if (ExtDirect::checkDolVersion(0, '', '21.0')) {
+					$this->_moConstants[0] = 'STOCK_ALLOW_NEGATIVE_TRANSFER';
+				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
 				} else {
@@ -254,7 +257,7 @@ class ExtDirectMo extends Mo
 	public function destroyOptionals($params)
 	{
 		if (!isset($this->db)) return CONNECTERROR;
-		if (!isset($this->_user->rights->mrp->mrp->write)) return PERMISSIONERROR;
+		if (!isset($this->_user->rights->mrp->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$object = new Mo($this->db);
 
@@ -516,6 +519,7 @@ class ExtDirectMo extends Mo
 		$contactTypeId = 0;
 		$originId = 0;
 		$status_id = array();
+		$barcode = null;
 		$contentFilter = null;
 		$customStatus = false;
 		$sorterSize = 0;
@@ -537,6 +541,7 @@ class ExtDirectMo extends Mo
 				elseif ($filter->property == 'contacttype_id') $contactTypeId = $filter->value;
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'origin_id') $originId = $filter->value;
+				elseif ($filter->property == 'barcode') $barcode = $filter->value;
 				elseif ($filter->property == 'content') $contentFilter = $filter->value;
 			}
 		}
@@ -593,6 +598,10 @@ class ExtDirectMo extends Mo
 		if ($contactTypeId > 0) {
 			$sqlWhere .= " AND ec.fk_c_type_contact = " . $contactTypeId;
 			$sqlWhere .= " AND ec.fk_socpeople = " . $contactId;
+		}
+
+		if ($barcode) {
+			$sqlWhere .= " AND (p.barcode LIKE '%".$this->db->escape($barcode)."%' OR mo.ref = '".$this->db->escape($barcode)."')";
 		}
 
 		if ($contentFilter) {
