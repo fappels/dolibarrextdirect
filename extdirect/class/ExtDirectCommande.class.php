@@ -1319,6 +1319,9 @@ class ExtDirectCommande extends Commande
 								!empty($line_warehouse_id) ? $row->stock = (float) $myprod->stock_warehouse[$line_warehouse_id]->real : $row->stock = $myprod->stock_reel;
 								$row->total_stock = $myprod->stock_reel;
 							}
+							if ($row->qty_shipped > 0) {
+								$row->stock -= $this->loadLineExpeditions($line->id, '0', $line_warehouse_id); // stock already taken by other draft shipment
+							}
 							$row->warehouse_id = $line_warehouse_id;
 							if ($this->warehouse_id > 0) {
 								$row->default_warehouse_id = $this->warehouse_id;
@@ -1393,6 +1396,10 @@ class ExtDirectCommande extends Commande
 								$row->reduction_percent = $line->remise_percent;
 								isset($this->expeditions[$line->id]) ? $row->qty_shipped = $this->expeditions[$line->id] : $row->qty_shipped = 0;
 								$row->stock = (float) $stock_warehouse->real;
+								if ($row->qty_shipped > 0) {
+									$row->stock -= $this->loadLineExpeditions($line->id, '0', $warehouse); // stock already taken by other draft shipment
+									if ($row->stock == 0) continue; // do not show line if no more stock
+								}
 								$row->total_stock = $myprod->stock_reel;
 								$row->warehouse_id = $warehouse;
 								if ($this->warehouse_id > 0) {
@@ -1862,5 +1869,46 @@ class ExtDirectCommande extends Commande
 		$diff = ExtDirect::prepareField($diff, $params, $orderLine, 'unit_id', 'fk_unit');
 
 		return $diff;
+	}
+
+	/**
+	 *	Load array this->expeditions of lines of shipments with nb of products sent for each order line
+	 *  Note: For a dedicated shipment, the fetch_lines can be used to load the qty_asked and qty_shipped. This function is use to return qty_shipped cumulated for the order
+	 *
+	 *  @param		int			$line_id			Line id to load.
+	 *	@param      string|null $filtre_statut		Filter on shipment status, comma separated list of status. null to disable filter
+	 *  @param		int			$fk_entrepot		Add a filter on a warehouse
+	 * 	@return		int								expedition qty
+	 */
+	public function loadLineExpeditions($line_id, $filtre_statut = null, $fk_entrepot = 0)
+	{
+		$expeditionQty = 0;
+
+		$sql = 'SELECT SUM(ed.qty) as qty';
+		$sql .= ' FROM '.MAIN_DB_PREFIX.'expeditiondet as ed';
+		if (isset($filtre_statut)) {
+			$sql .= ' INNER JOIN '.MAIN_DB_PREFIX.'expedition as e ON (ed.fk_expedition = e.rowid)';
+		}
+		$sql .= ' WHERE ed.fk_origin_line = '.((int) $line_id);
+		if ($fk_entrepot > 0) {
+			$sql .= ' AND ed.fk_entrepot = '.((int) $fk_entrepot);
+		}
+		if (isset($filtre_statut)) {
+			$sql .= ' AND e.fk_statut IN ('. $this->db->sanitize($filtre_statut).')';
+		}
+
+		dol_syslog(get_class($this)."::loadExpeditions", LOG_DEBUG);
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			$num = $this->db->num_rows($resql);
+			$i = 0;
+			while ($i < $num) {
+				$obj = $this->db->fetch_object($resql);
+				$expeditionQty += (int) $obj->qty;
+				$i++;
+			}
+			$this->db->free($resql);
+		}
+		return $expeditionQty;
 	}
 }
