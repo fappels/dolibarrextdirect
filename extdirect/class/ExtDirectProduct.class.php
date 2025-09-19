@@ -1983,11 +1983,11 @@ class ExtDirectProduct extends ProductFournisseur
 	}
 
 	/**
-	 * private method to fetch id from given barcode, search in barcode and ref field
+	 * public method to fetch id from given barcode, search in barcode and ref field
 	 *
 	 * @param string $barcode barcode to fetch id from
 	 * @param string $table table to search 'product' or 'product_fournisseur_price'
-	 * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 10+)
+	 * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 13+)
 	 */
 	public function fetchIdFromBarcode($barcode, $table = 'product')
 	{

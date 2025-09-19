@@ -714,10 +714,13 @@ class ExtDirectInventory extends Inventory
 		$result = new stdClass;
 		$data = array();
 		$rows = array();
-		$product_id = 0;
+		$origin_id = 0;
+		$product_id = null;
 		$photoSize = 'mini';
 		$warehouse_id = 0;
+		$batch = '';
 		$object = new Inventory($this->db);
+		$product = new ExtDirectProduct($this->_user->login);
 
 		$includeTotal = true;
 
@@ -732,24 +735,42 @@ class ExtDirectInventory extends Inventory
 		if (isset($params->filter)) {
 			foreach ($params->filter as $filter) {
 				if ($filter->property == 'origin_id') $origin_id = $filter->value;
-				if ($filter->property == 'product_id') $product_id = $filter->value;
-				if ($filter->property == 'warehouse_id') $warehouse_id = $filter->value;
-				if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+				elseif ($filter->property == 'product_id') $product_id = $filter->value;
+				elseif ($filter->property == 'warehouse_id') $warehouse_id = $filter->value;
+				elseif ($filter->property == 'barcode') {
+					$idArray = $product->fetchIdFromBarcode($filter->value);
+					if ($idArray['product'] > 0) {
+						$product_id = $idArray['product'];
+					} elseif (ExtDirect::checkDolVersion(0, '13.0', '')) {
+						$idArray = $product->fetchIdFromBarcode($filter->value, 'product_fournisseur_price');
+						$product_id = $idArray['product'];
+					}
+				} elseif ($filter->property == 'batch') $batch = $filter->value;
+				elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
 			}
 		}
 
 		if ($origin_id > 0) {
-			$product = new ExtDirectProduct($this->_user->login);
 			$object->fetch($origin_id);
 			$sqlFields = 'SELECT id.rowid as id, id.datec, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
 			$sqlFields .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real, id.pmp_expected';
 			$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
 			$sqlWhere = ' WHERE id.fk_inventory = '.((int) $origin_id);
+			if ($warehouse_id > 0) {
+				$sqlWhere .= ' AND id.fk_warehouse = '.((int) $warehouse_id);
+			}
+			if (isset($product_id)) {
+				$sqlWhere .= ' AND id.fk_product = '.((int) $product_id);
+			}
+			if ($batch != '') {
+				$sqlWhere .= " AND id.batch = '".$this->db->escape($batch)."'";
+			}
+
 			$sqlOrder = ' ORDER BY id.rowid';
 			if ($limit) {
 				$sqlLimit = $this->db->plimit($limit, $start);
 			}
-
+			$total = 0;
 			if ($includeTotal) {
 				$sqlTotal = 'SELECT COUNT(*) as total' . $sqlFrom . $sqlWhere;
 				$resql = $this->db->query($sqlTotal);
@@ -769,8 +790,6 @@ class ExtDirectInventory extends Inventory
 				$num = $this->db->num_rows($resql);
 				for ($i = 0; $i < $num; $i++) {
 					$line = $this->db->fetch_object($resql);
-					if ($warehouse_id > 0 && $warehouse_id != $line->fk_warehouse) continue;
-					if ($product_id > 0 && $product_id != $line->fk_product) continue;
 					$product->fetch($line->fk_product);
 					$row = $this->getLineData($line, $object, $product, $photoSize);
 					$rows[$row->id] = $row;
