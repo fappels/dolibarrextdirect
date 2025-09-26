@@ -771,10 +771,12 @@ class ExtDirect
 	 * Load available object Optionals (extra fields)
 	 *
 	 * @param   Object  $object to read model from
+	 * @param   array   $visibilities     array of visibilities to show (1=visible on list and form, 2 = List only, 3=visible on form, 4=not visible on creation form, 5=list and view)
+	 * 												Default is array(1,3,4,5) (2 is not in the list because we want to show fields that are at least on form view)
 	 *
 	 * @return array array result data
 	 */
-	public static function readOptionalModel($object)
+	public static function readOptionalModel($object, $visibilities = array(1, 3, 4, 5))
 	{
 		global $langs;
 
@@ -800,8 +802,8 @@ class ExtDirect
 				if (empty($enabled)) {
 					continue; // 0 = Never visible field
 				}
-				if (abs($enabled) != 1 && abs($enabled) != 3 && abs($enabled) != 5 && abs($enabled) != 4) {
-					continue; // <> 1 and <> 3 = not visible on list, only on forms <> 4 = not visible at the creation <> 5 only view
+				if (!in_array(abs($enabled), $visibilities)) {
+					continue; // not in list of visibilities to show
 				}
 				if (empty($perms)) {
 					continue; // 0 = Not visible
@@ -810,6 +812,7 @@ class ExtDirect
 				$row->name = $name;
 				($langs->trans($label) != $label) ? $row->label = $langs->trans($label) : $row->label = $label;
 				$row->type = $extraFields->attributes[$object->table_element]['type'][$name];
+				$row->visibility = $enabled;
 				$row->default = $extraFields->attributes[$object->table_element]['default'][$name];
 				$row->readonly = (abs($enabled) == 5) ? 1 : 0;
 				$results[] = $row;
