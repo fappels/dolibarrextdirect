@@ -56,6 +56,16 @@ class ExtDirectProduct extends ProductFournisseur
 	/** @var string $table_element_reception_line table of order reception line */
 	public $table_element_reception_line = 'receptiondet_batch';
 
+	/**
+	 * @var string ID of local trigger prefix for this class
+	 */
+	public $LOCAL_TRIGGER_PREFIX = 'EXTDIRECTPRODUCT';
+
+	/**
+	 * @var string ID of module.
+	 */
+	public $module = 'extdirect';
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -71,6 +81,11 @@ class ExtDirectProduct extends ProductFournisseur
 				$this->_user = $user;  //product.class uses global user
 				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
+				}
+				if (ExtDirect::checkDolVersion(0, '', '22.0')) {
+					$this->LOCAL_TRIGGER_PREFIX = 'EXTDIRECTPRODUCT';
+				} else {
+					$this->LOCAL_TRIGGER_PREFIX = $this->TRIGGER_PREFIX . '_' . $this->module;
 				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -794,7 +809,7 @@ class ExtDirectProduct extends ProductFournisseur
 			if (!$notrigger) {
 				// Call trigger
 				$this->extParam = &$param; // pass client parameters by reference to trigger
-				$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_CREATE', $this->_user);
+				$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_PRE_CREATE', $this->_user);
 				if ($result < 0) {
 					return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
@@ -915,7 +930,7 @@ class ExtDirectProduct extends ProductFournisseur
 			if (!$notrigger) {
 				// Call trigger
 				$this->extParam = &$param; // pass client parameters by reference to trigger
-				$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_CREATE', $this->_user);
+				$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_POST_CREATE', $this->_user);
 				if ($result < 0) {
 					return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
@@ -1002,7 +1017,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_MODIFY', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_PRE_MODIFY', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1326,7 +1341,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_MODIFY', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_POST_MODIFY', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1368,7 +1383,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_DELETE', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_PRE_DELETE', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1380,7 +1395,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_DELETE', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_POST_DELETE', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
