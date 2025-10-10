@@ -933,6 +933,8 @@ class ExtDirectInventory extends Inventory
 				$diff = ExtDirect::prepareField($diff, $params, $line, 'warehouse_id', $field);
 			} elseif ($field == 'fk_inventory') {
 				$diff = ExtDirect::prepareField($diff, $params, $line, 'origin_id', $field);
+			} elseif ($field == 'batch') {
+				$diff = ExtDirect::prepareField($diff, $params, $line,  $field, $field, ''); // default batch is empty to trigger unique constraint
 			} else {
 				$diff = ExtDirect::prepareField($diff, $params, $line, $field, $field);
 			}
