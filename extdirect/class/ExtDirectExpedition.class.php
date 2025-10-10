@@ -1223,6 +1223,7 @@ class ExtDirectExpedition extends Expedition
 					return ExtDirect::getDolError($result, $line->errors, $line->error);
 				}
 				$line->id = $params->line_id;
+				$line->origin_id = $params->origin_id;
 				$line->entrepot_id = $params->warehouse_id;
 				$line->fk_product = $params->product_id;
 				$line->qty = $params->qty_toship;
