@@ -719,6 +719,7 @@ class ExtDirectInventory extends Inventory
 		$photoSize = 'mini';
 		$warehouse_id = 0;
 		$batch = '';
+		$contentfilter = null;
 		$object = new Inventory($this->db);
 		$product = new ExtDirectProduct($this->_user->login);
 
@@ -747,6 +748,7 @@ class ExtDirectInventory extends Inventory
 					}
 				} elseif ($filter->property == 'batch') $batch = $filter->value;
 				elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+				elseif ($filter->property == 'content' && !empty($filter->value)) $contentfilter = $filter->value;
 			}
 		}
 
@@ -755,6 +757,9 @@ class ExtDirectInventory extends Inventory
 			$sqlFields = 'SELECT id.rowid as id, id.datec, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
 			$sqlFields .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real, id.pmp_expected';
 			$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+			if ($contentfilter) {
+				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product as p ON id.fk_product = p.rowid';
+			}
 			$sqlWhere = ' WHERE id.fk_inventory = '.((int) $origin_id);
 			if ($warehouse_id > 0) {
 				$sqlWhere .= ' AND id.fk_warehouse = '.((int) $warehouse_id);
@@ -764,6 +769,10 @@ class ExtDirectInventory extends Inventory
 			}
 			if ($batch != '') {
 				$sqlWhere .= " AND id.batch = '".$this->db->escape($batch)."'";
+			}
+			if ($contentfilter) {
+				$fields = array('p.ref', 'p.label', 'id.batch', 'p.barcode');
+				$sqlWhere .= " AND ".natural_search($fields, $contentfilter, 0, 1);
 			}
 
 			$sqlOrder = ' ORDER BY id.rowid';
