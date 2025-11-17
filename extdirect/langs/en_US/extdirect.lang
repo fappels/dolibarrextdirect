@@ -59,3 +59,4 @@ AllowManufactureOrder = Allow usage of Manufacture Order Picking module
 AllowProspect = Allow usage of Third-Party module
 UseUserRightsToAllowModules = Use user rights for allowing module usage. You need to set righs for existing users. 
 InventoryMode = Inventory mode
+ErrorMultipleSupplierProductForThisSupplierRef=Same vendor ref for vendor prices from same vendor are not supported.

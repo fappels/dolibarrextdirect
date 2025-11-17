@@ -966,10 +966,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							// supplier product for supplier barcode
 							$supplierProduct = new ProductFournisseur($this->db);
 							$supplierProducts = $supplierProduct->list_product_fournisseur_price($line->fk_product);
+							$nbrOffSameSupplierRef = 0;
 							foreach ($supplierProducts as $prodsupplier) {
 								if ($prodsupplier->ref_supplier == $line->ref_supplier && $prodsupplier->fourn_id == $this->socid) {
 									$supplierProduct = $prodsupplier;
+									$nbrOffSameSupplierRef++;
 								}
+							}
+							if ($nbrOffSameSupplierRef > 1) {
+								$this->error = 'ErrorMultipleSupplierProductForThisSupplierRef';
+								return ExtDirect::getDolError($result, $this->errors, $this->error);
 							}
 							$myprod->fetch_barcode();
 						} else {
