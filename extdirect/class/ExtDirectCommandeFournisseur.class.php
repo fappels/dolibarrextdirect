@@ -1587,7 +1587,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$supplierProducts = $supplierProduct->list_product_fournisseur_price($product->id);
 								if (is_array($supplierProducts)) {
 									foreach ($supplierProducts as $prodsupplier) {
-										if ($prodsupplier->fourn_ref == $params->ref_supplier) {
+										if ($prodsupplier->ref_supplier == $params->ref_supplier && $prodsupplier->fourn_id == $this->socid) {
 											$supplierProduct->product_fourn_price_id = $prodsupplier->product_fourn_price_id;
 											$supplierProduct->fourn_id = $prodsupplier->fourn_id;
 											$supplierProduct->fourn_qty = $prodsupplier->fourn_qty;
