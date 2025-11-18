@@ -1591,6 +1591,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								// get supplier product
 								$supplierProduct = new ProductFournisseur($this->db);
 								$supplierProducts = $supplierProduct->list_product_fournisseur_price($product->id);
+								$nbrOffSameSupplierRef = 0;
 								if (is_array($supplierProducts)) {
 									foreach ($supplierProducts as $prodsupplier) {
 										if ($prodsupplier->ref_supplier == $params->ref_supplier && $prodsupplier->fourn_id == $this->socid) {
@@ -1603,6 +1604,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 												$supplierProduct->fourn_tva_tx = $prodsupplier->tva_tx;
 											}
 											$supplierProduct->fetch_product_fournisseur_price($supplierProduct->product_fourn_price_id);
+											$nbrOffSameSupplierRef++;
 										}
 									}
 								}
@@ -1622,7 +1624,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 
 								// update unit price
-								if (!empty($this->_user->rights->fournisseur->lire) && !empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
+								if ($nbrOffSameSupplierRef == 1 && !empty($this->_user->rights->fournisseur->lire) && !empty($supplierProduct->fourn_unitprice) && !empty($supplierProduct->product_fourn_price_id)) {
 									$supplier = new Societe($this->db);
 									if (($result = $supplier->fetch($supplierProduct->fourn_id)) < 0) return $result;
 									if (($updated = $this->prepareProdSupplierFields($params, $supplierProduct)) && isset($this->_user->rights->produit->creer)) {
