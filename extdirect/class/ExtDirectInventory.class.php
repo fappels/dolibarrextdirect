@@ -31,6 +31,7 @@
  */
 
 require_once DOL_DOCUMENT_ROOT . '/product/inventory/class/inventory.class.php';
+include_once DOL_DOCUMENT_ROOT . '/product/stock/class/mouvementstock.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 
@@ -332,9 +333,18 @@ class ExtDirectInventory extends Inventory
 						case -1:
 							break;
 						case 0:
+							if ($object->status == $object::STATUS_VALIDATED) {
+								$result = $object->setDraft($this->_user);
+							}
 							break;
 						case 1:
-							$result = $object->validate($this->_user);
+							// We do not use standard inventory validate function because we need to add only lines created in client side
+							$lines = $this->fetchLines($object->id);
+							if (empty($lines)) {
+								$result = $object->validate($this->_user);
+							} else {
+								$result = $object->setStatut($object::STATUS_VALIDATED, null, '', 'INVENTORY_VALIDATED');
+							}
 							// PDF generating (no inventory pdf for the moment)
 							/*
 							if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
@@ -352,9 +362,132 @@ class ExtDirectInventory extends Inventory
 							}*/
 							break;
 						case 2:
-							$result = $object->setStatut(Inventory::STATUS_RECORDED);
-							if ($result < 0) {
-								return ExtDirect::getDolError($result, $object->errors, $object->error);
+							// Close inventory by recording the stock movements
+							if ($object->status == $object::STATUS_VALIDATED) {
+								$stockmovment = new MouvementStock($this->db);
+								$stockmovment->setOrigin($object->element, $object->id);
+
+								$cacheOfProducts = array();
+
+								$this->db->begin();
+
+								$sql = 'SELECT id.rowid, id.datec as date_creation, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
+								$sql .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real';
+								$sql .= ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+								$sql .= ' WHERE id.fk_inventory = '.((int) $object->id);
+								$sql .= ' ORDER BY id.rowid';
+
+								$resql = $this->db->query($sql);
+								if ($resql) {
+									$num = $this->db->num_rows($resql);
+									$i = 0;
+									$error = 0;
+									$option = '';
+
+									while ($i < $num) {
+										$line = $this->db->fetch_object($resql);
+
+										$qty_stock = $line->qty_stock;
+										$qty_view = $line->qty_view;		// The quantity viewed by inventorier, the qty we target
+
+
+										// Load real stock we have now.
+										if (isset($cacheOfProducts[$line->fk_product])) {
+											$product_static = $cacheOfProducts[$line->fk_product];
+										} else {
+											$product_static = new Product($this->db);
+											$result = $product_static->fetch($line->fk_product, '', '', '', 1, 1, 1);
+
+											//$option = 'nobatch';
+											$option .= ',novirtual';
+											$product_static->load_stock($option); // Load stock_reel + stock_warehouse.
+
+											$cacheOfProducts[$product_static->id] = $product_static;
+										}
+
+										// Get the real quantity in stock now, but before the stock move for inventory.
+										$realqtynow = $product_static->stock_warehouse[$line->fk_warehouse]->real;
+										if (isModEnabled('productbatch') && $product_static->hasbatch()) {
+											$realqtynow = $product_static->stock_warehouse[$line->fk_warehouse]->detail_batch[$line->batch]->qty;
+										}
+
+										if (!is_null($qty_view)) {
+											$stock_movement_qty = price2num($qty_view - $realqtynow, 'MS');
+											//print "Process inventory line ".$line->rowid." product=".$product_static->id." realqty=".$realqtynow." qty_stock=".$qty_stock." qty_view=".$qty_view." warehouse=".$line->fk_warehouse." qty to move=".$stock_movement_qty."<br>\n";
+
+											if ($stock_movement_qty != 0) {
+												if ($stock_movement_qty < 0) {
+													$movement_type = 1;
+												} else {
+													$movement_type = 0;
+												}
+
+												$datemovement = '';
+												//$inventorycode = 'INV'.$object->id;
+												$inventorycode = 'INV-'.$object->ref;
+												$price = 0;
+												if (!empty($line->pmp_real) && getDolGlobalString('INVENTORY_MANAGE_REAL_PMP')) {
+													$price = $line->pmp_real;
+												}
+
+												$idstockmove = $stockmovment->_create($this->_user, $line->fk_product, $line->fk_warehouse, (float) $stock_movement_qty, $movement_type, $price, $langs->trans('LabelOfInventoryMovemement', $object->ref), $inventorycode, $datemovement, '', '', $line->batch);
+												if ($idstockmove < 0) {
+													$error++;
+													$object->error = $stockmovment->error;
+													$object->errors = $stockmovment->errors;
+													break;
+												}
+
+												// Update line with id of stock movement (and the start quantity if it has changed this last recording)
+												$sqlupdate = "UPDATE ".MAIN_DB_PREFIX."inventorydet";
+												$sqlupdate .= " SET fk_movement = ".((int) $idstockmove);
+												if ($qty_stock != $realqtynow) {
+													$sqlupdate .= ", qty_stock = ".((float) $realqtynow);
+												}
+												$sqlupdate .= " WHERE rowid = ".((int) $line->rowid);
+												$resqlupdate = $this->db->query($sqlupdate);
+												if (! $resqlupdate) {
+													$error++;
+													$object->error = $this->db->lasterror();
+													break;
+												}
+											}
+
+											if (!empty($line->pmp_real) && getDolGlobalString('INVENTORY_MANAGE_REAL_PMP')) {
+												$sqlpmp = 'UPDATE '.MAIN_DB_PREFIX.'product SET pmp = '.((float) $line->pmp_real).' WHERE rowid = '.((int) $line->fk_product);
+												$resqlpmp = $this->db->query($sqlpmp);
+												if (! $resqlpmp) {
+													$error++;
+													$object->error = $this->db->lasterror();
+													break;
+												}
+												if (getDolGlobalString('MAIN_PRODUCT_PERENTITY_SHARED')) {
+													$sqlpmp = 'UPDATE '.MAIN_DB_PREFIX.'product_perentity SET pmp = '.((float) $line->pmp_real).' WHERE fk_product = '.((int) $line->fk_product).' AND entity='.$conf->entity;
+													$resqlpmp = $this->db->query($sqlpmp);
+													if (! $resqlpmp) {
+														$error++;
+														$object->error = $this->db->lasterror();
+														break;
+													}
+												}
+											}
+										}
+										$i++;
+									}
+
+									if (!$error) {
+										$result = $object->setRecorded($this->_user);
+									}
+								} else {
+									$object->error = $this->db->lasterror();
+									$error++;
+								}
+
+								if (! $error) {
+									$this->db->commit();
+								} else {
+									$this->db->rollback();
+								}
 							}
 							break;
 						default:
@@ -1009,6 +1142,36 @@ class ExtDirectInventory extends Inventory
 		$data->origin_id = $inventory->id;
 
 		return $data;
+	}
+
+	/**
+	 *    Load lines from object
+	 *
+	 *    @param    int    $origin_id     Id of object to load lines from
+	 *    @return     array of line objects
+	 */
+	private function fetchLines($origin_id)
+	{
+		$lines = array();
+
+		if ($origin_id > 0) {
+			$sql = 'SELECT id.rowid as id, id.datec, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
+			$sql .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real, id.pmp_expected';
+			$sql .= ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+			$sql .= ' WHERE id.fk_inventory = '.((int) $origin_id);
+			$sql .= ' ORDER BY id.rowid';
+
+			$resql = $this->db->query($sql);
+			if ($resql) {
+				$num = $this->db->num_rows($resql);
+				for ($i = 0; $i < $num; $i++) {
+					$line = $this->db->fetch_object($resql);
+					$lines[] = $line;
+				}
+				$this->db->free($resql);
+			}
+		}
+		return $lines;
 	}
 
 }
