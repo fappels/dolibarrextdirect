@@ -195,6 +195,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$row->order_method = $this->methode_commande;
 				$row->reduction_percent = $this->remise_percent;
 				$row->reduction = 0;
+				$totalShipped = 0;
+				$totalAsked = 0;
 				foreach ($this->lines as $line) {
 					if ($line->remise_percent > 0) {
 						$localtaxes_array = getLocalTaxesFromRate($line->tva_tx, 0, $thirdparty, $mysoc);
@@ -202,7 +204,19 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						$noDiscountHT = $tabprice[0];
 						$row->reduction += round($noDiscountHT - $line->total_ht, 2);
 					}
+					$totalAsked += $line->qty;
+					if (!method_exists($this, 'loadReceptions')) $totalShipped += $this->getDispatched($line->id, $line->fk_product);
 				}
+				if (method_exists($this, 'loadReceptions')) {
+					$this->loadReceptions();
+					if (!empty($this->receptions)) {
+						foreach ($this->receptions as $qty) {
+							$totalShipped += $qty;
+						}
+					}
+				}
+				$row->total_shipped = $totalShipped;
+				$row->total_asked = $totalAsked;
 				$row->payment_condition_id = $this->cond_reglement_id;
 				$row->payment_type_id = $this->mode_reglement_id;
 				$row->total_net = $this->total_ht;
@@ -913,24 +927,55 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$res = 0;
 		$order_id = 0;
 		$photoSize = '';
-		$includePhoto = false;
 		$batch = '';
+		$batchId = 0;
+		$product_id = 0;
+		$contentfilter = null;
+		$filterdispatched = false;
 		$supplierProduct = null;
+		$myprod = new ExtDirectProduct($this->_user->login);
+
+		$includeTotal = true;
+		$limit = 0;
+		$start = 0;
+
+		if (isset($params->limit)) {
+			$limit = $params->limit;
+			$start = $params->start;
+		}
+		if (isset($params->include_total)) {
+			$includeTotal = $params->include_total;
+		}
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'id') $id=$filter->value;
-				if ($filter->property == 'order_id') $order_id=$filter->value;
-				if ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
-				if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
-				if ($filter->property == 'batch_id') $batchId=$filter->value;
-				if ($filter->property == 'batch') $batch=$filter->value;
+				elseif ($filter->property == 'order_id') $order_id=$filter->value;
+				elseif ($filter->property == 'warehouse_id') $warehouse_id=$filter->value;
+				elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+				elseif ($filter->property == 'barcode') {
+					$idArray = $myprod->fetchIdFromBarcode($filter->value);
+					if ($idArray['product'] > 0) {
+						$product_id = $idArray['product'];
+					} elseif (ExtDirect::checkDolVersion(0, '13.0', '')) {
+						$idArray = $myprod->fetchIdFromBarcode($filter->value, 'product_fournisseur_price');
+						$product_id = $idArray['product'];
+					}
+				}
+				elseif ($filter->property == 'content' && !empty($filter->value)) $contentfilter = $filter->value;
+				elseif ($filter->property == 'batch_id') $batchId=$filter->value;
+				elseif ($filter->property == 'batch') $batch=$filter->value;
+				elseif ($filter->property == 'filterdispatched') $filterdispatched=$filter->value;
 			}
 		}
 
 		if ($order_id > 0) {
 			$this->id=$order_id;
 			if (($result = $this->fetch($this->id)) < 0)  return $result;
+			if ($product_id > 0 || $contentfilter) {
+				// filter lines
+				$this->lines = $this->filterLines($product_id, $contentfilter);
+			}
 			if (!$this->error) {
 				$receptionLines = array();
 				if (!empty($conf->reception->enabled) && ExtDirect::checkDolVersion(0, '18.0')) {
@@ -951,8 +996,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				foreach ($this->lines as $line) {
 					if (!isset($id) || ($id == $line->id)) {
 						$isService = false;
-						$myprod = new ExtDirectProduct($this->_user->login);
+						$qtyShipped = 0;
 						if ($line->fk_product) {
+							$qtyShipped = $this->getDispatched($line->id, $line->fk_product);
+							if ($filterdispatched && $qtyShipped >= $line->qty) {
+								continue;
+							}
 							$isFreeLine = false;
 							$result = $myprod->fetch($line->fk_product);
 							if ($result < 0) return ExtDirect::getDolError($result, $myprod->errors, $myprod->error);
@@ -1042,7 +1091,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->date_start = $line->date_start;
 								$row->date_end = $line->date_end;
 								// qty shipped for product line
-								$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
+								$row->qty_shipped = $qtyShipped;
 								$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 								if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 									$row->is_virtual_stock = true;
@@ -1132,7 +1181,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->date_start = $line->date_start;
 								$row->date_end = $line->date_end;
 								// qty shipped for product line
-								$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product);
+								$row->qty_shipped = $qtyShipped;
 								$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
 								if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 									if ($warehouse_id) {
@@ -1288,6 +1337,14 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			} else {
 				return 0;
 			}
+		}
+		if ($limit > 0) $results = $this->limitResult($results, $limit, $start);
+		if ($includeTotal) {
+			$totalResults = count($results);
+			$finalResults = new stdClass();
+			$finalResults->total = $totalResults;
+			$finalResults->data = $results;
+			return $finalResults;
 		}
 		return $results;
 	}
@@ -1909,5 +1966,65 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$diff = ExtDirect::prepareField($diff, $params, $product, 'barcode', 'barcode');
 		$diff = ExtDirect::prepareField($diff, $params, $product, 'barcode_type', 'barcode_type');
 		return $diff;
+	}
+
+	/**
+	 * private method to filter order lines
+	 *
+	 * TODO replace by make new fetch_lines with filters (use a fetchAll on lines)
+	 *
+	 * @param int $product_id product id to filter on
+	 * @param string $contentfilter content filter to apply
+	 * @return array filtered lines
+	 */
+	private function filterLines($product_id = 0, $contentfilter = null)
+	{
+		$filteredLines = array();
+		foreach ($this->lines as $line) {
+			$match = false;
+			if ($product_id > 0 && $line->fk_product != $product_id) {
+				$match = true;
+			}
+			if (!$match && $contentfilter) {
+				if (strpos($line->desc, $contentfilter) !== false) {
+					$match = true;
+				} elseif (strpos($line->product_ref, $contentfilter) !== false) {
+					$match = true;
+				} elseif (strpos($line->ref_supplier, $contentfilter) !== false) {
+					$match = true;
+				} elseif (strpos($line->product_barcode, $contentfilter) !== false) {
+					$match = true;
+				} elseif (strpos($line->product_desc, $contentfilter) !== false) {
+					$match = true;
+				}
+			}
+			if ($match) {
+				$filteredLines[] = $line;
+			}
+		}
+		return $filteredLines;
+	}
+
+	/**
+	 * private method to limit result set
+	 *
+	 * TODO replace by make new fetch_lines with limits (use a fetchAll on lines)
+	 *
+	 * @param array $result result set
+	 * @param int $limit max number of rows to return
+	 * @param int $start start offset
+	 * @return array limited result set
+	 */
+	private function limitResult($result, $limit = 0, $start = 0)
+	{
+		$filteredResult = array();
+		$rowCount = 0;
+		foreach ($result as $row) {
+			$rowCount++;
+			if (($limit == 0) || ($rowCount > $start && count($filteredResult) < $limit)) {
+				$filteredResult[] = $row;
+			}
+		}
+		return $filteredResult;
 	}
 }
