@@ -1187,4 +1187,53 @@ class ExtDirect
 
 		return $origin;
 	}
+
+	/**
+	 * Natural string search with AND, OR, NOT, ^ and $ operators
+	 * @param string $haystack The string to search in
+	 * @param string $needle The search string with operators
+	 * @param bool $case_sensitive Whether the search is case sensitive
+	 * @return bool True if the search matches, false otherwise
+	*/
+	public static function natural_string_search($haystack, $needle, $case_sensitive = false) {
+		$needle = trim($needle);
+
+		// Handle OR conditions
+		$or_terms = explode('|', $needle);
+		$results = [];
+
+		foreach ($or_terms as $term) {
+			$term = trim($term);
+
+			// Handle NOT conditions
+			if (strpos($term, '!') === 0) {
+				$term = substr($term, 1);
+				$found = $case_sensitive ?
+					strpos($haystack, $term) !== false :
+					stripos($haystack, $term) !== false;
+				if ($found) return false; // NOT condition failed
+			} else {
+				// Handle start/end anchors
+				$pattern = '/';
+				if (strpos($term, '^') === 0) {
+					$pattern .= '^';
+					$term = substr($term, 1);
+				}
+				if (strrpos($term, '$') === strlen($term) - 1) {
+					$pattern .= '$';
+					$term = substr($term, 0, -1);
+				} else {
+					$pattern .= '.*';
+				}
+				$pattern .= preg_quote($term, '/') . '/';
+				if (!$case_sensitive) $pattern .= 'i';
+
+				if (!preg_match($pattern, $haystack)) {
+					return false; // AND condition failed
+				}
+			}
+		}
+
+		return true;
+	}
 }

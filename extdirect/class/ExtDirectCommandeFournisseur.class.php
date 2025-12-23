@@ -1986,15 +1986,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 				$match = true;
 			}
 			if (!$match && $contentfilter) {
-				if (strpos($line->desc, $contentfilter) !== false) {
+				if (ExtDirect::natural_string_search($line->desc, $contentfilter)) {
 					$match = true;
-				} elseif (strpos($line->product_ref, $contentfilter) !== false) {
+				} elseif (ExtDirect::natural_string_search($line->product_ref, $contentfilter)) {
 					$match = true;
-				} elseif (strpos($line->ref_supplier, $contentfilter) !== false) {
+				} elseif (ExtDirect::natural_string_search($line->ref_supplier, $contentfilter)) {
 					$match = true;
-				} elseif (strpos($line->product_barcode, $contentfilter) !== false) {
+				} elseif (ExtDirect::natural_string_search($line->product_barcode, $contentfilter)) {
 					$match = true;
-				} elseif (strpos($line->product_desc, $contentfilter) !== false) {
+				} elseif (ExtDirect::natural_string_search($line->product_desc, $contentfilter)) {
 					$match = true;
 				}
 			}
