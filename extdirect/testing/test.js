@@ -3801,7 +3801,7 @@ describe("Manufacture Order", function () {
 		waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
 
 		runs(function () {
-			expect(testresults).toContain('Validated producible');
+			expect(testresults).toContain('Validated and producible');
 			expect(testresults).not.toContain('Validated partly producible');
 		});
 	});
@@ -3969,20 +3969,25 @@ describe("Inventory", function () {
 
 	it("create inventorylines", function () {
 		runs(function () {
-			// add 3 products
+			// add 2 products
 			var inventoryData, inventoryLine, inventoryLines = [];
 
 			flag = false;
 			inventoryData = {
 				origin_id: inventoryId,
 				product_id: null,
-				warehouse_id: null,
-				qty_stock: 1
+				warehouse_id: null
 			};
 			Ext.Array.each(productIds, function (productId, index) {
-				if (index > 0) { // skip first, which is produced product
+				if (index > 0) {
 					inventoryData.product_id = productId;
 					inventoryData.warehouse_id = warehouseIds[index];
+					if (index == 1) {
+						inventoryData.qty_stock = 8;
+					} else if (index == 2) {
+						inventoryData.qty_stock = 5;
+						inventoryData.batch = 'batch2';
+					}
 					inventoryLine = Ext.create('ConnectorTest.model.InventoryLine');
 					inventoryLine.set(inventoryData);
 					inventoryLines.push(inventoryLine);
@@ -4061,7 +4066,8 @@ describe("Inventory", function () {
 
 	it("read inventorylines by Id", function () {
 		var stock = 0,
-			photo = '';
+			photo = '',
+			batch = '';
 
 		runs(function () {
 			flag = false;
@@ -4076,6 +4082,9 @@ describe("Inventory", function () {
 						if (record.get('has_photo')) {
 							photo = record.get('photo');
 						}
+						if (record.get('batch')) {
+							batch = record.get('batch');
+						}
 					});
 					flag = true;
 				}
@@ -4088,8 +4097,9 @@ describe("Inventory", function () {
 			expect(testresults).toContain(warehouseIds[1]);
 			expect(testresults).toContain(warehouseIds[2]);
 			expect(testresults.length).toBe(2);
-			expect(stock).toBe(2);
+			expect(stock).toBe(13);
 			expect(photo).toMatch('jpeg');
+			expect(batch).toMatch('batch2');
 		});
 	});
 
@@ -4119,7 +4129,7 @@ describe("Inventory", function () {
 			expect(testresults).not.toContain(warehouseIds[2]);
 
 			expect(testresults.length).toBe(1);
-			expect(stock).toBe(1);
+			expect(stock).toBe(8);
 		});
 	});
 
@@ -4190,7 +4200,7 @@ describe("Inventory", function () {
 		waitsFor(function () { return flag; }, "extdirect timeout", TIMEOUT);
 
 		runs(function () {
-			expect(view).toBe(12);
+			expect(view).toBe(13);
 		});
 	});
 });
