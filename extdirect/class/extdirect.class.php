@@ -1236,4 +1236,32 @@ class ExtDirect
 
 		return true;
 	}
+
+	/**
+	 * Output the signature file into the PDF object.
+	 *
+	 * @param 	TCPDF 		$pdf		PDF handler
+	 * @param	Translate	$langs		Language
+	 * @param	array<string,int|float|string|mixed[]>		$params		Array of params
+	 * @return	void
+	 */
+	public static function printSignatureImage(TCPDF $pdf, $langs, $params)
+	{
+		$default_font_size = pdf_getPDFFontSize($langs);	// Must be after pdf_getInstance
+		$default_font = pdf_getPDFFont($langs);	// Must be
+		$xforimgstart = $params['xforimgstart'];
+		$yforimgstart = $params['yforimgstart'];
+		$wforimg = $params['wforimg'];
+
+		$pdf->SetXY($xforimgstart, $yforimgstart + round($wforimg / 4) - 4);
+		$pdf->SetFont($default_font, '', $default_font_size - 1);
+		$pdf->SetTextColor(80, 80, 80);
+		$pdf->MultiCell($wforimg, 4, $langs->trans("Signature") . ': ' . dol_print_date(dol_now(), "day", false, $langs, true). ' - '.$params['online_sign_name'], 0, 'L');
+		//$pdf->SetXY($xforimgstart, $yforimgstart + round($wforimg / 4));
+		//$pdf->MultiCell($wforimg, 4, $langs->trans("Lastname") . ': ' . $online_sign_name, 0, 'L');
+
+		$pdf->Image($params['pathtoimage'], $xforimgstart, $yforimgstart, $wforimg, round($wforimg / 4));
+
+		return;
+	}
 }

@@ -119,6 +119,8 @@ class ExtDirectExpedition extends Expedition
 	 */
 	public function readShipment(stdClass $params)
 	{
+		global $conf;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->expedition->lire)) return PERMISSIONERROR;
 		$myUser = new User($this->db);
@@ -195,6 +197,16 @@ class ExtDirectExpedition extends Expedition
 				$row->date_creation = $this->date_creation;
 				$row->delivery_address_id = $this->fk_delivery_address;
 				$row->ref_ext = $this->ref_ext;
+				$row->has_signature = 0;
+				if ($this->signed_status > 1) {
+					// signed by receiver or both
+					$row->has_signature = 1;
+					$filename = $row->shipment_date . "_signature.png";
+					$upload_dir = !empty($conf->expedition->multidir_output[$this->entity]) ? $conf->expedition->multidir_output[$this->entity] : $conf->expedition->dir_output;
+					$upload_dir .= '/sending/' . dol_sanitizeFileName($this->ref) . '/signatures/';
+					$data = file_get_contents($upload_dir . $filename);
+					if ($data) $row->signature = "data:image/png;base64,".base64_encode($data);
+				}
 				array_push($results, $row);
 			} else {
 				return 0;
@@ -373,11 +385,13 @@ class ExtDirectExpedition extends Expedition
 	 */
 	public function updateShipment($param)
 	{
-		global $conf, $langs;
+		global $conf, $langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 
 		$paramArray = ExtDirect::toArray($param);
+
+		$error = 0;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -421,6 +435,124 @@ class ExtDirectExpedition extends Expedition
 						break;
 				}
 				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				if (ExtDirect::checkDolVersion(0, '23.0') && !empty($params->has_signature) && !empty($params->signature) && !empty($params->shipment_date)) {
+					$hookmanager->initHooks(array('ajaxonlinesign'));
+					// store signature
+					$data = base64_decode(explode(",", $params->signature)[1]);
+					$upload_dir = !empty($conf->expedition->multidir_output[$this->entity]) ? $conf->expedition->multidir_output[$this->entity] : $conf->expedition->dir_output;
+					$upload_dir .= '/sending/' . dol_sanitizeFileName($this->ref) . '/';
+
+					$langs->loadLangs(array("main", "companies"));
+
+					$filename = "signatures/" . $params->shipment_date . "_signature.png";
+					if (!is_dir($upload_dir . "signatures/")) {
+						if (!dol_mkdir($upload_dir . "signatures/")) {
+							$this->errors[] = "Error mkdir. Failed to create dir " . $upload_dir . "signatures/";
+							$error++;
+						}
+					}
+
+					if (!$error) {
+						$return = file_put_contents($upload_dir . $filename, $data);
+						if ($return === false) {
+							$error++;
+							$this->errors[] = 'Error file_put_content: failed to create signature file.';
+						} else {
+							dolChmod($upload_dir.$filename);
+						}
+					}
+
+					if (!$error) {
+						// Defined modele of doc
+						$last_main_doc_file = $this->last_main_doc;
+
+						if (preg_match('/\.pdf/i', $last_main_doc_file)) {
+							$ref_pdf = pathinfo($last_main_doc_file, PATHINFO_FILENAME); // Retrieves the name of external or internal PDF
+
+							$newpdffilename = $upload_dir . $ref_pdf . "_signed-" . $params->shipment_date . ".pdf";
+							$sourcefile = $upload_dir . $ref_pdf . ".pdf";
+
+							if (dol_is_file($sourcefile)) {
+								$parameters = array('sourcefile' => $sourcefile, 'newpdffilename' => $newpdffilename);
+								$reshook = $hookmanager->executeHooks('AddSignature', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+								if ($reshook < 0) {
+									return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+								}
+
+								if (empty($reshook)) {
+									// We build the new PDF
+									$pdf = pdf_getInstance();
+									if (class_exists('TCPDF')) {
+										$pdf->setPrintHeader(false);
+										$pdf->setPrintFooter(false);
+									}
+									$pdf->SetFont(pdf_getPDFFont($langs));
+
+									if (getDolGlobalString('MAIN_DISABLE_PDF_COMPRESSION')) {
+										$pdf->SetCompression(false);
+									}
+
+									//$pdf->Open();
+									$pagecount = $pdf->setSourceFile($sourcefile);        // original PDF
+
+									$param = array();
+									$param['online_sign_name'] = $params->signature_name;
+									$param['pathtoimage'] = $upload_dir . $filename;
+
+									$s = array();    // Array with size of each page. Example array(w'=>210, 'h'=>297);
+									for ($i = 1; $i < ($pagecount + 1); $i++) {
+										try {
+											$tppl = $pdf->importPage($i);
+											$s = $pdf->getTemplatesize($tppl);
+											$pdf->AddPage($s['h'] > $s['w'] ? 'P' : 'L');
+											$pdf->useTemplate($tppl);
+
+											if (getDolGlobalString("SHIPMENT_SIGNATURE_ON_ALL_PAGES")) {
+												// A signature image file is 720 x 180 (ratio 1/4) but we use only the size into PDF
+												// TODO Get position of box from PDF template
+
+												$param['xforimgstart'] = 111;
+												$param['yforimgstart'] = (empty($s['h']) ? 250 : $s['h'] - 60);
+												$param['wforimg'] = $s['w'] - ($param['xforimgstart'] + 16);
+
+												ExtDirect::printSignatureImage($pdf, $langs, $param);
+											}
+										} catch (Exception $e) {
+											dol_syslog("Error when manipulating some PDF by onlineSign: " . $e->getMessage(), LOG_ERR);
+											$response = $e->getMessage();
+											$error++;
+										}
+									}
+
+									if (!getDolGlobalString("SHIPMENT_SIGNATURE_ON_ALL_PAGES")) {
+										// A signature image file is 720 x 180 (ratio 1/4) but we use only the size into PDF
+										// TODO Get position of box from PDF template
+
+										$param['xforimgstart'] = 111;
+										$param['yforimgstart'] = (empty($s['h']) ? 250 : $s['h'] - 60);
+										$param['wforimg'] = $s['w'] - ($param['xforimgstart'] + 16);
+
+										ExtDirect::printSignatureImage($pdf, $langs, $param);
+									}
+
+									//$pdf->Close();
+									$pdf->Output($newpdffilename, "F");
+
+									// Index the new file and update the last_main_doc property of object.
+									$this->indexFile($newpdffilename, 1);
+								}
+							}
+						} elseif (preg_match('/\.odt/i', $last_main_doc_file)) {
+							// Adding signature on .ODT not yet supported
+							// TODO
+						} else {
+							// Document format not supported to insert online signature.
+							// We should just create an image file with the signature.
+						}
+						$this->setSignedStatus($this->_user, Expedition::$SIGNED_STATUSES['STATUS_SIGNED_RECEIVER'], 0, 'SHIPPING_MODIFY');
+						$this->setShippingDate($this->_user, $params->shipment_date);
+					}
+				}
 			} else {
 				return PARAMETERERROR;
 			}
