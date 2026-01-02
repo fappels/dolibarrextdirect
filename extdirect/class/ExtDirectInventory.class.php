@@ -597,6 +597,9 @@ class ExtDirectInventory extends Inventory
 		$status_id = array();
 		$contentFilter = null;
 		$sorterSize = 0;
+		$barcode = null;
+		$limit = null;
+		$start = null;
 
 		$includeTotal = true;
 
