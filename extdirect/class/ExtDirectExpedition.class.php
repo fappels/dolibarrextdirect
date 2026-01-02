@@ -435,7 +435,7 @@ class ExtDirectExpedition extends Expedition
 						break;
 				}
 				if ($result < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
-				if (ExtDirect::checkDolVersion(0, '23.0') && !empty($params->has_signature) && !empty($params->signature) && !empty($params->shipment_date)) {
+				if (ExtDirect::checkDolVersion(0, '21.0') && !empty($params->has_signature) && !empty($params->signature) && !empty($params->shipment_date)) {
 					$hookmanager->initHooks(array('ajaxonlinesign'));
 					// store signature
 					$data = base64_decode(explode(",", $params->signature)[1]);
