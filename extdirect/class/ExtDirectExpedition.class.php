@@ -197,16 +197,18 @@ class ExtDirectExpedition extends Expedition
 				$row->date_creation = $this->date_creation;
 				$row->delivery_address_id = $this->fk_delivery_address;
 				$row->ref_ext = $this->ref_ext;
-				if (ExtDirect::checkDolVersion(0, '21.0')) $row->has_signature = 0;
-				if ($this->signed_status > 1) {
-					// signed by receiver or both
-					$filename = $row->shipment_date . "_signature.png";
-					$upload_dir = !empty($conf->expedition->multidir_output[$this->entity]) ? $conf->expedition->multidir_output[$this->entity] : $conf->expedition->dir_output;
-					$upload_dir .= '/sending/' . dol_sanitizeFileName($this->ref) . '/signatures/';
-					$data = file_get_contents($upload_dir . $filename);
-					if ($data) {
-						$row->signature = "data:image/png;base64,".base64_encode($data);
-						$row->has_signature = 1;
+				if (ExtDirect::checkDolVersion(0, '21.0') && $this->status > Expedition::STATUS_DRAFT) {
+					$row->has_signature = 0;
+					if ($this->signed_status > 1) {
+						// signed by receiver or both
+						$filename = $row->shipment_date . "_signature.png";
+						$upload_dir = !empty($conf->expedition->multidir_output[$this->entity]) ? $conf->expedition->multidir_output[$this->entity] : $conf->expedition->dir_output;
+						$upload_dir .= '/sending/' . dol_sanitizeFileName($this->ref) . '/signatures/';
+						$data = file_get_contents($upload_dir . $filename);
+						if ($data) {
+							$row->signature = "data:image/png;base64,".base64_encode($data);
+							$row->has_signature = 1;
+						}
 					}
 				}
 				array_push($results, $row);

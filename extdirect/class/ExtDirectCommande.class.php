@@ -210,18 +210,21 @@ class ExtDirectCommande extends Commande
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
 				$row->customer_type = $this->thirdparty->typent_code;
-				if (ExtDirect::checkDolVersion(0, '21.0')) $row->has_signature = 0;
-				if ($this->getValueFrom($this->table_element, $this->id, 'signed_status') > 1) {
-					// signed by receiver or both
-					$filename = $row->order_date . "_signature.png";
-					$upload_dir = !empty($conf->order->multidir_output[$this->entity]) ? $conf->order->multidir_output[$this->entity] : $conf->order->dir_output;
-					$upload_dir .= '/' . dol_sanitizeFileName($this->ref) . '/signatures/';
-					$data = file_get_contents($upload_dir . $filename);
-					if ($data) {
-						$row->signature = "data:image/png;base64,".base64_encode($data);
-						$row->has_signature = 1;
+				if (ExtDirect::checkDolVersion(0, '21.0') && $this->status > Commande::STATUS_DRAFT) {
+					$row->has_signature = 0;
+					if ($this->getValueFrom($this->table_element, $this->id, 'signed_status') > 1) {
+						// signed by receiver or both
+						$filename = $row->order_date . "_signature.png";
+						$upload_dir = !empty($conf->order->multidir_output[$this->entity]) ? $conf->order->multidir_output[$this->entity] : $conf->order->dir_output;
+						$upload_dir .= '/' . dol_sanitizeFileName($this->ref) . '/signatures/';
+						$data = file_get_contents($upload_dir . $filename);
+						if ($data) {
+							$row->signature = "data:image/png;base64,".base64_encode($data);
+							$row->has_signature = 1;
+						}
 					}
 				}
+
 				if (empty($this->remise)) {
 					$row->reduction = 0;
 					foreach ($this->lines as $line) {
