@@ -197,7 +197,7 @@ class ExtDirectExpedition extends Expedition
 				$row->date_creation = $this->date_creation;
 				$row->delivery_address_id = $this->fk_delivery_address;
 				$row->ref_ext = $this->ref_ext;
-				$row->has_signature = 0;
+				if (ExtDirect::checkDolVersion(0, '21.0')) $row->has_signature = 0;
 				if ($this->signed_status > 1) {
 					// signed by receiver or both
 					$row->has_signature = 1;
