@@ -200,12 +200,14 @@ class ExtDirectExpedition extends Expedition
 				if (ExtDirect::checkDolVersion(0, '21.0')) $row->has_signature = 0;
 				if ($this->signed_status > 1) {
 					// signed by receiver or both
-					$row->has_signature = 1;
 					$filename = $row->shipment_date . "_signature.png";
 					$upload_dir = !empty($conf->expedition->multidir_output[$this->entity]) ? $conf->expedition->multidir_output[$this->entity] : $conf->expedition->dir_output;
 					$upload_dir .= '/sending/' . dol_sanitizeFileName($this->ref) . '/signatures/';
 					$data = file_get_contents($upload_dir . $filename);
-					if ($data) $row->signature = "data:image/png;base64,".base64_encode($data);
+					if ($data) {
+						$row->signature = "data:image/png;base64,".base64_encode($data);
+						$row->has_signature = 1;
+					}
 				}
 				array_push($results, $row);
 			} else {
