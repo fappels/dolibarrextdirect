@@ -933,6 +933,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$contentfilter = null;
 		$filterdispatched = false;
 		$supplierProduct = null;
+		$warehouse_id = null;
 		$myprod = new ExtDirectProduct($this->_user->login);
 
 		$includeTotal = true;
@@ -1340,6 +1341,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		}
 		if ($limit > 0) $results = $this->limitResult($results, $limit, $start);
 		if ($includeTotal) {
+			if (!empty($params->sort)) {
+				$results = ExtDirect::resultSort($results, $params->sort);
+			}
 			$totalResults = count($results);
 			$finalResults = new stdClass();
 			$finalResults->total = $totalResults;
