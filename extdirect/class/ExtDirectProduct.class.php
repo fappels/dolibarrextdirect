@@ -2425,6 +2425,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$prods_arbo = $this->get_arbo_each_prod($row->qty_asked);
 				if (count($prods_arbo) > 0) {
 					$rowId = $row->id;
+					$warehouseId = $row->warehouse_id;
 					$rowLabel = $row->label;
 					foreach ($prods_arbo as $key => $value) {
 						$row->id = $rowId.'_'.$value['id'];
@@ -2435,12 +2436,33 @@ class ExtDirectProduct extends ProductFournisseur
 						$row->product_label = $value['label'];
 						$row->label = $rowLabel.' -> '.$value['fullpath'];
 						$row->qty_asked = $value['nb_total'];
+						$row->qty_shipped *= $value['nb'];
 						$row->stock = $value['stock'];
 						$row->has_photo = 0;
 						$subProduct = new Product($this->db);
 						$subProduct->fetch($value['id']);
 						$this->fetchPhoto($row, $photoFormat, 0, $subProduct);
-						array_push($results, clone $row);
+						if (isset($warehouseId)) {
+							$subProduct->load_stock('novirtual, warehouseopen');
+							foreach ($subProduct->stock_warehouse as $warehouse=>$stock_warehouse) {
+							$row->stock = (float) $stock_warehouse->real;
+								if ($row->origin_line_id) {
+									$rowId = $row->origin_line_id.'_'.$warehouse.'_'.$value['id'];
+								} else {
+									$rowId = $rowId.'_'.$warehouse.'_'.$value['id'];
+								}
+								if ($row->id != $rowId) {
+									$row->id = $rowId;
+									$row->warehouse_id = $warehouse;
+									ExtDirect::pushObjectIfIdNotExists($results, clone $row);
+								} else {
+									$row->warehouse_id = $warehouseId;
+									array_push($results, clone $row);
+								}
+							}
+						} else {
+							array_push($results, clone $row);
+						}
 					}
 				}
 			}

@@ -959,6 +959,7 @@ class ExtDirectExpedition extends Expedition
 		$photoSize = '';
 		$packageLine = null;
 		$packagedQty = 0;
+		$warehouse_id = null;
 
 		if (isset($params->filter)) {
 			foreach ($params->filter as $key => $filter) {
@@ -1076,7 +1077,7 @@ class ExtDirectExpedition extends Expedition
 						}
 					} else {
 						// return line from single warehouse
-						$row->warehouse_id = $line->entrepot_id;
+						$row->warehouse_id = (!empty($line->entrepot_id)) ? $line->entrepot_id : $warehouse_id;
 						if (empty($conf->productbatch->enabled)) {
 							$row->qty_toship = $packagedQty;
 							array_push($results, clone $row);

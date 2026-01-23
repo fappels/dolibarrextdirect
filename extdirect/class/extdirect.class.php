@@ -589,6 +589,33 @@ class ExtDirect
 	}
 
 	/**
+	 * Push object to array, skipping if object with same 'id' already exists
+	 *
+	 * @param array $array The array to push to
+	 * @param object $object The object to push
+	 */
+	public static function pushObjectIfIdNotExists(&$array, $object)
+	{
+		$exists = false;
+
+		// Check if object has the id property
+		if (!isset($object->id)) {
+			array_push($array, $object);
+		} else {
+			// Check if object with same id already exists
+			foreach ($array as $item) {
+				if ($item->id == $object->id) {
+					$exists = true;
+				}
+			}
+
+			if (! $exists) {
+				array_push($array, $object);
+			}
+		}
+	}
+
+	/**
 	 * method to check dolibarr compatibility
 	 *
 	 * @param Number $validate 0 = return version, 1 = return validation
