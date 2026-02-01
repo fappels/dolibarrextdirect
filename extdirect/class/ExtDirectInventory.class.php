@@ -31,6 +31,7 @@
  */
 
 require_once DOL_DOCUMENT_ROOT . '/product/inventory/class/inventory.class.php';
+include_once DOL_DOCUMENT_ROOT . '/product/stock/class/mouvementstock.class.php';
 dol_include_once('/extdirect/class/extdirect.class.php');
 dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 
@@ -332,9 +333,18 @@ class ExtDirectInventory extends Inventory
 						case -1:
 							break;
 						case 0:
+							if ($object->status == $object::STATUS_VALIDATED) {
+								$result = $object->setDraft($this->_user);
+							}
 							break;
 						case 1:
-							$result = $object->validate($this->_user);
+							// We do not use standard inventory validate function because we need to add only lines created in client side
+							$lines = $this->fetchLines($object->id);
+							if (empty($lines)) {
+								$result = $object->validate($this->_user);
+							} else {
+								$result = $object->setStatut($object::STATUS_VALIDATED, null, '', 'INVENTORY_VALIDATED');
+							}
 							// PDF generating (no inventory pdf for the moment)
 							/*
 							if (($result >= 0) && empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
@@ -352,9 +362,132 @@ class ExtDirectInventory extends Inventory
 							}*/
 							break;
 						case 2:
-							$result = $object->setStatut(Inventory::STATUS_RECORDED);
-							if ($result < 0) {
-								return ExtDirect::getDolError($result, $object->errors, $object->error);
+							// Close inventory by recording the stock movements
+							if ($object->status == $object::STATUS_VALIDATED) {
+								$stockmovment = new MouvementStock($this->db);
+								$stockmovment->setOrigin($object->element, $object->id);
+
+								$cacheOfProducts = array();
+
+								$this->db->begin();
+
+								$sql = 'SELECT id.rowid, id.datec as date_creation, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
+								$sql .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real';
+								$sql .= ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+								$sql .= ' WHERE id.fk_inventory = '.((int) $object->id);
+								$sql .= ' ORDER BY id.rowid';
+
+								$resql = $this->db->query($sql);
+								if ($resql) {
+									$num = $this->db->num_rows($resql);
+									$i = 0;
+									$error = 0;
+									$option = '';
+
+									while ($i < $num) {
+										$line = $this->db->fetch_object($resql);
+
+										$qty_stock = $line->qty_stock;
+										$qty_view = $line->qty_view;		// The quantity viewed by inventorier, the qty we target
+
+
+										// Load real stock we have now.
+										if (isset($cacheOfProducts[$line->fk_product])) {
+											$product_static = $cacheOfProducts[$line->fk_product];
+										} else {
+											$product_static = new Product($this->db);
+											$result = $product_static->fetch($line->fk_product, '', '', '', 1, 1, 1);
+
+											//$option = 'nobatch';
+											$option .= ',novirtual';
+											$product_static->load_stock($option); // Load stock_reel + stock_warehouse.
+
+											$cacheOfProducts[$product_static->id] = $product_static;
+										}
+
+										// Get the real quantity in stock now, but before the stock move for inventory.
+										$realqtynow = $product_static->stock_warehouse[$line->fk_warehouse]->real;
+										if (isModEnabled('productbatch') && $product_static->hasbatch()) {
+											$realqtynow = $product_static->stock_warehouse[$line->fk_warehouse]->detail_batch[$line->batch]->qty;
+										}
+
+										if (!is_null($qty_view)) {
+											$stock_movement_qty = price2num($qty_view - $realqtynow, 'MS');
+											//print "Process inventory line ".$line->rowid." product=".$product_static->id." realqty=".$realqtynow." qty_stock=".$qty_stock." qty_view=".$qty_view." warehouse=".$line->fk_warehouse." qty to move=".$stock_movement_qty."<br>\n";
+
+											if ($stock_movement_qty != 0) {
+												if ($stock_movement_qty < 0) {
+													$movement_type = 1;
+												} else {
+													$movement_type = 0;
+												}
+
+												$datemovement = '';
+												//$inventorycode = 'INV'.$object->id;
+												$inventorycode = 'INV-'.$object->ref;
+												$price = 0;
+												if (!empty($line->pmp_real) && getDolGlobalString('INVENTORY_MANAGE_REAL_PMP')) {
+													$price = $line->pmp_real;
+												}
+
+												$idstockmove = $stockmovment->_create($this->_user, $line->fk_product, $line->fk_warehouse, (float) $stock_movement_qty, $movement_type, $price, $langs->trans('LabelOfInventoryMovemement', $object->ref), $inventorycode, $datemovement, '', '', $line->batch);
+												if ($idstockmove < 0) {
+													$error++;
+													$object->error = $stockmovment->error;
+													$object->errors = $stockmovment->errors;
+													break;
+												}
+
+												// Update line with id of stock movement (and the start quantity if it has changed this last recording)
+												$sqlupdate = "UPDATE ".MAIN_DB_PREFIX."inventorydet";
+												$sqlupdate .= " SET fk_movement = ".((int) $idstockmove);
+												if ($qty_stock != $realqtynow) {
+													$sqlupdate .= ", qty_stock = ".((float) $realqtynow);
+												}
+												$sqlupdate .= " WHERE rowid = ".((int) $line->rowid);
+												$resqlupdate = $this->db->query($sqlupdate);
+												if (! $resqlupdate) {
+													$error++;
+													$object->error = $this->db->lasterror();
+													break;
+												}
+											}
+
+											if (!empty($line->pmp_real) && getDolGlobalString('INVENTORY_MANAGE_REAL_PMP')) {
+												$sqlpmp = 'UPDATE '.MAIN_DB_PREFIX.'product SET pmp = '.((float) $line->pmp_real).' WHERE rowid = '.((int) $line->fk_product);
+												$resqlpmp = $this->db->query($sqlpmp);
+												if (! $resqlpmp) {
+													$error++;
+													$object->error = $this->db->lasterror();
+													break;
+												}
+												if (getDolGlobalString('MAIN_PRODUCT_PERENTITY_SHARED')) {
+													$sqlpmp = 'UPDATE '.MAIN_DB_PREFIX.'product_perentity SET pmp = '.((float) $line->pmp_real).' WHERE fk_product = '.((int) $line->fk_product).' AND entity='.$conf->entity;
+													$resqlpmp = $this->db->query($sqlpmp);
+													if (! $resqlpmp) {
+														$error++;
+														$object->error = $this->db->lasterror();
+														break;
+													}
+												}
+											}
+										}
+										$i++;
+									}
+
+									if (!$error) {
+										$result = $object->setRecorded($this->_user);
+									}
+								} else {
+									$object->error = $this->db->lasterror();
+									$error++;
+								}
+
+								if (! $error) {
+									$this->db->commit();
+								} else {
+									$this->db->rollback();
+								}
 							}
 							break;
 						default:
@@ -464,6 +597,9 @@ class ExtDirectInventory extends Inventory
 		$status_id = array();
 		$contentFilter = null;
 		$sorterSize = 0;
+		$barcode = null;
+		$limit = null;
+		$start = null;
 
 		$includeTotal = true;
 
@@ -714,10 +850,14 @@ class ExtDirectInventory extends Inventory
 		$result = new stdClass;
 		$data = array();
 		$rows = array();
-		$product_id = 0;
+		$origin_id = 0;
+		$product_id = null;
 		$photoSize = 'mini';
 		$warehouse_id = 0;
+		$batch = '';
+		$contentfilter = null;
 		$object = new Inventory($this->db);
+		$product = new ExtDirectProduct($this->_user->login);
 
 		$includeTotal = true;
 
@@ -732,24 +872,50 @@ class ExtDirectInventory extends Inventory
 		if (isset($params->filter)) {
 			foreach ($params->filter as $filter) {
 				if ($filter->property == 'origin_id') $origin_id = $filter->value;
-				if ($filter->property == 'product_id') $product_id = $filter->value;
-				if ($filter->property == 'warehouse_id') $warehouse_id = $filter->value;
-				if ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+				elseif ($filter->property == 'product_id') $product_id = $filter->value;
+				elseif ($filter->property == 'warehouse_id') $warehouse_id = $filter->value;
+				elseif ($filter->property == 'barcode') {
+					$idArray = $product->fetchIdFromBarcode($filter->value);
+					if ($idArray['product'] > 0) {
+						$product_id = $idArray['product'];
+					} elseif (ExtDirect::checkDolVersion(0, '13.0', '')) {
+						$idArray = $product->fetchIdFromBarcode($filter->value, 'product_fournisseur_price');
+						$product_id = $idArray['product'];
+					}
+				} elseif ($filter->property == 'batch') $batch = $filter->value;
+				elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
+				elseif ($filter->property == 'content' && !empty($filter->value)) $contentfilter = $filter->value;
 			}
 		}
 
 		if ($origin_id > 0) {
-			$product = new ExtDirectProduct($this->_user->login);
 			$object->fetch($origin_id);
 			$sqlFields = 'SELECT id.rowid as id, id.datec, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
 			$sqlFields .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real, id.pmp_expected';
 			$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+			if ($contentfilter) {
+				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product as p ON id.fk_product = p.rowid';
+			}
 			$sqlWhere = ' WHERE id.fk_inventory = '.((int) $origin_id);
+			if ($warehouse_id > 0) {
+				$sqlWhere .= ' AND id.fk_warehouse = '.((int) $warehouse_id);
+			}
+			if (isset($product_id)) {
+				$sqlWhere .= ' AND id.fk_product = '.((int) $product_id);
+			}
+			if ($batch != '') {
+				$sqlWhere .= " AND id.batch = '".$this->db->escape($batch)."'";
+			}
+			if ($contentfilter) {
+				$fields = array('p.ref', 'p.label', 'id.batch', 'p.barcode');
+				$sqlWhere .= " AND ".natural_search($fields, $contentfilter, 0, 1);
+			}
+
 			$sqlOrder = ' ORDER BY id.rowid';
 			if ($limit) {
 				$sqlLimit = $this->db->plimit($limit, $start);
 			}
-
+			$total = 0;
 			if ($includeTotal) {
 				$sqlTotal = 'SELECT COUNT(*) as total' . $sqlFrom . $sqlWhere;
 				$resql = $this->db->query($sqlTotal);
@@ -769,8 +935,6 @@ class ExtDirectInventory extends Inventory
 				$num = $this->db->num_rows($resql);
 				for ($i = 0; $i < $num; $i++) {
 					$line = $this->db->fetch_object($resql);
-					if ($warehouse_id > 0 && $warehouse_id != $line->fk_warehouse) continue;
-					if ($product_id > 0 && $product_id != $line->fk_product) continue;
 					$product->fetch($line->fk_product);
 					$row = $this->getLineData($line, $object, $product, $photoSize);
 					$rows[$row->id] = $row;
@@ -914,6 +1078,8 @@ class ExtDirectInventory extends Inventory
 				$diff = ExtDirect::prepareField($diff, $params, $line, 'warehouse_id', $field);
 			} elseif ($field == 'fk_inventory') {
 				$diff = ExtDirect::prepareField($diff, $params, $line, 'origin_id', $field);
+			} elseif ($field == 'batch') {
+				$diff = ExtDirect::prepareField($diff, $params, $line,  $field, $field, ''); // default batch is empty to trigger unique constraint
 			} else {
 				$diff = ExtDirect::prepareField($diff, $params, $line, $field, $field);
 			}
@@ -979,6 +1145,36 @@ class ExtDirectInventory extends Inventory
 		$data->origin_id = $inventory->id;
 
 		return $data;
+	}
+
+	/**
+	 *    Load lines from object
+	 *
+	 *    @param    int    $origin_id     Id of object to load lines from
+	 *    @return     array of line objects
+	 */
+	private function fetchLines($origin_id)
+	{
+		$lines = array();
+
+		if ($origin_id > 0) {
+			$sql = 'SELECT id.rowid as id, id.datec, id.tms as date_modification, id.fk_inventory, id.fk_warehouse,';
+			$sql .= ' id.fk_product, id.batch, id.qty_stock, id.qty_view, id.qty_regulated, id.pmp_real, id.pmp_expected';
+			$sql .= ' FROM '.MAIN_DB_PREFIX.'inventorydet as id';
+			$sql .= ' WHERE id.fk_inventory = '.((int) $origin_id);
+			$sql .= ' ORDER BY id.rowid';
+
+			$resql = $this->db->query($sql);
+			if ($resql) {
+				$num = $this->db->num_rows($resql);
+				for ($i = 0; $i < $num; $i++) {
+					$line = $this->db->fetch_object($resql);
+					$lines[] = $line;
+				}
+				$this->db->free($resql);
+			}
+		}
+		return $lines;
 	}
 
 }

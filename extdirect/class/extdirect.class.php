@@ -589,6 +589,33 @@ class ExtDirect
 	}
 
 	/**
+	 * Push object to array, skipping if object with same 'id' already exists
+	 *
+	 * @param array $array The array to push to
+	 * @param object $object The object to push
+	 */
+	public static function pushObjectIfIdNotExists(&$array, $object)
+	{
+		$exists = false;
+
+		// Check if object has the id property
+		if (!isset($object->id)) {
+			array_push($array, $object);
+		} else {
+			// Check if object with same id already exists
+			foreach ($array as $item) {
+				if ($item->id == $object->id) {
+					$exists = true;
+				}
+			}
+
+			if (! $exists) {
+				array_push($array, $object);
+			}
+		}
+	}
+
+	/**
 	 * method to check dolibarr compatibility
 	 *
 	 * @param Number $validate 0 = return version, 1 = return validation
@@ -604,13 +631,13 @@ class ExtDirect
 
 		if ($validate) {
 			$minVersion = '6.0';
-			$maxVersion = '22.0'; // tested version
+			$maxVersion = '23.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
 		} else {
 			if (empty($minVersion)) $minVersion = '6.0';
-			if (empty($maxVersion)) $maxVersion = '22.0'; // debugging version
+			if (empty($maxVersion)) $maxVersion = '23.0'; // debugging version
 			if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
 				return 1;
 			} else {
@@ -771,10 +798,12 @@ class ExtDirect
 	 * Load available object Optionals (extra fields)
 	 *
 	 * @param   Object  $object to read model from
+	 * @param   array   $visibilities     array of visibilities to show (1=visible on list and form, 2 = List only, 3=visible on form, 4=not visible on creation form, 5=list and view)
+	 * 												Default is array(1,3,4,5) (2 is not in the list because we want to show fields that are at least on form view)
 	 *
 	 * @return array array result data
 	 */
-	public static function readOptionalModel($object)
+	public static function readOptionalModel($object, $visibilities = array(1, 3, 4, 5))
 	{
 		global $langs;
 
@@ -800,8 +829,8 @@ class ExtDirect
 				if (empty($enabled)) {
 					continue; // 0 = Never visible field
 				}
-				if (abs($enabled) != 1 && abs($enabled) != 3 && abs($enabled) != 5 && abs($enabled) != 4) {
-					continue; // <> 1 and <> 3 = not visible on list, only on forms <> 4 = not visible at the creation <> 5 only view
+				if (!in_array(abs($enabled), $visibilities)) {
+					continue; // not in list of visibilities to show
 				}
 				if (empty($perms)) {
 					continue; // 0 = Not visible
@@ -810,6 +839,7 @@ class ExtDirect
 				$row->name = $name;
 				($langs->trans($label) != $label) ? $row->label = $langs->trans($label) : $row->label = $label;
 				$row->type = $extraFields->attributes[$object->table_element]['type'][$name];
+				$row->visibility = $enabled;
 				$row->default = $extraFields->attributes[$object->table_element]['default'][$name];
 				$row->readonly = (abs($enabled) == 5) ? 1 : 0;
 				$results[] = $row;
@@ -1183,5 +1213,82 @@ class ExtDirect
 		}
 
 		return $origin;
+	}
+
+	/**
+	 * Natural string search with AND, OR, NOT, ^ and $ operators
+	 * @param string $haystack The string to search in
+	 * @param string $needle The search string with operators
+	 * @param bool $case_sensitive Whether the search is case sensitive
+	 * @return bool True if the search matches, false otherwise
+	*/
+	public static function natural_string_search($haystack, $needle, $case_sensitive = false) {
+		$needle = trim($needle);
+
+		// Handle OR conditions
+		$or_terms = explode('|', $needle);
+		$results = [];
+
+		foreach ($or_terms as $term) {
+			$term = trim($term);
+
+			// Handle NOT conditions
+			if (strpos($term, '!') === 0) {
+				$term = substr($term, 1);
+				$found = $case_sensitive ?
+					strpos($haystack, $term) !== false :
+					stripos($haystack, $term) !== false;
+				if ($found) return false; // NOT condition failed
+			} else {
+				// Handle start/end anchors
+				$pattern = '/';
+				if (strpos($term, '^') === 0) {
+					$pattern .= '^';
+					$term = substr($term, 1);
+				}
+				if (strrpos($term, '$') === strlen($term) - 1) {
+					$pattern .= '$';
+					$term = substr($term, 0, -1);
+				} else {
+					$pattern .= '.*';
+				}
+				$pattern .= preg_quote($term, '/') . '/';
+				if (!$case_sensitive) $pattern .= 'i';
+
+				if (!preg_match($pattern, $haystack)) {
+					return false; // AND condition failed
+				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Output the signature file into the PDF object.
+	 *
+	 * @param 	TCPDF 		$pdf		PDF handler
+	 * @param	Translate	$langs		Language
+	 * @param	array<string,int|float|string|mixed[]>		$params		Array of params
+	 * @return	void
+	 */
+	public static function printSignatureImage(TCPDF $pdf, $langs, $params)
+	{
+		$default_font_size = pdf_getPDFFontSize($langs);	// Must be after pdf_getInstance
+		$default_font = pdf_getPDFFont($langs);	// Must be
+		$xforimgstart = $params['xforimgstart'];
+		$yforimgstart = $params['yforimgstart'];
+		$wforimg = $params['wforimg'];
+
+		$pdf->SetXY($xforimgstart, $yforimgstart + round($wforimg / 4) - 4);
+		$pdf->SetFont($default_font, '', $default_font_size - 1);
+		$pdf->SetTextColor(80, 80, 80);
+		$pdf->MultiCell($wforimg, 4, $langs->trans("Signature") . ': ' . dol_print_date(dol_now(), "day", false, $langs, true). ' - '.$params['online_sign_name'], 0, 'L');
+		//$pdf->SetXY($xforimgstart, $yforimgstart + round($wforimg / 4));
+		//$pdf->MultiCell($wforimg, 4, $langs->trans("Lastname") . ': ' . $online_sign_name, 0, 'L');
+
+		$pdf->Image($params['pathtoimage'], $xforimgstart, $yforimgstart, $wforimg, round($wforimg / 4));
+
+		return;
 	}
 }

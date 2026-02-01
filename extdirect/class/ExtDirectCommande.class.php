@@ -134,7 +134,7 @@ class ExtDirectCommande extends Commande
 	 */
 	public function readOrder(stdClass $params)
 	{
-		global $mysoc;
+		global $mysoc, $conf;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
@@ -210,7 +210,21 @@ class ExtDirectCommande extends Commande
 				$row->incoterms_id = $this->fk_incoterms;
 				$row->location_incoterms = $this->location_incoterms;
 				$row->customer_type = $this->thirdparty->typent_code;
-				//$row->has_signature = 0; not yet implemented
+				if (ExtDirect::checkDolVersion(0, '21.0') && $this->status > Commande::STATUS_DRAFT) {
+					$row->has_signature = 0;
+					if ($this->getValueFrom($this->table_element, $this->id, 'signed_status') > 1) {
+						// signed by receiver or both
+						$filename = $row->order_date . "_signature.png";
+						$upload_dir = !empty($conf->order->multidir_output[$this->entity]) ? $conf->order->multidir_output[$this->entity] : $conf->order->dir_output;
+						$upload_dir .= '/' . dol_sanitizeFileName($this->ref) . '/signatures/';
+						$data = file_get_contents($upload_dir . $filename);
+						if ($data) {
+							$row->signature = "data:image/png;base64,".base64_encode($data);
+							$row->has_signature = 1;
+						}
+					}
+				}
+
 				if (empty($this->remise)) {
 					$row->reduction = 0;
 					foreach ($this->lines as $line) {
@@ -415,11 +429,13 @@ class ExtDirectCommande extends Commande
 	 */
 	public function updateOrder($param)
 	{
-		global $conf, $langs;
+		global $conf, $langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
+
+		$error = 0;
 
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -489,6 +505,123 @@ class ExtDirectCommande extends Commande
 						($result = $this->setIncoterms($this->fk_incoterms, $this->location_incoterms)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 					if (isset($this->ref_client) &&
 						($result = $this->set_ref_client($this->_user, $this->ref_client)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+				}
+				if (ExtDirect::checkDolVersion(0, '21.0') && !empty($params->has_signature) && !empty($params->signature) && !empty($params->order_date)) {
+					$hookmanager->initHooks(array('ajaxonlinesign'));
+					// store signature
+					$data = base64_decode(explode(",", $params->signature)[1]);
+					$upload_dir = !empty($conf->order->multidir_output[$this->entity]) ? $conf->order->multidir_output[$this->entity] : $conf->order->dir_output;
+					$upload_dir .= '/' . dol_sanitizeFileName($this->ref) . '/';
+
+					$langs->loadLangs(array("main", "companies"));
+
+					$filename = "signatures/" . $params->order_date . "_signature.png";
+					if (!is_dir($upload_dir . "signatures/")) {
+						if (!dol_mkdir($upload_dir . "signatures/")) {
+							$this->errors[] = "Error mkdir. Failed to create dir " . $upload_dir . "signatures/";
+							$error++;
+						}
+					}
+
+					if (!$error) {
+						$return = file_put_contents($upload_dir . $filename, $data);
+						if ($return === false) {
+							$error++;
+							$this->errors[] = 'Error file_put_content: failed to create signature file.';
+						} else {
+							dolChmod($upload_dir.$filename);
+						}
+					}
+
+					if (!$error) {
+						// Defined modele of doc
+						$last_main_doc_file = $this->last_main_doc;
+
+						if (preg_match('/\.pdf/i', $last_main_doc_file)) {
+							$ref_pdf = pathinfo($last_main_doc_file, PATHINFO_FILENAME); // Retrieves the name of external or internal PDF
+
+							$newpdffilename = $upload_dir . $ref_pdf . "_signed-" . $params->order_date . ".pdf";
+							$sourcefile = $upload_dir . $ref_pdf . ".pdf";
+
+							if (dol_is_file($sourcefile)) {
+								$parameters = array('sourcefile' => $sourcefile, 'newpdffilename' => $newpdffilename);
+								$reshook = $hookmanager->executeHooks('AddSignature', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+								if ($reshook < 0) {
+									return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+								}
+
+								if (empty($reshook)) {
+									// We build the new PDF
+									$pdf = pdf_getInstance();
+									if (class_exists('TCPDF')) {
+										$pdf->setPrintHeader(false);
+										$pdf->setPrintFooter(false);
+									}
+									$pdf->SetFont(pdf_getPDFFont($langs));
+
+									if (getDolGlobalString('MAIN_DISABLE_PDF_COMPRESSION')) {
+										$pdf->SetCompression(false);
+									}
+
+									//$pdf->Open();
+									$pagecount = $pdf->setSourceFile($sourcefile);        // original PDF
+
+									$param = array();
+									$param['online_sign_name'] = $params->signature_name;
+									$param['pathtoimage'] = $upload_dir . $filename;
+
+									$s = array();    // Array with size of each page. Example array(w'=>210, 'h'=>297);
+									for ($i = 1; $i < ($pagecount + 1); $i++) {
+										try {
+											$tppl = $pdf->importPage($i);
+											$s = $pdf->getTemplatesize($tppl);
+											$pdf->AddPage($s['h'] > $s['w'] ? 'P' : 'L');
+											$pdf->useTemplate($tppl);
+
+											if (getDolGlobalString("ORDER_SIGNATURE_ON_ALL_PAGES")) {
+												// A signature image file is 720 x 180 (ratio 1/4) but we use only the size into PDF
+												// TODO Get position of box from PDF template
+
+												$param['xforimgstart'] = 111;
+												$param['yforimgstart'] = (empty($s['h']) ? 270 : $s['h'] - 40);
+												$param['wforimg'] = $s['w'] - ($param['xforimgstart'] + 16);
+
+												ExtDirect::printSignatureImage($pdf, $langs, $param);
+											}
+										} catch (Exception $e) {
+											dol_syslog("Error when manipulating some PDF by onlineSign: " . $e->getMessage(), LOG_ERR);
+											$response = $e->getMessage();
+											$error++;
+										}
+									}
+
+									if (!getDolGlobalString("ORDER_SIGNATURE_ON_ALL_PAGES")) {
+										// A signature image file is 720 x 180 (ratio 1/4) but we use only the size into PDF
+										// TODO Get position of box from PDF template
+
+										$param['xforimgstart'] = 111;
+										$param['yforimgstart'] = (empty($s['h']) ? 270 : $s['h'] - 40);
+										$param['wforimg'] = $s['w'] - ($param['xforimgstart'] + 16);
+
+										ExtDirect::printSignatureImage($pdf, $langs, $param);
+									}
+
+									//$pdf->Close();
+									$pdf->Output($newpdffilename, "F");
+
+									// Index the new file and update the last_main_doc property of object.
+									$this->indexFile($newpdffilename, 1);
+								}
+							}
+						} elseif (preg_match('/\.odt/i', $last_main_doc_file)) {
+							// Adding signature on .ODT not yet supported
+							// TODO
+						} else {
+							// Document format not supported to insert online signature.
+							// We should just create an image file with the signature.
+						}
+						$this->setValueFrom('signed_status', 2, $this->table_element, $this->id); // signed by receiver TODO modify to setSignedStasus when order has signing trait
+					}
 				}
 			} else {
 				return PARAMETERERROR;

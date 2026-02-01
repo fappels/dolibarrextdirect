@@ -124,7 +124,12 @@ class ExtDirectFormProduct extends FormProduct
 				if ($filter->property == 'batch') $batch=$this->db->escape($filter->value);
 				if ($filter->property == 'sumstock') $sumStock=$filter->value;
 				if ($filter->property == 'exclude') $exclude = explode(',', $filter->value);
-				if ($filter->property == 'stockmin') $stockMin = $filter->value;
+				if ($filter->property == 'stockmin') {
+					$stockMin = $filter->value;
+					if ($stockMin == 1) {
+						$stockMin = 0; // to distinguish between no filter and filter for stock > 0
+					}
+				}
 				if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));
 				if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);
 			}
@@ -488,7 +493,7 @@ class ExtDirectFormProduct extends FormProduct
 
 			// minimum stock
 			if ($stockMin !== false) {
-				$sql .= " HAVING sum(ps.reel) > ".((float) $stockMin);
+				$sql .= " HAVING sum(ps.reel) >= ".((float) $stockMin);
 			}
 		}
 		if (ExtDirect::checkDolVersion(0, '7.0', '')) {

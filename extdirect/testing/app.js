@@ -6178,8 +6178,8 @@ Ext.apply(Ext, {_namedScopes:{'this':{isThis:1}, controller:{isController:1}, ow
     }
   }
   if (!packages.ext && !packages.touch) {
-    Ext.setVersion('ext', '7.0.0.168');
-    Ext.setVersion('core', '7.0.0.168');
+    Ext.setVersion('ext', '7.0.0.156');
+    Ext.setVersion('core', '7.0.0.156');
   }
 })(Ext.manifest);
 Ext.Config = function(name) {
@@ -55342,7 +55342,7 @@ Ext.define('ConnectorTest.controller.MainView', {extend:Ext.app.Controller, debu
   Ext.getStore('shipment').setProxy({type:'direct', api:{create:ExtDirectExpedition.createShipment, read:ExtDirectExpedition.readShipment, update:ExtDirectExpedition.updateShipment, destroy:ExtDirectExpedition.destroyShipment}});
   Ext.getStore('shipmentline').setProxy({type:'direct', api:{create:ExtDirectExpedition.createShipmentLine, read:ExtDirectExpedition.readShipmentLine, update:ExtDirectExpedition.updateShipmentLine, destroy:ExtDirectExpedition.destroyShipmentLine}});
   Ext.getStore('PurchaseOrder').setProxy({type:'direct', api:{create:ExtDirectCommandeFournisseur.createOrder, read:ExtDirectCommandeFournisseur.readOrder, update:ExtDirectCommandeFournisseur.updateOrder, destroy:ExtDirectCommandeFournisseur.destroyOrder}});
-  Ext.getStore('PurchaseOrderLine').setProxy({type:'direct', api:{create:ExtDirectCommandeFournisseur.createOrderLine, read:ExtDirectCommandeFournisseur.readOrderLine, update:ExtDirectCommandeFournisseur.updateOrderLine, destroy:ExtDirectCommandeFournisseur.destroyOrderLine}});
+  Ext.getStore('PurchaseOrderLine').setProxy({type:'direct', api:{create:ExtDirectCommandeFournisseur.createOrderLine, read:ExtDirectCommandeFournisseur.readOrderLine, update:ExtDirectCommandeFournisseur.updateOrderLine, destroy:ExtDirectCommandeFournisseur.destroyOrderLine}, reader:{rootProperty:'data'}});
   Ext.getStore('Intervention').setProxy({type:'direct', api:{create:ExtDirectFichinter.createIntervention, read:ExtDirectFichinter.readIntervention, update:ExtDirectFichinter.updateIntervention, destroy:ExtDirectFichinter.destroyIntervention}});
   Ext.getStore('InterventionLines').setProxy({type:'direct', api:{create:ExtDirectFichinter.createInterventionLine, read:ExtDirectFichinter.readInterventionLine, update:ExtDirectFichinter.updateInterventionLine, destroy:ExtDirectFichinter.destroyInterventionLine}});
   Ext.getStore('companies').setProxy({type:'direct', api:{create:ExtDirectSociete.createSociete, read:ExtDirectSociete.readSociete, update:ExtDirectSociete.updateSociete, destroy:ExtDirectSociete.destroySociete}});
@@ -55406,7 +55406,7 @@ Ext.define('ConnectorTest.controller.MainView', {extend:Ext.app.Controller, debu
   Ext.getStore('ManufactureOrderStatus').setProxy({type:'direct', directFn:ExtDirectMo.readStatus});
   Ext.getStore('ProductConstants').setProxy({type:'direct', directFn:ExtDirectProduct.readConstants});
   Ext.getStore('Inventory').setProxy({type:'direct', api:{create:ExtDirectInventory.extCreate, read:ExtDirectInventory.extRead, update:ExtDirectInventory.extUpdate, destroy:ExtDirectInventory.extDestroy}});
-  Ext.getStore('InventoryLines').setProxy({type:'direct', api:{create:ExtDirectInventory.extCreateLines, read:ExtDirectInventory.extReadLines, update:ExtDirectInventory.extUpdateLines, destroy:ExtDirectInventory.extDestroyLines},reader:{rootProperty:'data'}});
+  Ext.getStore('InventoryLines').setProxy({type:'direct', api:{create:ExtDirectInventory.extCreateLines, read:ExtDirectInventory.extReadLines, update:ExtDirectInventory.extUpdateLines, destroy:ExtDirectInventory.extDestroyLines}, reader:{rootProperty:'data'}});
   Ext.getStore('InventoryList').setProxy({type:'direct', directFn:ExtDirectInventory.extList, reader:{rootProperty:'data'}});
   Ext.getStore('InventoryStatus').setProxy({type:'direct', directFn:ExtDirectInventory.readStatus});
   Ext.getStore('InventoryConstants').setProxy({type:'direct', directFn:ExtDirectInventory.readConstants});

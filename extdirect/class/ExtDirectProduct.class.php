@@ -56,6 +56,16 @@ class ExtDirectProduct extends ProductFournisseur
 	/** @var string $table_element_reception_line table of order reception line */
 	public $table_element_reception_line = 'receptiondet_batch';
 
+	/**
+	 * @var string ID of local trigger prefix for this class
+	 */
+	public $LOCAL_TRIGGER_PREFIX = 'EXTDIRECTPRODUCT';
+
+	/**
+	 * @var string ID of module.
+	 */
+	public $module = 'extdirect';
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -71,6 +81,11 @@ class ExtDirectProduct extends ProductFournisseur
 				$this->_user = $user;  //product.class uses global user
 				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 					$this->table_element_reception_line = 'commande_fournisseur_dispatch';
+				}
+				if (ExtDirect::checkDolVersion(0, '', '22.0')) {
+					$this->LOCAL_TRIGGER_PREFIX = 'EXTDIRECTPRODUCT';
+				} else {
+					$this->LOCAL_TRIGGER_PREFIX = $this->TRIGGER_PREFIX . '_' . $this->module;
 				}
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -794,7 +809,7 @@ class ExtDirectProduct extends ProductFournisseur
 			if (!$notrigger) {
 				// Call trigger
 				$this->extParam = &$param; // pass client parameters by reference to trigger
-				$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_CREATE', $this->_user);
+				$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_PRE_CREATE', $this->_user);
 				if ($result < 0) {
 					return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
@@ -915,7 +930,7 @@ class ExtDirectProduct extends ProductFournisseur
 			if (!$notrigger) {
 				// Call trigger
 				$this->extParam = &$param; // pass client parameters by reference to trigger
-				$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_CREATE', $this->_user);
+				$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_POST_CREATE', $this->_user);
 				if ($result < 0) {
 					return ExtDirect::getDolError($result, $this->errors, $this->error);
 				}
@@ -1002,7 +1017,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_MODIFY', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_PRE_MODIFY', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1326,7 +1341,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_MODIFY', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_POST_MODIFY', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1368,7 +1383,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_PRE_DELETE', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_PRE_DELETE', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1380,7 +1395,7 @@ class ExtDirectProduct extends ProductFournisseur
 				if (!$notrigger) {
 					// Call trigger
 					$this->extParam = &$param; // pass client parameters by reference to trigger
-					$result = $this->call_trigger('EXTDIRECTPRODUCT_POST_DELETE', $this->_user);
+					$result = $this->call_trigger($this->LOCAL_TRIGGER_PREFIX.'_POST_DELETE', $this->_user);
 					if ($result < 0) {
 						return ExtDirect::getDolError($result, $this->errors, $this->error);
 					}
@@ -1983,11 +1998,11 @@ class ExtDirectProduct extends ProductFournisseur
 	}
 
 	/**
-	 * private method to fetch id from given barcode, search in barcode and ref field
+	 * public method to fetch id from given barcode, search in barcode and ref field
 	 *
 	 * @param string $barcode barcode to fetch id from
 	 * @param string $table table to search 'product' or 'product_fournisseur_price'
-	 * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 10+)
+	 * @return array $id rowid of product and rowid of supplier product (supplier product only for dolibarr 13+)
 	 */
 	public function fetchIdFromBarcode($barcode, $table = 'product')
 	{
@@ -2410,6 +2425,7 @@ class ExtDirectProduct extends ProductFournisseur
 				$prods_arbo = $this->get_arbo_each_prod($row->qty_asked);
 				if (count($prods_arbo) > 0) {
 					$rowId = $row->id;
+					$warehouseId = $row->warehouse_id;
 					$rowLabel = $row->label;
 					foreach ($prods_arbo as $key => $value) {
 						$row->id = $rowId.'_'.$value['id'];
@@ -2420,12 +2436,33 @@ class ExtDirectProduct extends ProductFournisseur
 						$row->product_label = $value['label'];
 						$row->label = $rowLabel.' -> '.$value['fullpath'];
 						$row->qty_asked = $value['nb_total'];
+						$row->qty_shipped *= $value['nb'];
 						$row->stock = $value['stock'];
 						$row->has_photo = 0;
 						$subProduct = new Product($this->db);
 						$subProduct->fetch($value['id']);
 						$this->fetchPhoto($row, $photoFormat, 0, $subProduct);
-						array_push($results, clone $row);
+						if (isset($warehouseId)) {
+							$subProduct->load_stock('novirtual, warehouseopen');
+							foreach ($subProduct->stock_warehouse as $warehouse=>$stock_warehouse) {
+							$row->stock = (float) $stock_warehouse->real;
+								if ($row->origin_line_id) {
+									$rowId = $row->origin_line_id.'_'.$warehouse.'_'.$value['id'];
+								} else {
+									$rowId = $rowId.'_'.$warehouse.'_'.$value['id'];
+								}
+								if ($row->id != $rowId) {
+									$row->id = $rowId;
+									$row->warehouse_id = $warehouse;
+									ExtDirect::pushObjectIfIdNotExists($results, clone $row);
+								} else {
+									$row->warehouse_id = $warehouseId;
+									array_push($results, clone $row);
+								}
+							}
+						} else {
+							array_push($results, clone $row);
+						}
 					}
 				}
 			}
