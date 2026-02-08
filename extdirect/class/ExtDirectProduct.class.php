@@ -1777,12 +1777,12 @@ class ExtDirectProduct extends ProductFournisseur
 		if ($res < 0) return ExtDirect::getDolError($res, $this->errors, $this->error);
 
 		if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
-			require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
-			$formProduct = new FormProduct($this->db);
-			$formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal', true, array(), 0);
-			if (count($formProduct->cache_warehouses) > 0) {
-				foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
-					if ($includeNoBatch) {
+			if ($includeNoBatch) {
+				require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
+				$formProduct = new FormProduct($this->db);
+				$formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal', true, array(), 0);
+				if (count($formProduct->cache_warehouses) > 0) {
+					foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
 						$row = new stdClass;
 						$row->id = $id.'_'.sprintf("%09d", $warehouseId);
 						$row->product_id = $id;
@@ -1797,21 +1797,26 @@ class ExtDirectProduct extends ProductFournisseur
 						}
 						$row->stock_reel =$defaultStock;
 						$row->warehouse_id = $warehouseId;
+						$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
+						if ($res < 0) return $res;
 					}
-					$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $this->stock_warehouse[$warehouseId]->id, $includeNoBatch);
+				} else {
+					$formProduct = new ExtDirectFormProduct($this->db);
+					$warehouseId = (!empty($conf->global->MAIN_DEFAULT_WAREHOUSE) ? $conf->global->MAIN_DEFAULT_WAREHOUSE : $formProduct->getFirstWarehouseId());
+					$row = new stdClass;
+					$row->id = $id.'_'.sprintf("%09d", $warehouseId);
+					$row->product_id = $id;
+					$row->batch_id = 0;
+					$row->batch = $langs->transnoentities('BatchDefaultNumber');
+					$row->stock_reel = 1;
+					$row->warehouse_id = $warehouseId;
+					array_push($results, $row);
+				}
+			} else {
+				foreach ($this->stock_warehouse as $warehouseId => $stock) {
+					$res = $this->fetchBatches($results, $row, $this->id, $warehouseId, $stock->id);
 					if ($res < 0) return $res;
 				}
-			} elseif ($includeNoBatch) {
-				$formProduct = new ExtDirectFormProduct($this->db);
-				$warehouseId = (!empty($conf->global->MAIN_DEFAULT_WAREHOUSE) ? $conf->global->MAIN_DEFAULT_WAREHOUSE : $formProduct->getFirstWarehouseId());
-				$row = new stdClass;
-				$row->id = $id.'_'.sprintf("%09d", $warehouseId);
-				$row->product_id = $id;
-				$row->batch_id = 0;
-				$row->batch = $langs->transnoentities('BatchDefaultNumber');
-				$row->stock_reel = 1;
-				$row->warehouse_id = $warehouseId;
-				array_push($results, $row);
 			}
 		} else {
 			if ($includeNoBatch) {
@@ -2114,7 +2119,6 @@ class ExtDirectProduct extends ProductFournisseur
 		$batchesQty = 0;
 		$stockQty = isset($row->stock_reel) ? $row->stock_reel : 0;
 		$product_id = isset($row->product_id) ? $row->product_id : $this->id;
-		$undefinedBatch = clone $row;
 		$num = 0;
 
 		if (!empty($productStockId) && ($batches = Productbatch::findAll($this->db, $productStockId, 1, $product_id)) < 0 ) return $batches;
@@ -2193,6 +2197,7 @@ class ExtDirectProduct extends ProductFournisseur
 
 		if ($includeNoBatch && (!empty($stockQty) || !empty($productStockId)) && isset($row->id) && isset($row->batch_id)) {
 			// add undefined batch with non batched stock for adding batches
+			$undefinedBatch = clone $row;
 			$undefinedBatch->stock_reel = price2num($stockQty - $batchesQty, 5);
 			$num++;
 			array_push($results, $undefinedBatch);
