@@ -577,7 +577,7 @@ class ExtDirectFormProduct extends FormProduct
 			$digits = '%0'.$maxLabelLen.'d';
 		}
 		foreach ($this->cache_warehouses as &$warehouse) {
-			$numericPart = (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
+			$numericPart = (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] >= 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
 			if (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'num-alfa') {
 				$warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
 			} elseif (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'alfa-num') {
