@@ -40,7 +40,10 @@ dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
 class ExtDirectMo extends Mo
 {
 	private $_user;
-	private $_moConstants = array('STOCK_DISALLOW_NEGATIVE_TRANSFER');
+	private $_moConstants = array(
+		'STOCK_ALLOW_NEGATIVE_TRANSFER', // V21-
+		'STOCK_DISALLOW_NEGATIVE_TRANSFER' // V22+
+	);
 	private $_enabled = false;
 	private $_productstock_cache = array();
 
