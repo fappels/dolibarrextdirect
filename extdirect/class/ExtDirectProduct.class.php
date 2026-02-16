@@ -310,7 +310,7 @@ class ExtDirectProduct extends ProductFournisseur
 							$row->batch_id = 0; // for adding new batch when batch not found
 							$batchesQty = 0;
 							$stockQty = $this->stock_warehouse[$warehouse]->real;
-							if ((! empty($this->stock_warehouse[$warehouse]->id)) && (($batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$warehouse]->id)) < 0 )) return $batchesQty;
+							if (!empty($this->stock_warehouse[$warehouse]->id)) $batchesQty = $this->fetchBatchesQty($this->stock_warehouse[$warehouse]->id);
 							dol_syslog(get_class($this)."::batchesQty=".$batchesQty." stockQty=".$stockQty);
 							$row->stock_reel = price2num($stockQty - $batchesQty, 5);
 						} else {
@@ -2187,8 +2187,8 @@ class ExtDirectProduct extends ProductFournisseur
 	{
 		$batches = array();
 		$batchesQty = 0;
-		if (($batches = Productbatch::findAll($this->db, $fk_product_stock)) < 0 ) return $batches;
-		if (!empty($batches)) {
+		$batches = Productbatch::findAll($this->db, $fk_product_stock, 0, $this->id);
+		if (is_array($batches) && !empty($batches)) {
 			foreach ($batches as $batch) {
 				$batchesQty += $batch->qty;
 			}
