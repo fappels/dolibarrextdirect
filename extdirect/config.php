@@ -260,9 +260,6 @@ $API = array(
 			),
 			'destroyAuthentication' => array(
 				'len' => 1
-			),
-			'readMainConstants' => array(
-				'len' => 1
 			)
 		)
 	),
@@ -278,6 +275,9 @@ $API = array(
 				'len' => 1
 			),
 			'destroyActivity' => array(
+				'len' => 1
+			),
+			'readMainConstants' => array(
 				'len' => 1
 			)
 		)

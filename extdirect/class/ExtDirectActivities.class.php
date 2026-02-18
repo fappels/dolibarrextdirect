@@ -34,6 +34,10 @@ class ExtDirectActivities extends ExtDirectActivity
 {
 	private $_user;
 
+	private $_mainConstants = array(
+		'MAIN_DEFAULT_WAREHOUSE'
+	);
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -155,6 +159,23 @@ class ExtDirectActivities extends ExtDirectActivity
 	public function destroyActivity($params)
 	{
 		return PARAMETERERROR;// no update possible
+	}
+
+	/**
+	 * Load main related constants
+	 *
+	 * @param   stdClass    $params filter with elements
+	 *                              constant    name of specific constant
+	 *
+	 * @return  stdClass result data with specific constant value
+	 */
+	public function readMainConstants(stdClass $params)
+	{
+		if (!isset($this->db)) return CONNECTERROR;
+
+		$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_mainConstants);
+
+		return $results;
 	}
 
 	/**
