@@ -260,6 +260,9 @@ $API = array(
 			),
 			'destroyAuthentication' => array(
 				'len' => 1
+			),
+			'readMainConstants' => array(
+				'len' => 1
 			)
 		)
 	),

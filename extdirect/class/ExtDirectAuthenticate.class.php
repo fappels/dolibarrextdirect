@@ -38,6 +38,10 @@ class ExtDirectAuthenticate extends ExtDirect
 
 	private $_modulesAvailable = array('Dispatch', 'Purchase', 'Order', 'Picking', 'Shipment', 'Inventory', 'Remove', 'InventoryPlus', 'ManufactureOrder', 'Prospect');
 
+	private $_mainConstants = array(
+		'MAIN_DEFAULT_WAREHOUSE'
+	);
+
 	/** Constructor
 	 *
 	 * @param string $login user name
@@ -282,6 +286,23 @@ class ExtDirectAuthenticate extends ExtDirect
 		} else {
 			return $param;
 		}
+	}
+
+	/**
+	 * Load main related constants
+	 *
+	 * @param   stdClass    $params filter with elements
+	 *                              constant    name of specific constant
+	 *
+	 * @return  stdClass result data with specific constant value
+	 */
+	public function readMainConstants(stdClass $params)
+	{
+		if (!isset($this->db)) return CONNECTERROR;
+
+		$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_mainConstants);
+
+		return $results;
 	}
 
 	/**
