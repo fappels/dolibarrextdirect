@@ -1750,9 +1750,9 @@ class ExtDirectProduct extends ProductFournisseur
 
 		if ($warehouseId == ExtDirectFormProduct::ALLWAREHOUSE_ID) {
 			if ($includeNoBatch) {
-				require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
-				$formProduct = new FormProduct($this->db);
-				$formProduct->loadWarehouses($id, '', 'warehouseopen, warehouseinternal', true, array(), 0);
+				dol_include_once('/extdirect/class/html.formproduct.class.php');
+				$formProduct = new ExtDirectFormProduct($this->db);
+				$formProduct->extLoadWarehouses($id, 0, '', 'warehouseopen, warehouseinternal', '', true, array(), true);
 				if (count($formProduct->cache_warehouses) > 0) {
 					foreach ($formProduct->cache_warehouses as $warehouseId => $warehouse) {
 						$row = new stdClass;
