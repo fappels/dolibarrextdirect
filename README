@@ -180,7 +180,7 @@ Can be used to track when client app is started, when the app started editing or
 
 **Usage:**
 
-For more details on how to use the Classes in your client side code, you can examine the provided jasmine unit tests in file extdirect/testing/test.js. You can run the test with URL "http://your.server.net/.../htdocs/extdirect/testing/", enable auto superAdmin assignment for this and set admin language to en_US.
+For more details on how to use the Classes in your client side code, you can examine the provided jasmine unit tests in file extdirect/testing/test.js. You can run the test with URL "http://your.server.net/.../htdocs/custom/extdirect/testing/", enable auto superAdmin assignment for this and set admin language to en_US.
 At least three warehouses, 2 multiprice indexes, product extrafield called 'test' and one customer-supplier with rowid 1 must be available to succeed the test.
 Enable barcode module with at least EAN13 activated.
 Enable agenda module.
@@ -190,4 +190,4 @@ Demo data from dev/initdemo should work. Add two multiprice levels and a string 
 **Supported Dolibarr Versions:**
 
 - Min version:	6.0
-- Max version:	21.0
+- Max version:	23.0
