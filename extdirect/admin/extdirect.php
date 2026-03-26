@@ -140,16 +140,16 @@ if (!$error) {
 		}
 		$extDirect->fetchList('', 'datec ASC');
 	} elseif ($action == 'clear' && empty($refresh)) {
-		if (! empty($extDirect->dataset)) {
+		if (! empty($extDirectActivity->dataset)) {
 			$db->begin();
-			foreach ($extDirect->dataset as $data) {
-				$extDirect->id=$data['rowid'];
+			foreach ($extDirectActivity->dataset as $data) {
+				$extDirectActivity->id=$data['rowid'];
 				//delete
-				$res = $extDirect->delete($user);
+				$res = $extDirectActivity->delete($user);
 				if (! $res > 0) $error++;
 			}
 		}
-		if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
+		if ($extDirectActivity->fetchList('', 'datec ASC') < 0) $error++;
 	} elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
 		// validate if dolibarr version is in compatibility range
 		if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
