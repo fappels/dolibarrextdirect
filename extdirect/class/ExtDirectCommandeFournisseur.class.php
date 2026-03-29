@@ -1288,8 +1288,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->date_start = $line->date_start;
 									$row->date_end = $line->date_end;
 									// qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse);
-									$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
+									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse); // to get only qty shipped from this warehouse
+									$row->qty_toreceive = $row->qty_asked - $this->getDispatched($line->id, $line->fk_product); // to get total qty shipped from all warehouse to calculate qty to receive
 									$row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
 									if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 										$row->is_virtual_stock = true;
@@ -1718,7 +1718,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 							}
 							// dispatch
-							if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
+							if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0 || $params->qty_received > 0)) {
 								if (!empty($this->_user->rights->fournisseur->lire) && isset($params->cost_price)) {
 									// updated in client
 									$cost_price = $params->cost_price;
@@ -1770,7 +1770,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$lineIndex = $reception->addline(
 										$params->warehouse_id,
 										$orderLine->id,
-										$params->qty_shipped,
+										($params->qty_received > 0)? $params->qty_received : $params->qty_shipped,
 										$orderLine->array_options,
 										$params->comment,
 										isset($params->eatby) ? ExtDirect::dateTimeToDate($params->eatby) : '',
@@ -1792,7 +1792,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									if (($result = $this->DispatchProduct(
 										$this->_user,
 										$orderLine->fk_product,
-										$params->qty_shipped,
+										($params->qty_received > 0)? $params->qty_received : $params->qty_shipped,
 										$params->warehouse_id,
 										$cost_price,
 										$params->comment,
