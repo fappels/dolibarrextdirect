@@ -829,6 +829,9 @@ class ExtDirect
 				if (empty($enabled)) {
 					continue; // 0 = Never visible field
 				}
+				if (!is_numeric($enabled)) {
+					continue; // not a numeric visibility, skip field
+				}
 				if (!in_array(abs($enabled), $visibilities)) {
 					continue; // not in list of visibilities to show
 				}
