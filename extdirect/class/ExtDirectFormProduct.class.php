@@ -31,6 +31,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectFormProduct extends FormProduct
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
 
 	const ALLWAREHOUSE_ID = 0;
@@ -42,7 +43,7 @@ class ExtDirectFormProduct extends FormProduct
 	/** Constructor
 	 *
 	 * @param string $login user name
-	 * @return number
+	 * @return void
 	 *
 	 */
 	public function __construct($login)
@@ -101,6 +102,7 @@ class ExtDirectFormProduct extends FormProduct
 		$start = 0;
 		$contentValue = '';
 		$statusFilter = 'warehouseopen, warehouseinternal';
+		$total = 0;
 
 		$includeTotal = false; // keep default false for mobilid full warehouse list store
 
@@ -407,6 +409,7 @@ class ExtDirectFormProduct extends FormProduct
 		dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
 
 		$warehouseStatus = array();
+		$barcodeTypes = array();
 
 		$barcodeTypeData = $this->readBarcodeType(new stdClass);
 		foreach ($barcodeTypeData as $barcodeType) {

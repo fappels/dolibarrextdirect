@@ -39,6 +39,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectCategorie extends Categorie
 {
+	/** @var User */
 	private $_user;
 
 	/** Constructor
@@ -51,7 +52,11 @@ class ExtDirectCategorie extends Categorie
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_user = $user;  //product.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -74,12 +79,10 @@ class ExtDirectCategorie extends Categorie
 	 *                                  id      Id of product to load
 	 *                                  label   Reference of product, name
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function readCategorie(stdClass $param)
 	{
-		global $conf,$langs;
-
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!isset($this->_user->rights->categorie->lire)) return PERMISSIONERROR;
 		$results = array();
@@ -95,20 +98,16 @@ class ExtDirectCategorie extends Categorie
 		}
 
 		if (($id > 0) || ($label != '')) {
-			if (($result = $this->fetch($id, $label)) < 0)    return $result;
-			if (!$this->error) {
-				$row->id           = $this->id ;
-				$row->fk_parent    = $this->fk_parent;
-				$row->label        = $this->label;
-				$row->description  = $this->description?$this->description:'';
-				$row->company_id   = $this->socid;
-				// 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
-				$row->type= $this->type;
-				$row->entity= $this->entity;
-				array_push($results, $row);
-			} else {
-				return 0;
-			}
+			if (($result = $this->fetch($id, $label)) < 0) return ExtDirect::getDolError($result, $this->error, $this->errors);
+			$row->id           = $this->id ;
+			$row->fk_parent    = $this->fk_parent;
+			$row->label        = $this->label;
+			$row->description  = $this->description?$this->description:'';
+			$row->company_id   = $this->socid;
+			// 0=Product, 1=Supplier, 2=Customer/Prospect, 3=Member
+			$row->type= $this->type;
+			$row->entity= $this->entity;
+			array_push($results, $row);
 		}
 
 		return $results;
@@ -118,8 +117,8 @@ class ExtDirectCategorie extends Categorie
 	/**
 	 * Ext.direct method to Create categorie
 	 *
-	 * @param unknown_type $params object or object array with categorie model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with categorie model(s)
+	 * @return array<stdClass>|int|string result data or error number/message
 	 */
 	public function createCategorie($params)
 	{
@@ -132,7 +131,7 @@ class ExtDirectCategorie extends Categorie
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			$this->prepareFields($param);
-			if (($result = $this->create($this->_user)) < 0) return $result;
+			if (($result = $this->create($this->_user)) < 0) return ExtDirect::getDolError($result, $this->error, $this->errors);
 
 			$param->id=$this->id;
 		}
@@ -140,15 +139,15 @@ class ExtDirectCategorie extends Categorie
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update categorie
 	 *
-	 * @param unknown_type $params object or object array with categorie model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with categorie model(s)
+	 * @return array<stdClass>|int|string result data or error number/message
 	 */
 	public function updateCategorie($params)
 	{
@@ -162,10 +161,10 @@ class ExtDirectCategorie extends Categorie
 			if ($param->id) {
 				$id = $param->id;
 				$this->id = $id;
-				if (($result = $this->fetch($id, '')) < 0)    return $result;
+				if (($result = $this->fetch($id, '')) < 0) return ExtDirect::getDolError($result, $this->error, $this->errors);
 				$this->prepareFields($param);
 				// update
-				if (($result = $this->update($this->_user)) < 0)   return $result;
+				if (($result = $this->update($this->_user)) < 0)   return ExtDirect::getDolError($result, $this->error, $this->errors);
 			} else {
 				return PARAMETERERROR;
 			}
@@ -173,15 +172,15 @@ class ExtDirectCategorie extends Categorie
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy categorie
 	 *
-	 * @param unknown_type $params object or object array with categorie model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with categorie model(s)
+	 * @return array<stdClass>|int|string result data or error number/message
 	 */
 	public function destroyCategorie($params)
 	{
@@ -196,7 +195,7 @@ class ExtDirectCategorie extends Categorie
 				$this->id = $id;
 				$this->fk_parent = 0; // bug in categorie.class.php introduced in 3.5.4
 				// delete product
-				if (($result = $this->delete($this->_user)) <= 0)    return $result;
+				if (($result = $this->delete($this->_user)) <= 0)    return ExtDirect::getDolError($result, $this->error, $this->errors);
 			} else {
 				return PARAMETERERROR;
 			}
@@ -205,7 +204,7 @@ class ExtDirectCategorie extends Categorie
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -214,7 +213,7 @@ class ExtDirectCategorie extends Categorie
 	 *
 	 * @param stdClass $param to    filter on type
 	 *
-	 * @return     stdClass result data or -1
+	 * @return array<stdClass>|int result data or error number
 	 */
 	public function readCategorieList(stdClass $param)
 	{
@@ -251,7 +250,7 @@ class ExtDirectCategorie extends Categorie
 	 * private method to copy fields into dolibarr object
 	 *
 	 * @param stdclass $param object with fields
-	 * @return null
+	 * @return void
 	 */
 	private function prepareFields($param)
 	{

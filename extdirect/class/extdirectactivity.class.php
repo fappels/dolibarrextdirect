@@ -32,22 +32,19 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectActivity extends CommonObject
 {
-	public $db;                            //!< To store db handler
-	public $error;                         //!< To return error code (or message)
-	public $errors=array();                //!< To return several error codes (or messages)
-	//var $element='extdirectactivity';         //!< Id that identify managed objects
-	//var $table_element='extdirectactivity';       //!< Name of table without prefix where object is stored
-
-	public $id;
-
-	public $tms='';
+	/** @var int */
 	public $fk_user;
+	/** @var string */
 	public $app_id;
+	/** @var string */
 	public $app_version;
+	/** @var string */
 	public $app_name;
+	/** @var string */
 	public $activity_name;
+	/** @var string */
 	public $activity_id;
-	public $datec='';
+	/** @var string */
 	public $status;
 
 	// array with multiple records

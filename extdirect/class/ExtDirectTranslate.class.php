@@ -33,15 +33,17 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/translate.class.php';
  */
 class ExtDirectTranslate
 {
-	private $_translate;
+	/** @var User|null Dolibarr user object */
 	private $_user;
+	/** @var Translate|bool Dolibarr translate object or boolean */
+	private $_translate;
 
 	/**
 	 * Constructor
 	 *
 	 * @param string $login user name
 	 *
-	 * @return number
+	 * @return void
 	 */
 	public function __construct($login)
 	{
@@ -60,7 +62,7 @@ class ExtDirectTranslate
 	 *
 	 *    @param stdClass $param optional parameter (filter,...)
 	 *
-	 *    @return stdClass result data or <0 if KO, 0 if already loaded, >0 if OK
+	 *    @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function load(stdClass $param)
 	{

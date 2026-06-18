@@ -32,14 +32,17 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectSociete extends Societe
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
+	/** @var array<string> used constants */
 	private $_constants = array('SOCIETE_CODECLIENT_ADDON');
+	/** @var bool true if order module is enabled and user has read rights */
 	private $_enabled = false;
 
 	/** Constructor
 	 *
 	 * @param string $login user name
-	 * @return number
+	 * @return void
 	 *
 	 */
 	public function __construct($login)
@@ -48,7 +51,11 @@ class ExtDirectSociete extends Societe
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->societe->enabled) && isset($user->rights->societe->lire);
 				$this->_user = $user;
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
@@ -76,7 +83,7 @@ class ExtDirectSociete extends Societe
 	 *  @param          stdClass    $params     filter with elements
 	 *                                          constant	name of specific constant
 	 *
-	 *	@return         stdClass result data with specific constant value
+	 *	@return         array<stdClass>|stdClass|int|string result data with specific constant value or error number/message
 	 */
 	public function readConstants(stdClass $params)
 	{
@@ -91,7 +98,7 @@ class ExtDirectSociete extends Societe
 	/**
 	 *    Load third parties Status constants
 	 *
-	 *    @return   stdClass                result data or -1
+	 *    @return   array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readStComm()
 	{
@@ -132,7 +139,7 @@ class ExtDirectSociete extends Societe
 	/**
 	 *    Load country constants
 	 *
-	 *    @return   stdClass                result data or -1
+	 *    @return   array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readCountryConstants()
 	{
@@ -170,7 +177,7 @@ class ExtDirectSociete extends Societe
 	 *    Load state constants
 	 *
 	 *    @param    stdClass    $param  filter with country_id
-	 *    @return   stdClass                result data or -1
+	 *    @return   array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readStateConstants(stdClass $param)
 	{
@@ -224,7 +231,7 @@ class ExtDirectSociete extends Societe
 	/**
 	 *    Load third parties prospect level constants
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readProspectLevel()
 	{
@@ -267,7 +274,7 @@ class ExtDirectSociete extends Societe
 	/**
 	 *    Load the available paiment condition constants
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readPaymentConditions()
 	{
@@ -307,7 +314,7 @@ class ExtDirectSociete extends Societe
 	/**
 	 *    Load the available paiment type constants
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readPaymentTypes()
 	{
@@ -359,7 +366,7 @@ class ExtDirectSociete extends Societe
 	 *                                      property sort with properties field names and directions:
 	 *                                      property limit for paging with sql LIMIT and START values
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readSocieteList(stdClass $params)
 	{
@@ -459,6 +466,8 @@ class ExtDirectSociete extends Societe
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -546,7 +555,7 @@ class ExtDirectSociete extends Societe
 	 *                                  idprof3     Prof id 3 of third party
 	 *                                  idprof4     Prof id 4 of third party
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readSociete(stdClass $param)
 	{
@@ -680,7 +689,7 @@ class ExtDirectSociete extends Societe
 	/**
 	 * public method to read available company optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionalModel()
 	{
@@ -695,7 +704,7 @@ class ExtDirectSociete extends Societe
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id Id of company to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -752,9 +761,9 @@ class ExtDirectSociete extends Societe
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -770,17 +779,17 @@ class ExtDirectSociete extends Societe
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -790,9 +799,9 @@ class ExtDirectSociete extends Societe
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -807,7 +816,7 @@ class ExtDirectSociete extends Societe
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -823,7 +832,7 @@ class ExtDirectSociete extends Societe
 	 *                                      idprof2     Prof id 2 of third party
 	 *                                      idprof3     Prof id 3 of third party
 	 *                                      idprof4     Prof id 4 of third party
-	 *    @return     stdClass result data or error string
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function getTowns(stdClass $params)
 	{
@@ -910,7 +919,7 @@ class ExtDirectSociete extends Societe
 	 *                                      idprof3     Prof id 3 of third party
 	 *                                      idprof4     Prof id 4 of third party
 	 *                                      town        town of third party
-	 *    @return     stdClass result data or error string
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function getCategories(stdClass $params)
 	{
@@ -990,8 +999,8 @@ class ExtDirectSociete extends Societe
 	/**
 	 * Ext.direct method to Create societe
 	 *
-	 * @param unknown_type $params object or object array with societe model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with societe model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createSociete($params)
 	{
@@ -1012,15 +1021,15 @@ class ExtDirectSociete extends Societe
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update societe
 	 *
-	 * @param unknown_type $params object or object array with societe model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with societe model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateSociete($params)
 	{
@@ -1063,15 +1072,15 @@ class ExtDirectSociete extends Societe
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
-	 * Ext.direct method to detroy societe
+	 * Ext.direct method to destroy societe
 	 *
-	 * @param unknown_type $params object or object array with societe model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with societe model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroySociete($params)
 	{
@@ -1094,15 +1103,15 @@ class ExtDirectSociete extends Societe
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to upload image file for societe object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function fileUpload($params)
 	{
@@ -1111,6 +1120,7 @@ class ExtDirectSociete extends Societe
 		if (!isset($this->_user->rights->societe->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
@@ -1134,10 +1144,10 @@ class ExtDirectSociete extends Societe
 	/**
 	 * private method to update stcomm_id and fk_prospectlevel field in societe table
 	 *
-	 * @param number $id            societe id
-	 * @param number $stcomm_id     statut commercial id
+	 * @param int $id            societe id
+	 * @param int $stcomm_id     statut commercial id
 	 * @param string $prospectlevel prospectlevel foreign key
-	 * @return number
+	 * @return int 1 on success, -1 on failure
 	 */
 	private function updateProspectStatLevel($id, $stcomm_id, $prospectlevel)
 	{

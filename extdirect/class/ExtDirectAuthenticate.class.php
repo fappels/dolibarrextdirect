@@ -34,8 +34,10 @@ dol_include_once('/extdirect/core/modules/modExtDirect.class.php');
  */
 class ExtDirectAuthenticate extends ExtDirect
 {
+	/** @var User */
 	private $_user;
 
+	/** @var array<string> */
 	private $_modulesAvailable = array('Dispatch', 'Purchase', 'Order', 'Picking', 'Shipment', 'Inventory', 'Remove', 'InventoryPlus', 'ManufactureOrder', 'Prospect');
 
 	/** Constructor
@@ -58,13 +60,13 @@ class ExtDirectAuthenticate extends ExtDirect
 	 * Ext.direct method to create app generated uuid and name in dolibarr system. System
 	 * will have to asign user and acknowledge id (access key) to the application, which can be read afterwards
 	 *
-	 * @param unknown_type $params object or object array with with 'requestid' connection requestor identifcation
+	 * @param array<stdClass>|stdClass $params array with with 'requestid' connection requestor identifcation
 	 *                             'app_id' app uuid
 	 *                             'app_name' app name
 	 *                             'dev_platform' device platform
 	 *                             'dev_type' device version
 	 *
-	 * @return return mixed stdClass  or int <0 if error
+	 * @return array<stdClass>|stdClass|int|string return data or error number/message
 	 */
 	public function createAuthentication($params)
 	{
@@ -86,7 +88,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -96,7 +98,7 @@ class ExtDirectAuthenticate extends ExtDirect
 	 * @param   stdClass    $param  filter with elements:
 	 *                              app_id  app_id of application to get authentication info from
 	 *                              ack_id  access key to get authentication info and start a login session
-	 * @return return mixed stdClass if success or int <0 if error
+	 * @return stdClass|int|string result data or error number/message
 	 */
 	public function readAuthentication(stdClass $param)
 	{
@@ -202,18 +204,18 @@ class ExtDirectAuthenticate extends ExtDirect
 	/**
 	 * Ext.direct method to update authorisation details.
 	 *
-	 * @param unknown_type $param parameter
+	 * @param array<stdClass>|stdClass $params parameter
 	 *
-	 * @return return  int PARAMETERERROR
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
-	public function updateAuthentication($param)
+	public function updateAuthentication($params)
 	{
 		global $conf;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		// dolibarr update settings
 
-		$paramArray = ExtDirect::toArray($param);
+		$paramArray = ExtDirect::toArray($params);
 		foreach ($paramArray as &$param) {
 			// prepare fields
 			if ($param->id && !empty($param->ack_id)) {
@@ -250,18 +252,18 @@ class ExtDirectAuthenticate extends ExtDirect
 				return PARAMETERERROR;
 			}
 		}
-		if (is_array($param)) {
+		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to delete application uuid entry.
 	 *
-	 * @param unknown_type $params with app id
-	 * @return return mixed stdClass or int <0 if error
+	 * @param array<stdClass>|stdClass $params with app id
+	 * @return array<stdClass>|stdClass|string result data or error message
 	 */
 	public function destroyAuthentication($params)
 	{
@@ -280,7 +282,7 @@ class ExtDirectAuthenticate extends ExtDirect
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 

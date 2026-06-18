@@ -38,8 +38,12 @@ dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
  */
 class ExtDirectShipmentPackage extends ShipmentPackage
 {
+
+	/** @var User|null Dolibarr user object */
 	private $_user;
+	/** @var array<string> used constants */
 	private $_shipmentPackageConstants = array();
+	/** @var bool true if order module is enabled and user has read rights */
 	private $_enabled = false;
 
 	/**
@@ -57,7 +61,11 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->shipmentpackage->enabled) && isset($user->rights->shipmentpackage->shipmentpackage->read);
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
@@ -87,7 +95,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	 *	@param			stdClass	$params		filter with elements
 	 *		                                    constant	name of specific constant
 	 *
-	 *	@return			stdClass result data with specific constant value
+	 *	@return			array<stdClass>|stdClass|int|string result data with specific constant value or error number/message
 	 */
 	public function readConstants(stdClass $params)
 	{
@@ -102,7 +110,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * public method to read available optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionalModel()
 	{
@@ -117,7 +125,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id Id of shipmentpackage to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -175,9 +183,9 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -194,17 +202,17 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -214,9 +222,9 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -232,15 +240,15 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to Create ShipmentPackage
 	 *
-	 * @param unknown_type $param object or object array with object record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with object record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extCreate($param)
 	{
@@ -260,7 +268,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
@@ -269,7 +277,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	 *
 	 *    @param    stdClass    $params     filter with elements:
 	 *                                      id Id of object to load
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extRead(stdClass $params)
 	{
@@ -310,8 +318,8 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * Ext.direct method to update
 	 *
-	 * @param unknown_type $param object or object array with record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extUpdate($param)
 	{
@@ -367,15 +375,15 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy shipmentpackage
 	 *
-	 * @param unknown_type $param object or object array with record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extDestroy($param)
 	{
@@ -399,15 +407,15 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to upload file for shipmentpackage object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function fileUpload($params)
 	{
@@ -417,6 +425,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
 		$shipmentPackage = new ShipmentPackage($this->db);
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
@@ -442,7 +451,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	 * public method to read a list of shipments
 	 *
 	 * @param stdClass $params to filter on order status and ref
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extList(stdClass $params)
 	{
@@ -548,6 +557,8 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -600,7 +611,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * public method to read a list of statusses
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readStatus()
 	{
@@ -624,7 +635,7 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	/**
 	 * public method to read a list of contac types
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readContactTypes()
 	{

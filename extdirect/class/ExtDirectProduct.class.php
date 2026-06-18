@@ -42,13 +42,16 @@ dol_include_once('/extdirect/class/ExtDirectFormProduct.class.php');
  */
 class ExtDirectProduct extends ProductFournisseur
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
-	private $_enabled = false;
+	/** @var array<string> used constants */
 	private $_productConstants = array(
 		'PRODUCT_USE_SUPPLIER_PACKAGING',
 		'STOCK_ALLOW_NEGATIVE_TRANSFER', // V21-
 		'STOCK_DISALLOW_NEGATIVE_TRANSFER' // V22+
 	);
+	/** @var bool true if order module is enabled and user has read rights */
+	private $_enabled = false;
 
 	/**
 	 * parameters received from client
@@ -80,7 +83,11 @@ class ExtDirectProduct extends ProductFournisseur
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->product->enabled) && isset($user->rights->produit->lire);
 				$this->_user = $user;  //product.class uses global user
 				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
@@ -121,7 +128,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 * @param   stdClass    $params filter with elements
 	 *                              constant    name of specific constant
 	 *
-	 * @return  stdClass result data with specific constant value
+	 * @return  array<stdClass>|stdClass|int|string result data with specific constant value or error number/message
 	 */
 	public function readConstants(stdClass $params)
 	{
@@ -146,7 +153,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 *                                  batch_id            batch rowid of product
 	 *                                  ref_supplier        supplier reference code
 	 *                                  photo_size          string with foto size 'mini', 'small' or 'full'
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readProduct(stdClass $param)
 	{
@@ -166,6 +173,8 @@ class ExtDirectProduct extends ProductFournisseur
 		$refSupplierId = null;
 		$warehouse = null;
 		$socid = null;
+		/** @var Societe $customer */
+		$customer;
 		$multiprices_index = 1;
 
 		if (isset($param->filter)) {
@@ -512,7 +521,7 @@ class ExtDirectProduct extends ProductFournisseur
 	/**
 	 * public method to read available product optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionalModel()
 	{
@@ -528,7 +537,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 *                                  id                  Id of product to load
 	 *                                  batch               batch code of product for lot attributes
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -623,12 +632,12 @@ class ExtDirectProduct extends ProductFournisseur
 		return $results;
 	}
 
-	 /**
+	/**
 	 * public method to update product or lot optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -656,17 +665,17 @@ class ExtDirectProduct extends ProductFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add product or lot optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -676,9 +685,9 @@ class ExtDirectProduct extends ProductFournisseur
 	/**
 	 * public method to delete product or lot optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -705,7 +714,7 @@ class ExtDirectProduct extends ProductFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -715,7 +724,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id                  Id of product to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readAttributes(stdClass $param)
 	{
@@ -773,8 +782,8 @@ class ExtDirectProduct extends ProductFournisseur
 	/**
 	 * Ext.direct method to Create product
 	 *
-	 * @param unknown_type $params object or object array with product model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with product model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createProduct($params)
 	{
@@ -945,15 +954,15 @@ class ExtDirectProduct extends ProductFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update product
 	 *
-	 * @param unknown_type $params object or object array with product model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with product model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateProduct($params)
 	{
@@ -1326,15 +1335,15 @@ class ExtDirectProduct extends ProductFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy product
 	 *
-	 * @param unknown_type $params object or object array with product model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with product model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyProduct($params)
 	{
@@ -1381,7 +1390,7 @@ class ExtDirectProduct extends ProductFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -1399,7 +1408,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 *                          property sort with properties field names and directions:
 	 *                          property limit for paging with sql LIMIT and START values
 	 *
-	 * @return stdClass result data or -1
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readProductList(stdClass $param)
 	{
@@ -1603,6 +1612,8 @@ class ExtDirectProduct extends ProductFournisseur
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -1719,7 +1730,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 *                          property sort with properties field names and directions:
 	 *                          property limit for paging with sql LIMIT and START values
 	 *
-	 * @return     stdClass result data or ERROR
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readProductBatchList(stdClass $param)
 	{
@@ -1986,6 +1997,7 @@ class ExtDirectProduct extends ProductFournisseur
 		global $conf;
 
 		$id = array('product'=>0, 'supplier_product'=>0);
+		$barcodeTypes = array();
 		dol_syslog(get_class($this)."::fetch ".$table." id from barcode=".$barcode);
 		$formProduct = new ExtDirectFormProduct($this->db);
 		$barcodeTypeData = $formProduct->readBarcodeType(new stdClass);
@@ -2270,7 +2282,7 @@ class ExtDirectProduct extends ProductFournisseur
 	 * @param string    $base64JpegUrl  base64 encoded jpeg data
 	 * @param int       $index          index number for multiple photo
 	 *
-	 * @return > 0 photo accepted < 0 photo not accepted
+	 * @return int > 0 photo accepted < 0 photo not accepted
 	 */
 	public function addBase64Jpeg($base64JpegUrl, $index = 1)
 	{
@@ -2345,6 +2357,7 @@ class ExtDirectProduct extends ProductFournisseur
 	{
 		$barcodeType = '';
 		$barcode = '';
+		$barcodeTypes = array();
 
 		$formProduct = new ExtDirectFormProduct($this->db);
 		$barcodeTypeData = $formProduct->readBarcodeType(new stdClass);
@@ -2354,10 +2367,10 @@ class ExtDirectProduct extends ProductFournisseur
 
 		if (!empty($object->supplier_barcode)) {
 			$barcode = $object->supplier_barcode;
-			$barcodeType = $barcodeTypes[$object->supplier_fk_barcode_type];
+			$barcodeType = (!empty($barcodeTypes[$object->supplier_fk_barcode_type]) ? $barcodeTypes[$object->supplier_fk_barcode_type] : '');
 		} else {
 			$barcode = $object->barcode;
-			$barcodeType = $barcodeTypes[$object->barcode_type];
+			$barcodeType = (!empty($barcodeTypes[$object->barcode_type]) ? $barcodeTypes[$object->barcode_type] : '');
 		}
 
 		if ($barcodeType == 'UPC') {

@@ -32,6 +32,7 @@ dol_include_once('/extdirect/class/extdirectactivity.class.php');
  */
 class ExtDirectActivities extends ExtDirectActivity
 {
+	/** @var User */
 	private $_user;
 
 	private $_mainConstants = array(
@@ -48,7 +49,11 @@ class ExtDirectActivities extends ExtDirectActivity
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
 					$langs->setDefaultLang($this->_user->conf->MAIN_LANG_DEFAULT);
@@ -67,12 +72,12 @@ class ExtDirectActivities extends ExtDirectActivity
 	/**
 	 * Ext.direct method to store an app activity in dolibarr system.
 	 *
-	 * @param unknown_type $params  object or object array with with 'activity_name' name of app activity to register
+	 * @param array<stdClass>|stdClass $params  object or object array with with 'activity_name' name of app activity to register
 	 *                              'activity_id' related dolibarr item id (ex product or customer order)
 	 *                              'datec' datetime of activity
 	 *                              'status' current status of activity (ex BUSY, DONE, CANCEL, VALIDATE)
 	 *
-	 * @return return mixed stdClass  or int <0 if error
+	 * @return array<stdClass>|stdClass|int  return data or error number
 	 */
 	public function createActivity($params)
 	{
@@ -88,7 +93,7 @@ class ExtDirectActivities extends ExtDirectActivity
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -99,7 +104,7 @@ class ExtDirectActivities extends ExtDirectActivity
 	 *                              app_id          app_id of application to get authentication info from
 	 *                              activity_name   name of app activity to register
 	 *                              activity_id     related dolibarr item id (ex product or customer order)
-	 * @return return mixed stdClass if success or int <0 if error
+	 * @return array<stdClass>|stdClass|int  return data or error number
 	 */
 	public function readActivities(stdClass $param)
 	{
@@ -120,7 +125,7 @@ class ExtDirectActivities extends ExtDirectActivity
 		}
 
 		// check if server user is set, if not return empty result
-		if (($resql = $this->fetchList($listfilter, 'rowid')) < 0) return $resql;
+		if (($result = $this->fetchList($listfilter, 'rowid')) < 0) return $result;
 		if (! empty($this->dataset)) {
 			foreach ($this->dataset as $data) {
 				$row = new stdClass;
@@ -141,9 +146,9 @@ class ExtDirectActivities extends ExtDirectActivity
 	/**
 	 * Ext.direct method to update authorisation details, update not possible.
 	 *
-	 * @param unknown_type $params parameter
+	 * @param array<stdClass>|stdClass $params parameter
 	 *
-	 * @return return  int PARAMETERERROR
+	 * @return int PARAMETERERROR
 	 */
 	public function updateActivity($params)
 	{
@@ -153,8 +158,8 @@ class ExtDirectActivities extends ExtDirectActivity
 	/**
 	 * Ext.direct method to delete application uuid entry.
 	 *
-	 * @param unknown_type $params na
-	 * @return return int PARAMETERERROR
+	 * @param array<stdClass>|stdClass $params parameter
+	 * @return int PARAMETERERROR
 	 */
 	public function destroyActivity($params)
 	{
@@ -181,7 +186,7 @@ class ExtDirectActivities extends ExtDirectActivity
 	/**
 	 * private method to copy order fields into dolibarr object
 	 *
-	 * @param stdclass $params na
+	 * @param stdClass $params parameter
 	 * @return null
 	 */
 	private function prepareActivityFields($params)

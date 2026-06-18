@@ -32,14 +32,16 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectContact extends Contact
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
+	/** @var bool true if order module is enabled and user has read rights */
 	private $_enabled = false;
 
 	/**
 	 * constructor
 	 *
 	 * @param string $login user name
-	 * @return number
+	 * @return void
 	 */
 	public function __construct($login)
 	{
@@ -47,7 +49,11 @@ class ExtDirectContact extends Contact
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->societe->enabled) && isset($user->rights->societe->contact->lire);
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
@@ -68,7 +74,7 @@ class ExtDirectContact extends Contact
 	 *    Load contact from database into memory
 	 *
 	 *    @param    stdClass    $params filter[]->property->id  Id's of contacts to load
-	 *    @return     stdClass result data or error string
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readContact(stdClass $params)
 	{
@@ -150,7 +156,7 @@ class ExtDirectContact extends Contact
 	/**
 	 * public method to read available contact optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionalModel()
 	{
@@ -165,7 +171,7 @@ class ExtDirectContact extends Contact
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id  Id of contact to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -222,9 +228,9 @@ class ExtDirectContact extends Contact
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -240,17 +246,16 @@ class ExtDirectContact extends Contact
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -260,9 +265,9 @@ class ExtDirectContact extends Contact
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -277,7 +282,7 @@ class ExtDirectContact extends Contact
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -358,6 +363,8 @@ class ExtDirectContact extends Contact
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -416,8 +423,8 @@ class ExtDirectContact extends Contact
 	/**
 	 * Ext.direct create method
 	 *
-	 * @param unknown_type $params  object or object array with contact model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params  object or object array with contact model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createContact($params)
 	{
@@ -436,15 +443,15 @@ class ExtDirectContact extends Contact
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct update method
 	 *
-	 * @param unknown_type $params object or object array with contact model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params object or object array with contact model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateContact($params)
 	{
@@ -472,15 +479,15 @@ class ExtDirectContact extends Contact
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy data
 	 *
-	 * @param unknown_type $params   object or object array with contact model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $params   object or object array with contact model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyContact($params)
 	{
@@ -504,15 +511,15 @@ class ExtDirectContact extends Contact
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to upload image file for contact object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return null|array|int   ExtDirect response message
 	 */
 	public function fileUpload($params)
 	{
@@ -521,6 +528,7 @@ class ExtDirectContact extends Contact
 		if (!isset($this->_user->rights->societe->contact->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {

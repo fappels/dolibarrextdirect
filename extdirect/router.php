@@ -42,12 +42,21 @@ if (version_compare(phpversion(), '7.3', '>=')) {
 
 /** Action class
  * class to execute extdirect functions
+ *
+ * @property string $action
+ * @property string $method
+ * @property mixed $data
+ * @property int|string|null $tid
  */
 class BogusAction
 {
+	/** @var string */
 	public $action;
+	/** @var string */
 	public $method;
+	/** @var mixed */
 	public $data;
+	/** @var int|string|null */
 	public $tid;
 }
 
@@ -80,7 +89,7 @@ if (empty($rawData) || empty($data)) {
  *
  * @param Object $cdata remote call and it's data
  *
- * @return Array result array
+ * @return array result array
  */
 function doRpc($cdata)
 {
@@ -194,9 +203,9 @@ function doRpc($cdata)
 /**
  * loop through methods
  *
- * @param pointer $fns method(s)
- * @param pointer $cdata parameters
- * @param pointer $returnData return parameter
+ * @param callable|array $fns method(s)
+ * @param mixed          $cdata parameters
+ * @param mixed|null     $returnData return parameter
  * @return void
  */
 function doAroundCalls(&$fns, &$cdata, &$returnData = null)
@@ -216,9 +225,9 @@ function doAroundCalls(&$fns, &$cdata, &$returnData = null)
 /**
  * Security: Return true if OK, false otherwise.
  *
- * @param       unknown_type        $var       Object/Array to check
- * @param       int     $type       1=GET, 0=POST, 2=PHP_SELF
- * @return      boolean                 false if ther is an injection
+ * @param       array|object|string	$var	Object/Array/String to check
+ * @param       int					$type	1=GET, 0=POST, 2=PHP_SELF
+ * @return      boolean                 false if there is an injection
  */
 function object_analyse_sql_and_script(&$var, $type)
 {

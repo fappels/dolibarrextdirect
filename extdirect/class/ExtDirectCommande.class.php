@@ -36,11 +36,15 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectCommande extends Commande
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
+	/** @var array<string> used constants */
 	private $_orderConstants = array('STOCK_MUST_BE_ENOUGH_FOR_ORDER',
 		'STOCK_CALCULATE_ON_VALIDATE_ORDER',
 		'STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO');
+	/** @var bool true if order module is enabled and user has read rights */
 	private $_enabled = false;
+	/** @var array<int, array<string, mixed>> cache for product stock status */
 	private $_productstat_cache = array();
 
 	/**
@@ -78,7 +82,11 @@ class ExtDirectCommande extends Commande
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->commande->enabled) && isset($user->rights->commande->lire);
 				$this->_user = $user;  //commande.class uses global user
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
@@ -106,7 +114,7 @@ class ExtDirectCommande extends Commande
 	 *	@param			stdClass    $params		filter with elements
 	 *                                          constant    name of specific constant
 	 *
-	 *	@return			stdClass result data with specific constant value
+	 *	@return			array<stdClass> result data with specific constant value
 	 */
 	public function readConstants(stdClass $params)
 	{
@@ -130,7 +138,7 @@ class ExtDirectCommande extends Commande
 	 *                                      id  Id of order to load
 	 *                                      ref ref, ref_int
 	 *
-	 *    @return     stdClass result data or error number
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function readOrder(stdClass $params)
 	{
@@ -262,7 +270,7 @@ class ExtDirectCommande extends Commande
 	/**
 	* public method to read available optionals (extra fields)
 	*
-	* @return stdClass result data or ERROR
+	* @return array<stdClass>|int result data or error number
 	*/
 	public function readOptionalModel()
 	{
@@ -277,7 +285,7 @@ class ExtDirectCommande extends Commande
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id  Id of order to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -334,9 +342,9 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass   $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -352,17 +360,17 @@ class ExtDirectCommande extends Commande
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -372,9 +380,9 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -389,15 +397,15 @@ class ExtDirectCommande extends Commande
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to Create Order
 	 *
-	 * @param unknown_type $param object or object array with product model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with product model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOrder($param)
 	{
@@ -417,15 +425,15 @@ class ExtDirectCommande extends Commande
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update order
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOrder($param)
 	{
@@ -445,7 +453,11 @@ class ExtDirectCommande extends Commande
 				// update
 				switch ($params->orderstatus_id) {
 					case -1:
-						$result = $this->cancel();
+						if (ExtDirect::checkDolVersion(0, '', '22.0')) {
+							$result = $this->cancel();
+						} else {
+							$result = $this->cancel($this->_user);
+						}
 						break;
 					case 0:
 						if (ExtDirect::checkDolVersion(0, '10.0', '')) {
@@ -630,15 +642,15 @@ class ExtDirectCommande extends Commande
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy order
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOrder($param)
 	{
@@ -660,7 +672,7 @@ class ExtDirectCommande extends Commande
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
@@ -698,7 +710,7 @@ class ExtDirectCommande extends Commande
 	 * public method to read a list of orders
 	 *
 	 * @param stdClass $params to filter on order status and ref
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOrderList(stdClass $params)
 	{
@@ -841,6 +853,8 @@ class ExtDirectCommande extends Commande
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -961,7 +975,7 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to read a list of orderstatusses
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readOrderStatus()
 	{
@@ -985,7 +999,7 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to read a list of contac types
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readContactTypes()
 	{
@@ -1009,7 +1023,7 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to read a list of availability codes
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readAvailabilityCodes()
 	{
@@ -1052,7 +1066,7 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to read a list of shipping modes
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readShipmentModes()
 	{
@@ -1096,7 +1110,7 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to read a list of incoterm codes
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readIncotermCodes()
 	{
@@ -1134,8 +1148,8 @@ class ExtDirectCommande extends Commande
 	/**
 	 * Ext.direct method to upload file for order object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return null|array|int   ExtDirect response message
 	 */
 	public function fileUpload($params)
 	{
@@ -1144,6 +1158,7 @@ class ExtDirectCommande extends Commande
 		if (!isset($this->_user->rights->commande->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
@@ -1238,7 +1253,7 @@ class ExtDirectCommande extends Commande
 	 *                                      only_product only lines with physical product
 	 *                                      is_sub_product include sub products
 	 *
-	 *    @return     stdClass result data or error number
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOrderLine(stdClass $params)
 	{
@@ -1563,7 +1578,7 @@ class ExtDirectCommande extends Commande
 	/**
 	* public method to read available line optionals (extra fields)
 	*
-	* @return stdClass result data or ERROR
+	* @return array<stdClass>|int result data or error number
 	*/
 	public function readLineOptionalModel()
 	{
@@ -1580,7 +1595,7 @@ class ExtDirectCommande extends Commande
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id  Id of order to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function readLineOptionals(stdClass $param)
 	{
@@ -1639,9 +1654,9 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param     unknown_type    $params  optionals
+	 *    @param     array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function updateLineOptionals($params)
 	{
@@ -1661,16 +1676,16 @@ class ExtDirectCommande extends Commande
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function createLineOptionals($params)
 	{
@@ -1680,9 +1695,9 @@ class ExtDirectCommande extends Commande
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param     unknown_type    $params  optionals
+	 *    @param     array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|int|string result data or error number/message
 	 */
 	public function destroyLineOptionals($params)
 	{
@@ -1701,15 +1716,15 @@ class ExtDirectCommande extends Commande
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to Create Orderlines
 	 *
-	 * @param unknown_type $param object or object array with product model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with product model(s)
+	 * @return array<stdClass>|int|string result data or error number/message
 	 */
 	public function createOrderLine($param)
 	{
@@ -1810,15 +1825,15 @@ class ExtDirectCommande extends Commande
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update orderlines
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|int|string result data or error number/message
 	 */
 	public function updateOrderLine($param)
 	{
@@ -1916,15 +1931,15 @@ class ExtDirectCommande extends Commande
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy orderlines
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|int|string result data or error number/message
 	 */
 	public function destroyOrderLine($param)
 	{
@@ -1963,7 +1978,7 @@ class ExtDirectCommande extends Commande
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
@@ -1972,7 +1987,7 @@ class ExtDirectCommande extends Commande
 	 *
 	 * @param stdclass $params object with fields
 	 * @param stdclass $orderLine object
-	 * @return @return boolean $diff true if changed
+	 * @return boolean $diff true if changed
 	 */
 	private function prepareOrderLineFields($params, $orderLine)
 	{
