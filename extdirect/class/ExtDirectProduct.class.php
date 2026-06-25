@@ -2412,6 +2412,7 @@ class ExtDirectProduct extends ProductFournisseur
 			$product_id = $this->id;
 			$this->get_sousproduits_arbo();
 			if (isset($this->sousprods)) {
+				$qty_shipped = $row->qty_shipped;
 				$prods_arbo = $this->get_arbo_each_prod($row->qty_asked);
 				if (count($prods_arbo) > 0) {
 					$rowId = $row->id;
@@ -2426,7 +2427,7 @@ class ExtDirectProduct extends ProductFournisseur
 						$row->product_label = $value['label'];
 						$row->label = $rowLabel.' -> '.$value['fullpath'];
 						$row->qty_asked = $value['nb_total'];
-						$row->qty_shipped *= $value['nb'];
+						$row->qty_shipped = $qty_shipped * $value['nb'];
 						$row->stock = $value['stock'];
 						$row->has_photo = 0;
 						$subProduct = new Product($this->db);
