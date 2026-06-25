@@ -869,6 +869,7 @@ class ExtDirectInventory extends Inventory
 		$contentfilter = null;
 		$object = new Inventory($this->db);
 		$product = new ExtDirectProduct($this->_user->login);
+		$lineId = 0;
 
 		$includeTotal = true;
 
@@ -896,6 +897,7 @@ class ExtDirectInventory extends Inventory
 				} elseif ($filter->property == 'batch') $batch = $filter->value;
 				elseif ($filter->property == 'photo_size' && !empty($filter->value)) $photoSize = $filter->value;
 				elseif ($filter->property == 'content' && !empty($filter->value)) $contentfilter = $filter->value;
+				elseif ($filter->property == 'id' && !empty($filter->value)) $lineId = $filter->value;
 			}
 		}
 
@@ -908,6 +910,9 @@ class ExtDirectInventory extends Inventory
 				$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product as p ON id.fk_product = p.rowid';
 			}
 			$sqlWhere = ' WHERE id.fk_inventory = '.((int) $origin_id);
+			if ($lineId > 0) {
+				$sqlWhere .= ' AND id.rowid = '.((int) $lineId);
+			}
 			if ($warehouse_id > 0) {
 				$sqlWhere .= ' AND id.fk_warehouse = '.((int) $warehouse_id);
 			}
@@ -924,6 +929,13 @@ class ExtDirectInventory extends Inventory
 
 			$sqlOrder = ' ORDER BY id.rowid';
 			if ($limit) {
+				if (isset($params->sort)) {
+					foreach ($params->sort as $sort) {
+						if ($sort->property == 'warehouse_id') {
+							$sqlOrder = ' ORDER BY id.fk_warehouse, id.rowid';
+						}
+					}
+				}
 				$sqlLimit = $this->db->plimit($limit, $start);
 			} else {
 				$sqlLimit = '';
