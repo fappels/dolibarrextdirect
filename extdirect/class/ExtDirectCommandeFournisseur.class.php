@@ -482,7 +482,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					$reception = new Reception($this->db);
 					$reception->fetch($params->reception_id);
 					if ($reception->id && $params->receptionstatus_id == Reception::STATUS_VALIDATED) {
-						$reception->valid($this->_user);
+						if (($result = $reception->valid($this->_user)) < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
 					}
 				}
 				if ($orderUpdated) {
@@ -993,7 +993,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			if (!$this->error) {
 				$receptionLines = array();
 				if (!empty($conf->reception->enabled) && ExtDirect::checkDolVersion(0, '18.0')) {
-					// use reception mode
+					// use reception mode and find a draft reception for adding lines
 					require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
 					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 						dol_include_once('/fourn/class/fournisseur.commande.dispatch.class.php');
@@ -1004,7 +1004,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					}
 					$dispatchedLines = $this->getDispachedLines();
 					foreach ($dispatchedLines as $dispatchedLine) {
-						$receptionLines[$dispatchedLine['orderlineid']] = $dispatchedLine['id'];
+						$dispatch->fetch($dispatchedLine['id']);
+						if ($dispatch->fk_reception) {
+							$reception = new Reception($this->db);
+							$reception->fetch($dispatch->fk_reception);
+							if ($reception->status == Reception::STATUS_DRAFT) {
+								$receptionLines[$dispatchedLine['orderlineid']] = $dispatchedLine['id'];
+								break;
+							}
+						}
+
 					}
 				}
 				foreach ($this->lines as $line) {
@@ -1130,14 +1139,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 								$row->unit_id = $line->fk_unit;
 								if (isset($receptionLines[$line->id])) {
-									$dispatch->fetch($receptionLines[$line->id]);
-									if ($dispatch->fk_reception) {
-										$reception = new Reception($this->db);
-										$reception->fetch($dispatch->fk_reception);
-										$row->receptionstatus_id = $reception->status;
-										$row->reception_id = $dispatch->fk_reception;
-										$row->receptionline_id = $receptionLines[$line->id];
-									}
+									$row->receptionstatus_id = $reception->status;
+									$row->reception_id = $reception->id;
+									$row->receptionline_id = $receptionLines[$line->id];
 								}
 								array_push($results, $row);
 							} else {
@@ -1219,14 +1223,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 								$row->unit_id = $line->fk_unit;
 								if (isset($receptionLines[$line->id])) {
-									$dispatch->fetch($receptionLines[$line->id]);
-									if ($dispatch->fk_reception) {
-										$reception = new Reception($this->db);
-										$reception->fetch($dispatch->fk_reception);
-										$row->receptionstatus_id = $reception->status;
-										$row->reception_id = $dispatch->fk_reception;
-										$row->receptionline_id = $receptionLines[$line->id];
-									}
+									$row->receptionstatus_id = $reception->status;
+									$row->reception_id = $reception->id;
+									$row->receptionline_id = $receptionLines[$line->id];
 								}
 								if (empty($batchId)) {
 									if (empty($batch)) {
@@ -1320,14 +1319,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									}
 									$row->unit_id = $line->fk_unit;
 									if (isset($receptionLines[$line->id])) {
-										$dispatch->fetch($receptionLines[$line->id]);
-										if ($dispatch->fk_reception) {
-											$reception = new Reception($this->db);
-											$reception->fetch($dispatch->fk_reception);
-											$row->receptionstatus_id = $reception->status;
-											$row->reception_id = $dispatch->fk_reception;
-											$row->receptionline_id = $receptionLines[$line->id];
-										}
+										$row->receptionstatus_id = $reception->status;
+										$row->reception_id = $reception->id;
+										$row->receptionline_id = $receptionLines[$line->id];
 									}
 									if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
 										if (empty($batchId)) {
@@ -1779,26 +1773,44 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$result = $reception->update($this->_user);
 										if ($result < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
 									}
-									// reception addline
-									$lineIndex = $reception->addline(
-										$params->warehouse_id,
-										$orderLine->id,
-										($params->qty_received > 0)? $params->qty_received : $params->qty_shipped,
-										$orderLine->array_options,
-										$params->comment,
-										isset($params->eatby) ? ExtDirect::dateTimeToDate($params->eatby) : '',
-										isset($params->sellby) ? ExtDirect::dateTimeToDate($params->sellby): '',
-										$params->batch,
-										$cost_price
-									);
-									if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
-									// create dispatch from line created by addline
-									$result = $reception->lines[$lineIndex]->create($this->_user);
-									if ($result < 0) {
-										return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+									$dispatchLine = null;
+									if (!empty($params->receptionline_id)) {
+										// Update reception line qty if line target warehouse and batch number are the same
+										if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+											dol_include_once('/fourn/class/fournisseur.commande.dispatch.class.php');
+											$dispatchLine = new CommandeFournisseurDispatch($this->db);
+										} else {
+											dol_include_once('/reception/class/receptionlinebatch.class.php');
+											$dispatchLine = new ReceptionLineBatch($this->db);
+										}
+										$dispatchLine->fetch($params->receptionline_id);
+									}
+									if ($dispatchLine !== null && $dispatchLine->id > 0 && $dispatchLine->fk_entrepot == $params->warehouse_id && $dispatchLine->batch == $params->batch && $dispatchLine->comment == $params->comment && $dispatchLine->fk_user == $this->_user->id) {
+										$dispatchLine->qty += ($params->qty_received > 0) ? $params->qty_received : $params->qty_shipped;
+										$result = $dispatchLine->update($this->_user);
+										if ($result < 0) return ExtDirect::getDolError($result, $dispatchLine->errors, $dispatchLine->error);
 									} else {
-										$params->receptionline_id = $result;
-										$params->reception_id = $reception->id;
+										// reception addline
+										$lineIndex = $reception->addline(
+											$params->warehouse_id,
+											$orderLine->id,
+											($params->qty_received > 0)? $params->qty_received : $params->qty_shipped,
+											$orderLine->array_options,
+											$params->comment,
+											isset($params->eatby) ? ExtDirect::dateTimeToDate($params->eatby) : '',
+											isset($params->sellby) ? ExtDirect::dateTimeToDate($params->sellby): '',
+											$params->batch,
+											$cost_price
+										);
+										if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
+										// create dispatch from line created by addline
+										$result = $reception->lines[$lineIndex]->create($this->_user);
+										if ($result < 0) {
+											return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+										} else {
+											$params->receptionline_id = $result;
+											$params->reception_id = $reception->id;
+										}
 									}
 								} else {
 									// use dispatch mode
