@@ -725,6 +725,7 @@ class ExtDirectCommande extends Commande
 		$contactTypeId = 0;
 		$barcode = null;
 		$contentFilter = null;
+		$billed = null;
 
 		$includeTotal = true;
 
@@ -752,6 +753,7 @@ class ExtDirectCommande extends Commande
 				elseif ($filter->property == 'contact_id') $contactId = $filter->value;
 				elseif ($filter->property == 'barcode') $barcode = $filter->value;
 				elseif ($filter->property == 'content') $contentFilter = $filter->value;
+				elseif ($filter->property == 'billed') $billed = (int) $filter->value;
 			}
 		}
 
@@ -767,7 +769,7 @@ class ExtDirectCommande extends Commande
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level";
-		$sqlFields .= ", c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, c.fk_shipping_method, u.firstname, u.lastname";
+		$sqlFields .= ", c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, c.fk_shipping_method, u.firstname, u.lastname, c.facture as billed";
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
@@ -815,6 +817,9 @@ class ExtDirectCommande extends Commande
 		if ($contentFilter) {
 			$fields = array('c.ref', 'c.ref_client', 's.nom', 'u.firstname', 'u.lastname', 'p.ref');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+		if ($billed !== null) {
+			$sqlWhere .= " AND c.facture = ".$billed;
 		}
 
 		$sqlOrder = " ORDER BY ";
