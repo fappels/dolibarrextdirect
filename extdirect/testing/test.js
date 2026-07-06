@@ -2176,7 +2176,7 @@ describe("shipment", function () {
 				trueHeight: .2,
 				note_private: 'connectortest private',
 				note_public: 'connectortest public',
-				tracking_number: 'connectortest tracking',
+				tracking_number: 'connectortesttracking',
 				deliver_date: Ext.Date.format(new Date(), 'U')
 			};
 			shipment = Ext.create('ConnectorTest.model.Shipment');
@@ -2325,7 +2325,7 @@ describe("shipment", function () {
 			expect(testresults).toContain(shipmentRef);
 			expect(testresults).toContain('connectortest public');
 			expect(testresults).toContain('connectortest private');
-			expect(testresults).toContain('connectortest tracking');
+			expect(testresults).toContain('connectortesttracking');
 			expect(testresults).toContain(1);
 			expect(testresults).toContain(2);
 			expect(testresults).toContain('location incoterms');
