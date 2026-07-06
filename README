@@ -166,6 +166,7 @@ For client File uploads create an upload fieldset like below, set extTID field v
 - https://github.com/fappels/dolibarr-shipmentpackage
 - Manufacture orders
 - Inventories
+- Receptions
 
 
 > New classes will be added.
@@ -190,4 +191,4 @@ Demo data from dev/initdemo should work. Add two multiprice levels and a string 
 **Supported Dolibarr Versions:**
 
 - Min version:	6.0
-- Max version:	23.0
+- Max version:	24.0
