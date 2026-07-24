@@ -1412,12 +1412,15 @@ class ExtDirectProduct extends ProductFournisseur
 	 */
 	public function readProductList(stdClass $param)
 	{
-		global $conf, $langs;
+		global $conf, $langs, $hookmanager;
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectproductreadproductlist'));
+		$parameters = array('filter' => $param->filter);
+		$action = 'readProductList';
 
 		$filterSize = 0;
 		$limit=null;
@@ -1488,6 +1491,12 @@ class ExtDirectProduct extends ProductFournisseur
 				$sqlFields .= ', pcp.price as customer_price, pcp.price_ttc as customer_price_ttc';
 			}
 		}
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'product as p';
 		if ($warehouseFilter || !empty($conf->multicompany->enabled)) {
 			if (in_array(0, $checkWarehouseIds) || empty($checkWarehouseIds)) {
@@ -1531,6 +1540,12 @@ class ExtDirectProduct extends ProductFournisseur
 		}
 		if (! empty($conf->global->PRODUIT_CUSTOMER_PRICES) && ! empty($socid)) {
 			$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'product_customer_price as pcp ON p.rowid = pcp.fk_product AND pcp.fk_soc = '.$socid;
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
 		}
 		$sqlWhere = ' WHERE p.entity IN ('.getEntity('product', 1).')';
 		if ($filterSize > 0) {
@@ -1587,6 +1602,12 @@ class ExtDirectProduct extends ProductFournisseur
 				}
 			}
 			$sqlWhere .= ')';
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 		$sqlOrder = " ORDER BY ";
 		if (isset($param->sort)) {

@@ -301,13 +301,16 @@ class ExtDirectContact extends Contact
 	 */
 	public function readContactList(stdClass $params)
 	{
-		global $conf,$langs;
+		global $conf,$langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectcontactreadcontactlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readContactList';
 		$filterSize = 0;
 		$includeTotal = true;
 
@@ -322,8 +325,20 @@ class ExtDirectContact extends Contact
 			$includeTotal = $params->include_total;
 		}
 		$sqlFields = 'SELECT c.rowid as id, s.rowid as company_id, s.nom as companyname, c.lastname, c.firstname,c.zip as zip, c.town as town, c.statut';
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'socpeople as c';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON c.fk_soc = s.rowid';
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = ' WHERE c.entity IN ('.getEntity($this->element).')';
 		if ($filterSize > 0) {
 			// TODO improve sql command to allow random property type
@@ -345,6 +360,12 @@ class ExtDirectContact extends Contact
 				}
 			}
 			$sqlWhere .= ')';
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 		$sqlOrder = " ORDER BY ";
 		if (isset($params->sort)) {

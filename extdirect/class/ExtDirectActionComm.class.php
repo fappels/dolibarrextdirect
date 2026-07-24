@@ -274,13 +274,16 @@ class ExtDirectActionComm extends ActionComm
 	 */
 	public function readActionList(stdClass $params)
 	{
-		global $conf,$langs;
+		global $conf,$langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectactioncommreadactionlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readActionList';
 
 		$filterSize = 0;
 		$includeTotal = true;
@@ -297,10 +300,22 @@ class ExtDirectActionComm extends ActionComm
 		}
 
 		$sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_actioncomm as ac ON a.fk_action = ac.id';
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = ' WHERE a.entity IN ('.getEntity('agenda').')';
 		if ($filterSize > 0) {
 			// TODO improve sql command to allow random property type
@@ -326,6 +341,12 @@ class ExtDirectActionComm extends ActionComm
 				}
 			}
 			$sqlWhere .= ')';
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 		$sqlOrder = " ORDER BY ";
 		if (isset($params->sort)) {
