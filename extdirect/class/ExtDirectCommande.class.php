@@ -714,11 +714,16 @@ class ExtDirectCommande extends Commande
 	 */
 	public function readOrderList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectcommandereadorderlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readOrderList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -770,6 +775,12 @@ class ExtDirectCommande extends Commande
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.fk_statut, c.ref_ext, c.fk_availability, ea.status, s.price_level";
 		$sqlFields .= ", c.ref_client, c.fk_user_author, c.total_ttc, c.date_livraison, c.date_commande, c.fk_shipping_method, u.firstname, u.lastname, c.facture as billed";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
@@ -779,7 +790,7 @@ class ExtDirectCommande extends Commande
 			if ($barcode) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cd.fk_product AND pl.batch = '".$this->db->escape($barcode)."'";
 		}
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."element_contact as ec ON c.rowid = ec.element_id";
-		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
+				$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status for commande to check if locked
 		$sqlFrom.= "   SELECT ma.activity_id, ma.maxrow AS rowid, ea.status";
 		$sqlFrom.= "   FROM (";
 		$sqlFrom.= "    SELECT MAX( rowid ) AS maxrow, activity_id";
@@ -788,6 +799,12 @@ class ExtDirectCommande extends Commande
 		$sqlFrom.= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
 		$sqlFrom.= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom.= " ) AS ea ON c.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = " WHERE c.entity IN (".getEntity('commande', 1).')';
 		$sqlWhere .= " AND c.fk_soc = s.rowid";
 
@@ -820,6 +837,13 @@ class ExtDirectCommande extends Commande
 		}
 		if ($billed !== null) {
 			$sqlWhere .= " AND c.facture = ".$billed;
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";
