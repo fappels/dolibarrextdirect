@@ -455,11 +455,16 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 	 */
 	public function extList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->shipmentpackage->shipmentpackage->read)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectshipmentpackageextlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'extList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -490,6 +495,12 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, ep.rowid, ep.ref, ep.status, ep.ref_supplier, ea.activity_status, ep.date_creation";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "societe as s, " . MAIN_DB_PREFIX . "expedition_package as ep";
 		if ($contactTypeId > 0) $sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec ON ep.rowid = ec.element_id";
 		if ($originId) {
@@ -505,6 +516,12 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		$sqlFrom .= "   ) AS ma, " . MAIN_DB_PREFIX . "extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON ep.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = " WHERE ep.entity IN (" . getEntity($this->table_element) . ')';
 		$sqlWhere .= " AND ep.fk_soc = s.rowid";
 
@@ -527,6 +544,13 @@ class ExtDirectShipmentPackage extends ShipmentPackage
 		if ($contentFilter) {
 			$fields = array('ep.ref', 'ep.ref_supplier', 's.nom');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";

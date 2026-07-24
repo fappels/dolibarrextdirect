@@ -452,12 +452,17 @@ class ExtDirectReception extends Reception
 	 */
 	public function extList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->reception->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 		$rows = array();
+		$hookmanager->initHooks(array('extdirectreceptionextlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'extList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -492,6 +497,12 @@ class ExtDirectReception extends Reception
 		}
 
 		$sqlFields = "SELECT r.rowid, r.ref, r.ref_supplier, r.fk_soc, s.nom as company_name, r.fk_statut as status_id, r.date_creation, r.date_reception, r.date_delivery, r.tracking_number, ea.activity_status";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "reception as r";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "societe as s ON r.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ("; // get latest extdirect activity status to check if locked
@@ -506,6 +517,12 @@ class ExtDirectReception extends Reception
 		if ($origin_id) {
 			$sqlFrom .= " INNER JOIN " . MAIN_DB_PREFIX . "element_element as el ON el.fk_target = r.rowid AND el.fk_source = " . ((int) $origin_id);
 			$sqlFrom .= " AND el.sourcetype = 'order_supplier' AND el.targettype = '" . $this->db->escape($this->element) . "'";
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
 		}
 		$sqlFromNotForTotal = "";
 		$sqlWhere = " WHERE r.entity IN (" . getEntity($this->element) . ')';
@@ -531,6 +548,13 @@ class ExtDirectReception extends Reception
 		if ($contentFilter) {
 			$fields = array('r.ref', 'r.ref_supplier', 's.nom');
 			$sqlWhere .= " AND " . natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";

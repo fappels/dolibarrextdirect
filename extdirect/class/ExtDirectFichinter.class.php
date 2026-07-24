@@ -518,11 +518,16 @@ class ExtDirectFichinter extends Fichinter
 	 */
 	public function readList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->ficheinter->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectfichinterreadlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -555,6 +560,12 @@ class ExtDirectFichinter extends Fichinter
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, i.rowid, i.ref, i.description, i.fk_statut, ea.status, s.price_level, i.fk_user_author, i.datec, u.firstname, u.lastname";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."fichinter as i";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON i.fk_user_author = u.rowid";
@@ -568,6 +579,12 @@ class ExtDirectFichinter extends Fichinter
 		$sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON i.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = " WHERE i.entity IN (".getEntity('fichinter', 1).')';
 
 		if ($statusFilterCount>0) {
@@ -592,6 +609,13 @@ class ExtDirectFichinter extends Fichinter
 		if ($contentFilter) {
 			$fields = array('i.ref', 'i.description', 's.nom', 'u.firstname', 'u.lastname');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY i.datec DESC";

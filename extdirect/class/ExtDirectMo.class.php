@@ -518,12 +518,17 @@ class ExtDirectMo extends Mo
 	 */
 	public function extList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->mrp->read)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 		$rows = array();
+		$hookmanager->initHooks(array('extdirectmoextlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'extList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -571,6 +576,12 @@ class ExtDirectMo extends Mo
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, mo.rowid, mo.ref, mo.status, bom.ref as ref_bom, p.ref as ref_product, ea.activity_status, mo.date_start_planned, mol.role, mol.qty, mo.qty as product_qty";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "mrp_mo as mo";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "societe as s ON mo.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "bom_bom as bom ON mo.fk_bom = bom.rowid";
@@ -589,6 +600,12 @@ class ExtDirectMo extends Mo
 		$sqlFrom .= "   ) AS ma, " . MAIN_DB_PREFIX . "extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON mo.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlFromNotForTotal = " LEFT JOIN " . MAIN_DB_PREFIX . "mrp_production as mol ON mol.fk_mo = mo.rowid";
 		$sqlWhere = " WHERE mo.entity IN (" . getEntity($this->table_element) . ')';
 		$sqlWhereNotForTotal = " AND mol.role IN ('toproduce','produced')";
@@ -618,6 +635,13 @@ class ExtDirectMo extends Mo
 		if ($contentFilter) {
 			$fields = array('mo.ref', 'p.ref', 's.nom');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";

@@ -609,13 +609,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 */
 	public function readOrderList(stdClass $params)
 	{
-		global $langs;
+		global $langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectcommandefournisseurreadorderlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readOrderList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -656,6 +659,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date, u.firstname, u.lastname";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
@@ -677,6 +686,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON c.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = " WHERE c.entity IN (".getEntity('order_supplier', 1).')';
 		$sqlWhere .= " AND c.fk_soc = s.rowid";
 
@@ -713,6 +728,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if ($contentFilter) {
 			$fields = array('c.ref', 'c.ref_supplier', 's.nom', 'u.firstname', 'u.lastname', 'p.ref');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";

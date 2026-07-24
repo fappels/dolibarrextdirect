@@ -594,12 +594,17 @@ class ExtDirectInventory extends Inventory
 	 */
 	public function extList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->stock->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 		$rows = array();
+		$hookmanager->initHooks(array('extdirectinventoryextlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'extList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -630,6 +635,12 @@ class ExtDirectInventory extends Inventory
 		}
 
 		$sqlFields = "SELECT inv.rowid, inv.ref, inv.title, inv.status,e.rowid as warehouse_id, e.ref as ref_warehouse, p.rowid as product_id, p.ref as ref_product, ea.activity_status, inv.date_inventory, inv.date_validation";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "inventory as inv";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "entrepot as e ON inv.fk_warehouse = e.rowid";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "product as p ON inv.fk_product = p.rowid";
@@ -642,6 +653,12 @@ class ExtDirectInventory extends Inventory
 		$sqlFrom .= "   ) AS ma, " . MAIN_DB_PREFIX . "extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON inv.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlFromNotForTotal = "";
 		$sqlWhere = " WHERE inv.entity IN (" . getEntity($this->element) . ')';
 		$sqlWhereNotForTotal = "";
@@ -665,6 +682,13 @@ class ExtDirectInventory extends Inventory
 		if ($contentFilter) {
 			$fields = array('inv.ref', 'p.ref', 'inv.title');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";

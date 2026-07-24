@@ -370,13 +370,16 @@ class ExtDirectSociete extends Societe
 	 */
 	public function readSocieteList(stdClass $params)
 	{
-		global $conf,$langs;
+		global $conf,$langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectsocietereadsocietelist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readSocieteList';
 		$filterSize = 0;
 		$limit=null;
 		$start=0;
@@ -396,12 +399,24 @@ class ExtDirectSociete extends Societe
 		$sqlFields = 'SELECT s.rowid, s.nom as name, s.ref_ext, s.zip, s.town, s.fk_prospectlevel, s.logo, s.entity, code_client, code_fournisseur';
 		$sqlFields .= ', st.libelle as commercial_status';
 		$sqlFields .= ', c.rowid as categorie_id, c.label as categorie, s.fk_stcomm';
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'societe as s';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_stcomm as st ON s.fk_stcomm = st.id';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie_societe as cs ON s.rowid = cs.fk_soc';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'categorie as c ON c.rowid = cs.fk_categorie';
 		if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
 			$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe_commerciaux as sc ON s.rowid = sc.fk_soc';
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
 		}
 		$sqlWhere = ' WHERE s.entity IN ('.getEntity('societe', 1).')';
 		if (!isset($this->_user->rights->societe->client->voir) && $this->_user->id > 0) {
@@ -447,6 +462,12 @@ class ExtDirectSociete extends Societe
 				}
 			}
 			$sqlWhere .= ')';
+		}
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 		$sqlOrder = " ORDER BY ";
 		if (isset($params->sort)) {
