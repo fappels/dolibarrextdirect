@@ -1073,6 +1073,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 							$myprod->fetch_barcode();
 						} else {
+							$myprod = new ExtDirectProduct($this->_user->login);
 							$isFreeLine = true;
 						}
 						if (ExtDirect::checkDolVersion(0, '', '18.0') && $line->product_type == 1) {
@@ -1088,8 +1089,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->is_virtual_stock = false;
 								$row->origin_id = $this->id;
 								$row->origin_line_id = $line->id;
-								$row->label = $line->product_label;
-								$row->description = $line->description;
+								$row->label = (!empty($line->product_label) ? $line->product_label : $line->desc);
+								$row->description = $line->desc;
 								$row->product_id = $line->fk_product;
 								$row->ref = $line->product_ref;
 								$row->product_label = $line->product_label;
@@ -1174,7 +1175,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->origin_id = $this->id;
 								$row->origin_line_id = $line->id;
 								$row->label = $line->product_label;
-								$row->description = $line->description;
+								$row->description = $line->desc;
 								$row->product_id = $line->fk_product;
 								$row->ref = $line->product_ref;
 								$row->product_label = $line->product_label;
@@ -1275,7 +1276,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->origin_id = $this->id;
 									$row->origin_line_id = $line->id;
 									$row->label = $line->product_label;
-									$row->description = $line->description;
+									$row->description = $line->desc;
 									$row->product_id = $line->fk_product;
 									$row->ref = $line->product_ref;
 									$row->product_label = $line->product_label;
