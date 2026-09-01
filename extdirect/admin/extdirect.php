@@ -92,6 +92,9 @@ if (!$error) {
 	} elseif ($action == 'userights') {
 		$userights = GETPOST('userights', 'alpha');
 		$res = dolibarr_set_const($db, "DIRECTCONNECT_USE_RIGHTS", $userights, 'yesno', 0, '', $conf->entity);
+	} elseif ($action == 'disablesortablewarehouselabels') {
+		$disableSortableWarehouseLabels = GETPOST('disable_sortable_warehouselabels', 'alpha');
+		$res = dolibarr_set_const($db, "DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS", $disableSortableWarehouseLabels, 'yesno', 0, '', $conf->entity);
 	} elseif ($action == "save" && empty($refresh)) {
 		$i=0;
 
@@ -249,6 +252,21 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<td>'.$langs->trans("UseUserRightsToAllowModules").'</td>';
 	print '<td width="60" align="right">';
 	print $form->selectyesno("userights", $conf->global->DIRECTCONNECT_USE_RIGHTS, 1);
+	print '</td><td align="right">';
+	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
+	print '</td>';
+	print '</tr>';
+	print '</form>';
+
+	// disable sortable numeric warehouse labels
+	$var = $var ? 0 : 1;
+	print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+	print '<input type="hidden" name="action" value="disablesortablewarehouselabels">';
+	print '<tr '.$bc[$var].'>';
+	print '<td>'.$langs->trans("DisableSortableWarehouseLabels").'</td>';
+	print '<td width="60" align="right">';
+	print $form->selectyesno("disable_sortable_warehouselabels", $conf->global->DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS, 1);
 	print '</td><td align="right">';
 	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
 	print '</td>';

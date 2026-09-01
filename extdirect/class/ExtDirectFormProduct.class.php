@@ -139,7 +139,7 @@ class ExtDirectFormProduct extends FormProduct
 			$res = $this->extLoadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin, $limit, $start);
 		}
 
-		$this->_makeNumericLabelSortable();
+		if (empty($conf->global->DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS)) $this->_makeNumericLabelSortable();
 
 		if ($start == 0 && !in_array(0, $exclude)) {
 			// create allwarehouse record with total warehouse stock, only for first page
