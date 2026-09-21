@@ -11,12 +11,38 @@ if (!defined('NOREQUIREAJAX'))      define('NOREQUIREAJAX', '1');
 if (!defined('NOLOGIN'))            define('NOLOGIN', '1');          // If this page is public (can be called outside logged session)
 if (!defined('NOREQUIRETRAN'))      define('NOREQUIRETRAN', '1');    // no load of main translations, because we do not know user lang yet
 
+// CORS: the mobile app (cordova) is not loaded from file:// anymore, so it calls this router cross-origin.
+// Only the listed origins are allowed (cordova scheme://hostname preferences), credentials are needed for the session cookie.
+$corsAllowedOrigins = array('http://localhost', 'https://localhost');
+$corsOrigin = '';
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+	header('Vary: Origin');
+	if (in_array($_SERVER['HTTP_ORIGIN'], $corsAllowedOrigins, true)) {
+		$corsOrigin = $_SERVER['HTTP_ORIGIN'];
+	}
+}
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+	// preflight, answer without loading dolibarr
+	if ($corsOrigin) {
+		extDirectSendCorsHeaders($corsOrigin);
+		header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+		if (!empty($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
+			header('Access-Control-Allow-Headers: ' . preg_replace('/[^A-Za-z0-9\-, ]/', '', $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']));
+		}
+		header('Access-Control-Max-Age: 600');
+	}
+	http_response_code(204);
+	exit;
+}
+extDirectSendCorsHeaders($corsOrigin);
+
 // Change this following line to use the correct relative path (../, ../../, etc)
 $res=0;
 if (! $res && file_exists("../main.inc.php")) $res=@include "../main.inc.php";
 if (! $res && file_exists("../../main.inc.php")) $res=@include "../../main.inc.php" ;
 if (! $res && file_exists("../../../main.inc.php")) $res=@include "../../../main.inc.php";
 if (! $res) die("Include of main fails");
+extDirectSendCorsHeaders($corsOrigin); // again, main.inc.php may have replaced Access-Control-Allow-Origin
 dol_include_once("/core/class/translate.class.php");
 dol_include_once("/extdirect/class/extdirect.class.php");
 require 'config.php';
@@ -24,19 +50,29 @@ $debugData = '[]';
 $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
+// main.inc.php already queued a (SameSite=Lax, not partitioned) session cookie, remove it otherwise the browser gets 2 cookies with the same name
+header_remove('Set-Cookie');
 if (version_compare(phpversion(), '7.3', '>=')) {
 	$site_cookie_samesite = ini_get('session.cookie_samesite');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
 	session_abort();
 	browserHasNoSamesite() ? $sessionParam = array('samesite' => null) : $sessionParam = array('samesite' => 'None');
 	requestIsHTTPS() ? $sessionParam['secure'] = 1 : $sessionParam['secure'] = 0;
+	if (requestIsHTTPS()) {
+		// partitioned (CHIPS) cookies require secure, PHP < 8.5 has no partitioned option so append the attribute to the path
+		if (version_compare(phpversion(), '8.5', '>=')) {
+			$sessionParam['partitioned'] = true;
+		} else {
+			$sessionParam['path'] = '/; Partitioned';
+		}
+	}
 	session_set_cookie_params($sessionParam);
 	session_start();
 } else {
 	$site_cookie_samesite = 'NA';
 	$site_cookie_secure = ini_get('session.cookie_secure');
 	session_abort();
-	session_set_cookie_params(0, (browserHasNoSamesite() ? '/' : '/; samesite=None'), null, (requestIsHTTPS() ? true : false), true);
+	session_set_cookie_params(0, (browserHasNoSamesite() ? '/' : '/; samesite=None') . (requestIsHTTPS() ? '; Partitioned' : ''), null, (requestIsHTTPS() ? true : false), true);
 	session_start();
 }
 
@@ -250,6 +286,20 @@ function object_analyse_sql_and_script(&$var, $type)
 		} else {
 			return (testSqlAndScriptInject($var, $type) <= 0);
 		}
+	}
+}
+
+/**
+ * Send the CORS headers for an allowed origin
+ *
+ * @param	string	$origin		Allowed origin, empty if request origin is not allowed
+ * @return	void
+ */
+function extDirectSendCorsHeaders($origin)
+{
+	if ($origin) {
+		header('Access-Control-Allow-Origin: ' . $origin);
+		header('Access-Control-Allow-Credentials: true');
 	}
 }
 
