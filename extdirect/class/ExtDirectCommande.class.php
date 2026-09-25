@@ -252,6 +252,15 @@ class ExtDirectCommande extends Commande
 					$row->reduction = $this->remise;
 				}
 
+				if (!empty($this->_user->rights->fournisseur->lire) && !empty($conf->margin->enabled) && $this->_user->rights->margins->liretous) {
+					require_once DOL_DOCUMENT_ROOT.'/core/class/html.formmargin.class.php';
+					$formMargin = new FormMargin($this->db);
+					$marginInfos = $formMargin->getMarginInfosArray($this);
+					$row->total_margin = $marginInfos['total_margin'];
+					$row->total_margin_rate = $marginInfos['total_margin_rate'];
+					$row->total_mark_rate = $marginInfos['total_mark_rate'];
+				}
+
 				if (empty($orderstatus_ids)) {
 					array_push($results, $row);
 				} else {
@@ -1417,6 +1426,8 @@ class ExtDirectCommande extends Commande
 							}
 							$row->unit_id = $line->fk_unit;
 							(!empty($this->_user->rights->fournisseur->lire)) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
+							$row->margin_rate = $line->marge_tx;
+							$row->mark_rate = $line->marque_tx;
 							$row->is_sub_product = false;
 							if ($isService) {
 								$row->warehouse_id = -1; // service is not stocked
@@ -1508,6 +1519,8 @@ class ExtDirectCommande extends Commande
 							}
 							$row->unit_id = $line->fk_unit;
 							(!empty($this->_user->rights->fournisseur->lire)) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
+							$row->margin_rate = $line->marge_tx;
+							$row->mark_rate = $line->marque_tx;
 							// split orderlines by batch
 							if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
 							$row->is_sub_product = false;
@@ -1583,6 +1596,8 @@ class ExtDirectCommande extends Commande
 								}
 								$row->unit_id = $line->fk_unit;
 								(!empty($this->_user->rights->fournisseur->lire)) ? $row->cost_price = $line->pa_ht : $row->cost_price = 0;
+								$row->margin_rate = $line->marge_tx;
+								$row->mark_rate = $line->marque_tx;
 								// split orderlines by batch
 								if (! empty($conf->productbatch->enabled)) $row->has_batch = $myprod->status_batch;
 								$row->is_sub_product = false;
