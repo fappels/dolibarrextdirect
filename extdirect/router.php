@@ -50,8 +50,12 @@ $debugData = '[]';
 $langs = new Translate('', $conf); // Needed because 'NOREQUIRETRAN' defined
 
 // a non CSRF cookie should be created but cookie needs to be secured
-// main.inc.php already queued a (SameSite=Lax, not partitioned) session cookie, remove it otherwise the browser gets 2 cookies with the same name
-header_remove('Set-Cookie');
+// main.inc.php already queued a (SameSite=Lax, not partitioned) session cookie.
+// On https remove it, otherwise the browser keeps 2 cookies with the same name (one partitioned, one not).
+// On plain http keep it: browsers reject SameSite=None without Secure, so the Lax cookie is the only one that survives there
+if (requestIsHTTPS()) {
+	header_remove('Set-Cookie');
+}
 if (version_compare(phpversion(), '7.3', '>=')) {
 	$site_cookie_samesite = ini_get('session.cookie_samesite');
 	$site_cookie_secure = ini_get('session.cookie_secure'); // site cookie info can be removed for production
