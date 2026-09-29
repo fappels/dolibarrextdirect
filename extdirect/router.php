@@ -62,7 +62,7 @@ if (version_compare(phpversion(), '7.3', '>=')) {
 	session_abort();
 	browserHasNoSamesite() ? $sessionParam = array('samesite' => null) : $sessionParam = array('samesite' => 'None');
 	requestIsHTTPS() ? $sessionParam['secure'] = 1 : $sessionParam['secure'] = 0;
-	if (requestIsHTTPS()) {
+	if (requestIsHTTPS() && !browserHasNoPartitioned()) {
 		// partitioned (CHIPS) cookies require secure, PHP < 8.5 has no partitioned option so append the attribute to the path
 		if (version_compare(phpversion(), '8.5', '>=')) {
 			$sessionParam['partitioned'] = true;
@@ -76,7 +76,7 @@ if (version_compare(phpversion(), '7.3', '>=')) {
 	$site_cookie_samesite = 'NA';
 	$site_cookie_secure = ini_get('session.cookie_secure');
 	session_abort();
-	session_set_cookie_params(0, (browserHasNoSamesite() ? '/' : '/; samesite=None') . (requestIsHTTPS() ? '; Partitioned' : ''), null, (requestIsHTTPS() ? true : false), true);
+	session_set_cookie_params(0, (browserHasNoSamesite() ? '/' : '/; samesite=None') . (requestIsHTTPS() && !browserHasNoPartitioned() ? '; Partitioned' : ''), null, (requestIsHTTPS() ? true : false), true);
 	session_start();
 }
 
@@ -349,6 +349,28 @@ function browserHasNoSamesite()
 	}
 
 	return $noSamesite;
+}
+
+/**
+ * Return if an old browser that rejects partitioned (CHIPS) cookies is connecting
+ * Chrome enabled CHIPS by default in version 114, older versions (seen on webview 95) reject the cookie.
+ * They do not block third party cookies either, so they do not need the partitioned attribute.
+ *
+ * @return	boolean		True if browser does not accept the Partitioned attribute
+ */
+function browserHasNoPartitioned()
+{
+	global $conf;
+
+	$noPartitioned = false;
+
+	if (!empty($conf->browser->version)) {
+		if ($conf->browser->name == 'chrome' && version_compare($conf->browser->version, '114.0.0.0', '<')) {
+			$noPartitioned = true;
+		}
+	}
+
+	return $noPartitioned;
 }
 
 $response = null;
