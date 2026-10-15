@@ -45,7 +45,9 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectCommandeFournisseur extends CommandeFournisseur
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
+	/** @var array<string> used constants */
 	private $_orderConstants = array('STOCK_CALCULATE_ON_SUPPLIER_BILL',
 		'STOCK_CALCULATE_ON_SUPPLIER_VALIDATE_ORDER',
 		'STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER',
@@ -54,6 +56,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		'STOCK_DISALLOW_NEGATIVE_TRANSFER',
 		'STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE',
 		'MAIN_MODULE_RECEPTION');
+	/** @var bool true if order module is enabled and user has read rights */
 	private $_enabled = false;
 
 	/**
@@ -88,7 +91,11 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->fournisseur->enabled) && isset($user->rights->fournisseur->commande->lire);
 				$this->_user = $user;  //commande.class uses global user
 				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
@@ -122,7 +129,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 * @param   stdClass    $params filter with elements
 	 *                              constant    name of specific constant
 	 *
-	 * @return  stdClass result data with specific constant value
+	 * @return  array<stdClass>|stdClass|int result data with specific constant value or error number
 	 */
 	public function readConstants(stdClass $params)
 	{
@@ -141,7 +148,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *                                      id  Id of order to load
 	 *                                      ref ref
 	 *
-	 *    @return     stdClass result data or error number
+	 *    @return     array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readOrder(stdClass $params)
 	{
@@ -243,7 +250,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to read available optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readOptionalModel()
 	{
@@ -258,7 +265,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id  Id of order to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -315,9 +322,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -326,24 +333,25 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if ($this->id != $param->object_id) return PARAMETERERROR;
+			if (($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			$this->array_options['options_'.$param->name] = $param->raw_value;
 		}
 		if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -353,9 +361,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -364,21 +372,22 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$paramArray = ExtDirect::toArray($params);
 
 		foreach ($paramArray as &$param) {
-			if (($this->id != $param->object_id && $result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if ($this->id != $param->object_id) return PARAMETERERROR;
+			if (($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		}
 		if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to Create Order
 	 *
-	 * @param unknown_type $param object or object array with product model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with product model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOrder($param)
 	{
@@ -398,15 +407,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update order
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOrder($param)
 	{
@@ -473,7 +482,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					$reception = new Reception($this->db);
 					$reception->fetch($params->reception_id);
 					if ($reception->id && $params->receptionstatus_id == Reception::STATUS_VALIDATED) {
-						$reception->valid($this->_user);
+						if (($result = $reception->valid($this->_user)) < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
 					}
 				}
 				if ($orderUpdated) {
@@ -494,15 +503,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy order
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOrder($param)
 	{
@@ -524,15 +533,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to upload file for supplier order object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return null|array|int   ExtDirect response message
 	 */
 	public function fileUpload($params)
 	{
@@ -541,6 +550,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (!isset($this->_user->rights->fournisseur->commande->creer)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
@@ -595,17 +605,20 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *
 	 * @param stdClass $params to filter on order status and ref
 	 *
-	 * @return stdClass result data or error number
+	 * @return array<stdClass>|stdClass|int result data or error number
 	 */
 	public function readOrderList(stdClass $params)
 	{
-		global $langs;
+		global $langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->fournisseur->commande->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectcommandefournisseurreadorderlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readOrderList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -614,6 +627,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$productId = null;
 		$supplierId = null;
 		$contentFilter = null;
+		$orderstatus_id = array();
+		$limit = 0;
+		$start = 0;
 
 		$includeTotal = true;
 
@@ -643,6 +659,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, c.rowid, c.ref, c.ref_supplier, c.fk_statut, ea.status, cim.libelle as mode_label, cim.code as mode_code, c.fk_user_author, c.total_ttc, c.date_commande, c.date_livraison as delivery_date, u.firstname, u.lastname";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM ".MAIN_DB_PREFIX."commande_fournisseur as c";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON c.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON c.fk_user_author = u.rowid";
@@ -664,6 +686,12 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		$sqlFrom .= "   ) AS ma, ".MAIN_DB_PREFIX."extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON c.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = " WHERE c.entity IN (".getEntity('order_supplier', 1).')';
 		$sqlWhere .= " AND c.fk_soc = s.rowid";
 
@@ -700,6 +728,13 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if ($contentFilter) {
 			$fields = array('c.ref', 'c.ref_supplier', 's.nom', 'u.firstname', 'u.lastname', 'p.ref');
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
+		}
+
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
 		}
 
 		$sqlOrder = " ORDER BY ";
@@ -799,7 +834,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to read a list of orderstatusses
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|int result data or error number
 	 */
 	public function readOrderStatus()
 	{
@@ -822,7 +857,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to read a list of contac types
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|int result data or error number
 	 */
 	public function readContactTypes()
 	{
@@ -913,7 +948,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *                                      warehouse_id -1 will get total stock
 	 *                                      no warehouse_id will split lines in stock by warehouse
 	 *                                      photo_size string with foto size 'mini' or 'small'
-	 *    @return     stdClass result data or error number
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function readOrderLine(stdClass $params)
 	{
@@ -980,7 +1015,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			if (!$this->error) {
 				$receptionLines = array();
 				if (!empty($conf->reception->enabled) && ExtDirect::checkDolVersion(0, '18.0')) {
-					// use reception mode
+					// use reception mode and find a draft reception for adding lines
 					require_once DOL_DOCUMENT_ROOT.'/reception/class/reception.class.php';
 					if (ExtDirect::checkDolVersion(0, '', '19.0')) {
 						dol_include_once('/fourn/class/fournisseur.commande.dispatch.class.php');
@@ -991,7 +1026,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 					}
 					$dispatchedLines = $this->getDispachedLines();
 					foreach ($dispatchedLines as $dispatchedLine) {
-						$receptionLines[$dispatchedLine['orderlineid']] = $dispatchedLine['id'];
+						$dispatch->fetch($dispatchedLine['id']);
+						if ($dispatch->fk_reception) {
+							$reception = new Reception($this->db);
+							$reception->fetch($dispatch->fk_reception);
+							if ($reception->status == Reception::STATUS_DRAFT) {
+								$receptionLines[$dispatchedLine['orderlineid']] = $dispatchedLine['id'];
+								break;
+							}
+						}
+
 					}
 				}
 				foreach ($this->lines as $line) {
@@ -1029,6 +1073,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 							$myprod->fetch_barcode();
 						} else {
+							$myprod = new ExtDirectProduct($this->_user->login);
 							$isFreeLine = true;
 						}
 						if (ExtDirect::checkDolVersion(0, '', '18.0') && $line->product_type == 1) {
@@ -1044,8 +1089,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->is_virtual_stock = false;
 								$row->origin_id = $this->id;
 								$row->origin_line_id = $line->id;
-								$row->label = $line->product_label;
-								$row->description = $line->description;
+								$row->label = (!empty($line->product_label) ? $line->product_label : $line->desc);
+								$row->description = $line->desc;
 								$row->product_id = $line->fk_product;
 								$row->ref = $line->product_ref;
 								$row->product_label = $line->product_label;
@@ -1117,14 +1162,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 								$row->unit_id = $line->fk_unit;
 								if (isset($receptionLines[$line->id])) {
-									$dispatch->fetch($receptionLines[$line->id]);
-									if ($dispatch->fk_reception) {
-										$reception = new Reception($this->db);
-										$reception->fetch($dispatch->fk_reception);
-										$row->receptionstatus_id = $reception->status;
-										$row->reception_id = $dispatch->fk_reception;
-										$row->receptionline_id = $receptionLines[$line->id];
-									}
+									$row->receptionstatus_id = $reception->status;
+									$row->reception_id = $reception->id;
+									$row->receptionline_id = $receptionLines[$line->id];
 								}
 								array_push($results, $row);
 							} else {
@@ -1135,7 +1175,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								$row->origin_id = $this->id;
 								$row->origin_line_id = $line->id;
 								$row->label = $line->product_label;
-								$row->description = $line->description;
+								$row->description = $line->desc;
 								$row->product_id = $line->fk_product;
 								$row->ref = $line->product_ref;
 								$row->product_label = $line->product_label;
@@ -1206,14 +1246,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 								$row->unit_id = $line->fk_unit;
 								if (isset($receptionLines[$line->id])) {
-									$dispatch->fetch($receptionLines[$line->id]);
-									if ($dispatch->fk_reception) {
-										$reception = new Reception($this->db);
-										$reception->fetch($dispatch->fk_reception);
-										$row->receptionstatus_id = $reception->status;
-										$row->reception_id = $dispatch->fk_reception;
-										$row->receptionline_id = $receptionLines[$line->id];
-									}
+									$row->receptionstatus_id = $reception->status;
+									$row->reception_id = $reception->id;
+									$row->receptionline_id = $receptionLines[$line->id];
 								}
 								if (empty($batchId)) {
 									if (empty($batch)) {
@@ -1241,7 +1276,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->origin_id = $this->id;
 									$row->origin_line_id = $line->id;
 									$row->label = $line->product_label;
-									$row->description = $line->description;
+									$row->description = $line->desc;
 									$row->product_id = $line->fk_product;
 									$row->ref = $line->product_ref;
 									$row->product_label = $line->product_label;
@@ -1288,8 +1323,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->date_start = $line->date_start;
 									$row->date_end = $line->date_end;
 									// qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse);
-									$row->qty_toreceive = $row->qty_asked - $row->qty_shipped;
+									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse); // to get only qty shipped from this warehouse
+									$row->qty_toreceive = $row->qty_asked - $this->getDispatched($line->id, $line->fk_product); // to get total qty shipped from all warehouse to calculate qty to receive
 									$row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
 									if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 										$row->is_virtual_stock = true;
@@ -1307,14 +1342,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									}
 									$row->unit_id = $line->fk_unit;
 									if (isset($receptionLines[$line->id])) {
-										$dispatch->fetch($receptionLines[$line->id]);
-										if ($dispatch->fk_reception) {
-											$reception = new Reception($this->db);
-											$reception->fetch($dispatch->fk_reception);
-											$row->receptionstatus_id = $reception->status;
-											$row->reception_id = $dispatch->fk_reception;
-											$row->receptionline_id = $receptionLines[$line->id];
-										}
+										$row->receptionstatus_id = $reception->status;
+										$row->reception_id = $reception->id;
+										$row->receptionline_id = $receptionLines[$line->id];
 									}
 									if (!empty($myprod->stock_warehouse[$warehouse]->id) || $row->qty_shipped > 0) {
 										if (empty($batchId)) {
@@ -1356,7 +1386,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to read available line optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|int result data or error number
 	 */
 	public function readLineOptionalModel()
 	{
@@ -1373,7 +1403,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id Id of order to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|int|string result data or error number/message
 	 */
 	public function readLineOptionals(stdClass $param)
 	{
@@ -1432,9 +1462,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateLineOptionals($params)
 	{
@@ -1454,17 +1484,17 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createLineOptionals($params)
 	{
@@ -1474,9 +1504,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyLineOptionals($params)
 	{
@@ -1495,16 +1525,16 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to Create Orderlines
 	 *
-	 * @param unknown_type $param object or object array with product model(s)
+	 * @param array<stdClass>|stdClass $param object or object array with product model(s)
 	 *
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOrderLine($param)
 	{
@@ -1556,7 +1586,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
@@ -1587,9 +1617,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	/**
 	 * Ext.direct method to update orderlines
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
 	 *
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOrderLine($param)
 	{
@@ -1718,7 +1748,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 								}
 							}
 							// dispatch
-							if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0)) {
+							if (($this->statut == 3 || $this->statut == 4 || $this->statut == 5) && ($params->qty_shipped > 0 || $params->qty_received > 0)) {
 								if (!empty($this->_user->rights->fournisseur->lire) && isset($params->cost_price)) {
 									// updated in client
 									$cost_price = $params->cost_price;
@@ -1766,33 +1796,51 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 										$result = $reception->update($this->_user);
 										if ($result < 0) return ExtDirect::getDolError($result, $reception->errors, $reception->error);
 									}
-									// reception addline
-									$lineIndex = $reception->addline(
-										$params->warehouse_id,
-										$orderLine->id,
-										$params->qty_shipped,
-										$orderLine->array_options,
-										$params->comment,
-										isset($params->eatby) ? ExtDirect::dateTimeToDate($params->eatby) : '',
-										isset($params->sellby) ? ExtDirect::dateTimeToDate($params->sellby): '',
-										$params->batch,
-										$cost_price
-									);
-									if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
-									// create dispatch from line created by addline
-									$result = $reception->lines[$lineIndex]->create($this->_user);
-									if ($result < 0) {
-										return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+									$dispatchLine = null;
+									if (!empty($params->receptionline_id)) {
+										// Update reception line qty if line target warehouse and batch number are the same
+										if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+											dol_include_once('/fourn/class/fournisseur.commande.dispatch.class.php');
+											$dispatchLine = new CommandeFournisseurDispatch($this->db);
+										} else {
+											dol_include_once('/reception/class/receptionlinebatch.class.php');
+											$dispatchLine = new ReceptionLineBatch($this->db);
+										}
+										$dispatchLine->fetch($params->receptionline_id);
+									}
+									if ($dispatchLine !== null && $dispatchLine->id > 0 && $dispatchLine->fk_entrepot == $params->warehouse_id && $dispatchLine->batch == $params->batch && $dispatchLine->comment == $params->comment && $dispatchLine->fk_user == $this->_user->id) {
+										$dispatchLine->qty += ($params->qty_received > 0) ? $params->qty_received : $params->qty_shipped;
+										$result = $dispatchLine->update($this->_user);
+										if ($result < 0) return ExtDirect::getDolError($result, $dispatchLine->errors, $dispatchLine->error);
 									} else {
-										$params->receptionline_id = $result;
-										$params->reception_id = $reception->id;
+										// reception addline
+										$lineIndex = $reception->addline(
+											$params->warehouse_id,
+											$orderLine->id,
+											($params->qty_received > 0)? $params->qty_received : $params->qty_shipped,
+											$orderLine->array_options,
+											$params->comment,
+											isset($params->eatby) ? ExtDirect::dateTimeToDate($params->eatby) : '',
+											isset($params->sellby) ? ExtDirect::dateTimeToDate($params->sellby): '',
+											$params->batch,
+											$cost_price
+										);
+										if ($lineIndex < 0) return ExtDirect::getDolError($lineIndex, $reception->errors, $reception->error);
+										// create dispatch from line created by addline
+										$result = $reception->lines[$lineIndex]->create($this->_user);
+										if ($result < 0) {
+											return ExtDirect::getDolError($result, $reception->lines[$lineIndex]->errors, $reception->lines[$lineIndex]->error);
+										} else {
+											$params->receptionline_id = $result;
+											$params->reception_id = $reception->id;
+										}
 									}
 								} else {
 									// use dispatch mode
 									if (($result = $this->DispatchProduct(
 										$this->_user,
 										$orderLine->fk_product,
-										$params->qty_shipped,
+										($params->qty_received > 0)? $params->qty_received : $params->qty_shipped,
 										$params->warehouse_id,
 										$cost_price,
 										$params->comment,
@@ -1813,15 +1861,15 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy orderlines
 	 *
-	 * @param unknown_type $param object or object array with order model(s)
-	 * @return Ambigous <multitype:, unknown_type>|unknown
+	 * @param array<stdClass>|stdClass $param object or object array with order model(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOrderLine($param)
 	{
@@ -1867,7 +1915,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
@@ -1914,7 +1962,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *
 	 * @param stdclass $params object with fields
 	 * @param stdclass $orderLine object
-	 * @return null
+	 * @return bool true if fields updated, false if not
 	 */
 	private function prepareOrderLineFields($params, $orderLine)
 	{
@@ -1942,7 +1990,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *
 	 * @param stdclass $params object with fields
 	 * @param stdclass $prodSupplier object
-	 * @return null
+	 * @return bool true if fields updated, false if not
 	 */
 	private function prepareProdSupplierFields($params, $prodSupplier)
 	{
@@ -1961,7 +2009,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	 *
 	 * @param stdclass $params object with fields
 	 * @param stdclass $product object
-	 * @return null
+	 * @return bool true if fields updated, false if not
 	 */
 	private function prepareProductFields($params, $product)
 	{

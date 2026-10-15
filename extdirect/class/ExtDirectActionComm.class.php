@@ -33,15 +33,18 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectActionComm extends ActionComm
 {
+	/** @var User */
 	private $_user;
+	/** @var Societe */
 	private $_societe;
+	/** @var bool */
 	private $_enabled = false;
 
 	/**
 	 * constructor
 	 *
 	 * @param string $login user name
-	 * @return number
+	 * @return void
 	 */
 	public function __construct($login)
 	{
@@ -49,7 +52,11 @@ class ExtDirectActionComm extends ActionComm
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->agenda->enabled) && isset($user->rights->agenda->allactions->read);
 				$this->_user = $user;
 				if (isset($this->_user->conf->MAIN_LANG_DEFAULT)) {
@@ -191,9 +198,9 @@ class ExtDirectActionComm extends ActionComm
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return   array<stdClass>|stdClass|string result data or error message
 	 */
 	public function updateOptionals($params)
 	{
@@ -205,22 +212,22 @@ class ExtDirectActionComm extends ActionComm
 		foreach ($paramArray as &$param) {
 			if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 			$this->array_options['options_'.$param->name] = $param->raw_value;
+			if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		}
-		if (($result = $this->insertExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return   array<stdClass>|stdClass|string result data or error message
 	 */
 	public function createOptionals($params)
 	{
@@ -230,9 +237,9 @@ class ExtDirectActionComm extends ActionComm
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return   array<stdClass>|stdClass|string result data or error message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -243,12 +250,12 @@ class ExtDirectActionComm extends ActionComm
 
 		foreach ($paramArray as &$param) {
 			if ($this->id != $param->object_id && ($result = $this->fetch($param->object_id)) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
+			if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		}
-		if (($result = $this->deleteExtraFields()) < 0) return ExtDirect::getDolError($result, $this->errors, $this->error);
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
@@ -263,17 +270,20 @@ class ExtDirectActionComm extends ActionComm
 	 *                                      property sort with properties field names and directions:
 	 *                                      property limit for paging with sql LIMIT and START values
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     stdClass|int result data or error number
 	 */
 	public function readActionList(stdClass $params)
 	{
-		global $conf,$langs;
+		global $conf,$langs, $hookmanager;
 
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->societe->contact->lire)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
+		$hookmanager->initHooks(array('extdirectactioncommreadactionlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'readActionList';
 
 		$filterSize = 0;
 		$includeTotal = true;
@@ -290,10 +300,22 @@ class ExtDirectActionComm extends ActionComm
 		}
 
 		$sqlFields = 'SELECT a.id, a.label, a.datep, a.datep2 as datef, a.percent as percentage, s.nom as companyname, c.lastname, c.firstname, s.rowid as company_id, c.rowid as contact_id';
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = ' FROM '.MAIN_DB_PREFIX.'actioncomm as a';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'societe as s ON a.fk_soc = s.rowid';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'socpeople as c ON a.fk_contact = c.rowid';
 		$sqlFrom .= ' LEFT JOIN '.MAIN_DB_PREFIX.'c_actioncomm as ac ON a.fk_action = ac.id';
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlWhere = ' WHERE a.entity IN ('.getEntity('agenda').')';
 		if ($filterSize > 0) {
 			// TODO improve sql command to allow random property type
@@ -320,6 +342,12 @@ class ExtDirectActionComm extends ActionComm
 			}
 			$sqlWhere .= ')';
 		}
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
+		}
 		$sqlOrder = " ORDER BY ";
 		if (isset($params->sort)) {
 			$sorterSize = count($params->sort);
@@ -337,6 +365,8 @@ class ExtDirectActionComm extends ActionComm
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -388,7 +418,7 @@ class ExtDirectActionComm extends ActionComm
 		} else {
 			$error="Error ".$this->db->lasterror();
 			dol_syslog(get_class($this)."::readActionList ".$error, LOG_ERR);
-			return -1;
+			return SQLERROR;
 		}
 	}
 
@@ -397,8 +427,8 @@ class ExtDirectActionComm extends ActionComm
 	/**
 	 * Ext.direct create method
 	 *
-	 *    @param    stdClass    $params record to create
-	 *    @return   stdClass    result data or error number
+	 *    @param    array<stdClass>|stdClass    $params record to create
+	 *    @return   array<stdClass>|stdClass|string    result data or error message
 	 */
 	public function createAction($params)
 	{
@@ -427,15 +457,15 @@ class ExtDirectActionComm extends ActionComm
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct update method
 	 *
-	 *    @param        stdClass    $params record to update
-	 *    @return       stdClass    result data or error number
+	 *    @param        array<stdClass>|stdClass    $params record to update
+	 *    @return       array<stdClass>|stdClass|string    result data or error message
 	 */
 	public function updateAction($params)
 	{
@@ -468,15 +498,15 @@ class ExtDirectActionComm extends ActionComm
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct destroy method
 	 *
-	 *    @param        stdClass    $params record to destroy
-	 *    @return       stdClass    result data or error number
+	 *    @param        array<stdClass>|stdClass    $params record to destroy
+	 *    @return       array<stdClass>|stdClass|string    result data or error message
 	 */
 	public function destroyAction($params)
 	{
@@ -500,15 +530,15 @@ class ExtDirectActionComm extends ActionComm
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to upload file for actioncomm object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return null|array|int   ExtDirect response message
 	 */
 	public function fileUpload($params)
 	{
@@ -517,6 +547,7 @@ class ExtDirectActionComm extends ActionComm
 		if (!isset($this->_user->rights->agenda->myactions->create)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
@@ -540,7 +571,7 @@ class ExtDirectActionComm extends ActionComm
 	/**
 	 * Ext.directfn for getting all users who have a sales role
 	 *
-	 * @return stdClass array or error number
+	 * @return array<stdClass>|int array or error number
 	 */
 	public function getAllUsers()
 	{
@@ -573,7 +604,7 @@ class ExtDirectActionComm extends ActionComm
 		} else {
 			$this->error="Error ".$this->db->lasterror();
 			dol_syslog(get_class($this)."::getAllUsers ".$this->error, LOG_ERR);
-			return ExtDirect::getDolError(-1, $this->errors, $this->error);
+			return SQLERROR;
 		}
 	}
 

@@ -39,8 +39,14 @@ dol_include_once('/extdirect/class/ExtDirectProduct.class.php');
  */
 class ExtDirectMo extends Mo
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
-	private $_moConstants = array('STOCK_DISALLOW_NEGATIVE_TRANSFER');
+	/** @var array<string> used constants */
+	private $_moConstants = array(
+		'STOCK_ALLOW_NEGATIVE_TRANSFER', // V21-
+		'STOCK_DISALLOW_NEGATIVE_TRANSFER' // V22+
+	);
+	/** @var bool true if order module is enabled and user has read rights */
 	private $_enabled = false;
 	private $_productstock_cache = array();
 
@@ -89,7 +95,11 @@ class ExtDirectMo extends Mo
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
-				$user->getrights();
+				if (ExtDirect::checkDolVersion(0, '', '19.0')) {
+					$user->getrights();
+				} else {
+					$user->loadRights();
+				}
 				$this->_enabled = !empty($conf->mrp->enabled) && isset($user->rights->mrp->read);
 				$this->_user = $user;  //commande.class uses global user
 				if (ExtDirect::checkDolVersion(0, '', '21.0')) {
@@ -123,7 +133,7 @@ class ExtDirectMo extends Mo
 	 *	@param			stdClass	$params		filter with elements
 	 *		                                    constant	name of specific constant
 	 *
-	 *	@return			stdClass result data with specific constant value
+	 *	@return			array<stdClass>|stdClass|int|string result data with specific constant value or error number/message
 	 */
 	public function readConstants(stdClass $params)
 	{
@@ -138,7 +148,7 @@ class ExtDirectMo extends Mo
 	/**
 	 * public method to read available optionals (extra fields)
 	 *
-	 * @return stdClass result data or ERROR
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionalModel()
 	{
@@ -153,7 +163,7 @@ class ExtDirectMo extends Mo
 	 *    @param    stdClass    $param  filter with elements:
 	 *                                  id Id of object to load
 	 *
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readOptionals(stdClass $param)
 	{
@@ -211,9 +221,9 @@ class ExtDirectMo extends Mo
 	/**
 	 * public method to update optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function updateOptionals($params)
 	{
@@ -230,17 +240,17 @@ class ExtDirectMo extends Mo
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * public method to add optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
 	 *
-	 *    @return     Ambigous <multitype:, unknown_type>|unknown
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function createOptionals($params)
 	{
@@ -250,9 +260,9 @@ class ExtDirectMo extends Mo
 	/**
 	 * public method to delete optionals (extra fields) into database
 	 *
-	 *    @param    unknown_type    $params  optionals
+	 *    @param    array<stdClass>|stdClass    $params  optionals
 	 *
-	 *    @return    Ambigous <multitype:, unknown_type>|unknown
+	 *    @return    array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function destroyOptionals($params)
 	{
@@ -268,15 +278,15 @@ class ExtDirectMo extends Mo
 		if (is_array($params)) {
 			return $paramArray;
 		} else {
-			return $param;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to Create object
 	 *
-	 * @param unknown_type $param object or object array with record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extCreate($param)
 	{
@@ -295,7 +305,7 @@ class ExtDirectMo extends Mo
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
@@ -304,7 +314,7 @@ class ExtDirectMo extends Mo
 	 *
 	 *    @param    stdClass    $params     filter with elements:
 	 *                                      id Id of object to load
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extRead(stdClass $params)
 	{
@@ -346,7 +356,7 @@ class ExtDirectMo extends Mo
 				$row = $this->getData($object);
 				if ($customStatus) {
 					$this->getProducible($row, $object->qty);
-					$row->statusdisplay = html_entity_decode($this->LibStatut($row->status_id, false, 1));
+					$row->statusdisplay = html_entity_decode($this->LibStatut($row->status_id, 1));
 				}
 				array_push($results, $row);
 			} else {
@@ -360,8 +370,8 @@ class ExtDirectMo extends Mo
 	/**
 	 * Ext.direct method to update
 	 *
-	 * @param unknown_type $param object or object array with record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extUpdate($param)
 	{
@@ -428,15 +438,15 @@ class ExtDirectMo extends Mo
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy object
 	 *
-	 * @param unknown_type $param object or object array with record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extDestroy($param)
 	{
@@ -460,15 +470,15 @@ class ExtDirectMo extends Mo
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to upload file for object
 	 *
-	 * @param unknown_type $params object or object array with uploaded file(s)
-	 * @return Array    ExtDirect response message
+	 * @param array<stdClass>|stdClass $params object or object array with uploaded file(s)
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function fileUpload($params)
 	{
@@ -478,6 +488,7 @@ class ExtDirectMo extends Mo
 		$paramArray = ExtDirect::toArray($params);
 		$dir = null;
 		$object = new Mo($this->db);
+		$response = null;
 
 		foreach ($paramArray as &$param) {
 			if (isset($param['extTID'])) {
@@ -503,16 +514,21 @@ class ExtDirectMo extends Mo
 	 * public method to read a list of objects
 	 *
 	 * @param stdClass $params to filter on order status and ref
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extList(stdClass $params)
 	{
+		global $hookmanager;
+
 		if (!isset($this->db)) return CONNECTERROR;
 		if (!$this->_enabled) return NOTENABLEDERROR;
 		if (!isset($this->_user->rights->mrp->read)) return PERMISSIONERROR;
 		$result = new stdClass;
 		$data = array();
 		$rows = array();
+		$hookmanager->initHooks(array('extdirectmoextlist'));
+		$parameters = array('filter' => $params->filter);
+		$action = 'extList';
 
 		$statusFilterCount = 0;
 		$ref = null;
@@ -560,6 +576,12 @@ class ExtDirectMo extends Mo
 		}
 
 		$sqlFields = "SELECT s.nom, s.rowid AS socid, mo.rowid, mo.ref, mo.status, bom.ref as ref_bom, p.ref as ref_product, ea.activity_status, mo.date_start_planned, mol.role, mol.qty, mo.qty as product_qty";
+		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFields .= $hookmanager->resPrint;
+		}
 		$sqlFrom = " FROM " . MAIN_DB_PREFIX . "mrp_mo as mo";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "societe as s ON mo.fk_soc = s.rowid";
 		$sqlFrom .= " LEFT JOIN " . MAIN_DB_PREFIX . "bom_bom as bom ON mo.fk_bom = bom.rowid";
@@ -578,6 +600,12 @@ class ExtDirectMo extends Mo
 		$sqlFrom .= "   ) AS ma, " . MAIN_DB_PREFIX . "extdirect_activity AS ea";
 		$sqlFrom .= "   WHERE ma.maxrow = ea.rowid";
 		$sqlFrom .= " ) AS ea ON mo.rowid = ea.activity_id";
+		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlFrom .= $hookmanager->resPrint;
+		}
 		$sqlFromNotForTotal = " LEFT JOIN " . MAIN_DB_PREFIX . "mrp_production as mol ON mol.fk_mo = mo.rowid";
 		$sqlWhere = " WHERE mo.entity IN (" . getEntity($this->table_element) . ')';
 		$sqlWhereNotForTotal = " AND mol.role IN ('toproduce','produced')";
@@ -609,6 +637,13 @@ class ExtDirectMo extends Mo
 			$sqlWhere .= " AND ".natural_search($fields, $contentFilter, 0, 1);
 		}
 
+		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $this, $action); // Note that $action and $object may have been modified by hook
+		if ($reshook < 0) {
+			return ExtDirect::getDolError($reshook, $hookmanager->errors, $hookmanager->error);
+		} else {
+			$sqlWhere .= $hookmanager->resPrint;
+		}
+
 		$sqlOrder = " ORDER BY ";
 		if (isset($params->sort)) {
 			$sorterSize = count($params->sort);
@@ -635,6 +670,8 @@ class ExtDirectMo extends Mo
 
 		if ($limit) {
 			$sqlLimit = $this->db->plimit($limit, $start);
+		} else {
+			$sqlLimit = '';
 		}
 
 		if ($includeTotal) {
@@ -748,7 +785,7 @@ class ExtDirectMo extends Mo
 	/**
 	 * public method to read a list of statusses
 	 *
-	 * @return     stdClass result data or error number
+	 * @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function readStatus()
 	{
@@ -906,6 +943,10 @@ class ExtDirectMo extends Mo
 		$qtyToProduce = 0;
 		$qtyProduced = 0;
 		$productToConsume = array();
+		$qtyToConsume = array();
+		$qtyConsumed = array();
+		$qtyStockAvailableToProduce = array();
+		$qtyVirtualStockAvailableToProduce = array();
 		$this->id = $row->id;
 		if (ExtDirect::checkDolVersion(0, '16.0')) {
 			$this->getLinesArray();
@@ -1022,7 +1063,7 @@ class ExtDirectMo extends Mo
 	 *
 	 *    @param    stdClass    $params     filter with elements:
 	 *                                      origin_id   Id of object to load lines from
-	 *    @return     stdClass result data or -1
+	 *    @return     array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extReadLines(stdClass $params)
 	{
@@ -1138,8 +1179,8 @@ class ExtDirectMo extends Mo
 	 *
 	 * !!deliver $param sorted by origin_line_id
 	 *
-	 * @param unknown_type $param object or object array with line record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with manufacturing order line record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extCreateLines($param)
 	{
@@ -1167,15 +1208,15 @@ class ExtDirectMo extends Mo
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to update lines
 	 *
-	 * @param unknown_type $param object or object array with shipment record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with manufacturing order line record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extUpdateLines($param)
 	{
@@ -1185,6 +1226,7 @@ class ExtDirectMo extends Mo
 		if (!isset($this->_user->rights->mrp->write)) return PERMISSIONERROR;
 		$paramArray = ExtDirect::toArray($param);
 		$pos = 0;
+		$idstockmove = 0;
 		$object = new Mo($this->db);
 		foreach ($paramArray as &$params) {
 			// prepare fields
@@ -1264,15 +1306,15 @@ class ExtDirectMo extends Mo
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 
 	/**
 	 * Ext.direct method to destroy lines
 	 *
-	 * @param unknown_type $param object or object array with shipment record
-	 * @return result data or -1
+	 * @param array<stdClass>|stdClass $param object or object array with manufacturing order line record
+	 * @return array<stdClass>|stdClass|int|string result data or error number/message
 	 */
 	public function extDestroyLines($param)
 	{
@@ -1301,7 +1343,7 @@ class ExtDirectMo extends Mo
 		if (is_array($param)) {
 			return $paramArray;
 		} else {
-			return $params;
+			return $paramArray[0];
 		}
 	}
 

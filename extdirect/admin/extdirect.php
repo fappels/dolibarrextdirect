@@ -40,6 +40,11 @@ require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 dol_include_once("/extdirect/class/extdirect.class.php");
 dol_include_once("/extdirect/class/extdirectactivity.class.php");
 
+/**
+ * @var DoliDB $db Database handler
+ * @var array $bc Alternating background color for rows
+ */
+
 $langs->load("admin");
 $langs->load("extdirect@extdirect");
 
@@ -58,6 +63,8 @@ $mode=GETPOST('mode', 'alpha')?GETPOST('mode', 'alpha'):$authentication->mode;
 $action = GETPOST('action', 'alpha');
 $value = GETPOST('value', 'alpha');
 $refresh = GETPOST('refresh', 'alpha');
+$activityFilter = '';
+$userId = -1;
 
 $extDirect= new ExtDirect($db);
 if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
@@ -66,9 +73,6 @@ if (!$error && $mode == $activities->mode) {
 	$userId = GETPOST('userid', 'int');
 	if ($userId > 0) {
 		$activityFilter = ' AND ea.fk_user = ' . $userId;
-	} else {
-		$activityFilter = '';
-		$userId = -1;
 	}
 	$extDirectActivity = new ExtDirectActivity($db);
 	if ($extDirectActivity->fetchList($activityFilter, 'rowid ASC') < 0) $error++;
@@ -88,6 +92,9 @@ if (!$error) {
 	} elseif ($action == 'userights') {
 		$userights = GETPOST('userights', 'alpha');
 		$res = dolibarr_set_const($db, "DIRECTCONNECT_USE_RIGHTS", $userights, 'yesno', 0, '', $conf->entity);
+	} elseif ($action == 'disablesortablewarehouselabels') {
+		$disableSortableWarehouseLabels = GETPOST('disable_sortable_warehouselabels', 'alpha');
+		$res = dolibarr_set_const($db, "DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS", $disableSortableWarehouseLabels, 'yesno', 0, '', $conf->entity);
 	} elseif ($action == "save" && empty($refresh)) {
 		$i=0;
 
@@ -140,16 +147,16 @@ if (!$error) {
 		}
 		$extDirect->fetchList('', 'datec ASC');
 	} elseif ($action == 'clear' && empty($refresh)) {
-		if (! empty($extDirect->dataset)) {
+		if (! empty($extDirectActivity->dataset)) {
 			$db->begin();
-			foreach ($extDirect->dataset as $data) {
-				$extDirect->id=$data['rowid'];
+			foreach ($extDirectActivity->dataset as $data) {
+				$extDirectActivity->id=$data['rowid'];
 				//delete
-				$res = $extDirect->delete($user);
+				$res = $extDirectActivity->delete($user);
 				if (! $res > 0) $error++;
 			}
 		}
-		if ($extDirect->fetchList('', 'datec ASC') < 0) $error++;
+		if ($extDirectActivity->fetchList('', 'datec ASC') < 0) $error++;
 	} elseif (!ExtDirect::checkDolVersion(1) && empty($refresh)) {
 		// validate if dolibarr version is in compatibility range
 		if (($mesgText = $langs->trans("DolibarrCompatibilityError")) && ($mesgText != "DolibarrCompatibilityError")) {
@@ -194,7 +201,7 @@ if ($mode == $tabs['tab1']->mode) {
 	//tab1
 	print dol_get_fiche_head($head, 'tab1', $tabsTitle, 0);
 
-	$var=true;
+	$var=1;
 	print '<table class="noborder" width="100%">';
 	print '<tr class="liste_titre">';
 	print '<td>'.$langs->trans("Parameters").'</td>'."\n";
@@ -202,7 +209,7 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<td width="80">&nbsp;</td></tr>'."\n";
 
 	// autoasign activation/desactivation
-	$var=!$var;
+	$var = $var ? 0 : 1;
 	print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
 	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
 	print '<input type="hidden" name="action" value="autoasign">';
@@ -219,7 +226,7 @@ if ($mode == $tabs['tab1']->mode) {
 	if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
 		// select auto asigned user
 
-		$var=!$var;
+		$var = $var ? 0 : 1;
 		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
 		print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
 		print '<input type="hidden" name="action" value="autouser">';
@@ -237,7 +244,7 @@ if ($mode == $tabs['tab1']->mode) {
 	}
 
 	// use user rights for allowing modules on client
-	$var=!$var;
+	$var = $var ? 0 : 1;
 	print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
 	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
 	print '<input type="hidden" name="action" value="userights">';
@@ -251,13 +258,28 @@ if ($mode == $tabs['tab1']->mode) {
 	print '</tr>';
 	print '</form>';
 
+	// disable sortable numeric warehouse labels
+	$var = $var ? 0 : 1;
+	print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+	print '<input type="hidden" name="action" value="disablesortablewarehouselabels">';
+	print '<tr '.$bc[$var].'>';
+	print '<td>'.$langs->trans("DisableSortableWarehouseLabels").'</td>';
+	print '<td width="60" align="right">';
+	print $form->selectyesno("disable_sortable_warehouselabels", $conf->global->DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS, 1);
+	print '</td><td align="right">';
+	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
+	print '</td>';
+	print '</tr>';
+	print '</form>';
+
 	// asign users to app uuid
 
 	print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">';
 	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
 	print '<input type="hidden" name="action" value="save">';
 
-	$var=true;
+	$var=1;
 	print '<table class="noborder" width="100%">';
 	print '<tr class="liste_titre">';
 	print '<td>'.$langs->trans("RequestId").'</td>';
@@ -274,7 +296,7 @@ if ($mode == $tabs['tab1']->mode) {
 	if (! empty($extDirect->dataset)) {
 		$i=0;
 		foreach ($extDirect->dataset as $user_app) {
-			$var=!$var;
+			$var = $var ? 0 : 1;
 			$userId = ($user_app['fk_user']?$user_app['fk_user']:-1);
 			$extDirectStatic = new ExtDirect($db);
 			$extDirectStatic->requestid = $user_app['requestid'];
@@ -342,7 +364,7 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<td>'.$langs->trans("Value").'</td>'."\n";
 	print '<td></td><td></td><td></td><td></td><td></td><td></td></tr>'."\n";
 	// user refresh or clear
-	$var=!$var;
+	$var = $var ? 0 : 1;
 	print '<tr '.$bc[$var].'>';
 	print '<td>'.$langs->trans("ActivitiesFromUser").'</td>';
 	print '<td>';
@@ -372,7 +394,7 @@ if ($mode == $tabs['tab1']->mode) {
 	if (! empty($extDirectActivity->dataset)) {
 		$i=0;
 		foreach ($extDirectActivity->dataset as $data) {
-			$var=!$var;
+			$var = $var ? 0 : 1;
 			print '<tr '.$bc[$var].'>';
 			print '<td>'.$data['requestid'].'</td>';
 			print '<td>'.$data['app_name'].'</td>';
@@ -408,7 +430,7 @@ $db->close();
 /**
  *  Return array head with list of tabs to view object informations.
  *
- *  @param  Array   $tabs       tab names
+ *  @param  array   $tabs       tab names
  *  @param  Object  $langs      localize object
  *  @param  Object  $object     class object
  *  @return array               head array with tabs

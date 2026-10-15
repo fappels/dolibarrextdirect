@@ -31,6 +31,7 @@ dol_include_once('/extdirect/class/extdirect.class.php');
  */
 class ExtDirectFormProduct extends FormProduct
 {
+	/** @var User|null Dolibarr user object */
 	private $_user;
 
 	const ALLWAREHOUSE_ID = 0;
@@ -42,7 +43,7 @@ class ExtDirectFormProduct extends FormProduct
 	/** Constructor
 	 *
 	 * @param string $login user name
-	 * @return number
+	 * @return void
 	 *
 	 */
 	public function __construct($login)
@@ -101,6 +102,7 @@ class ExtDirectFormProduct extends FormProduct
 		$start = 0;
 		$contentValue = '';
 		$statusFilter = 'warehouseopen, warehouseinternal';
+		$total = 0;
 
 		$includeTotal = false; // keep default false for mobilid full warehouse list store
 
@@ -124,25 +126,20 @@ class ExtDirectFormProduct extends FormProduct
 				if ($filter->property == 'batch') $batch=$this->db->escape($filter->value);
 				if ($filter->property == 'sumstock') $sumStock=$filter->value;
 				if ($filter->property == 'exclude') $exclude = explode(',', $filter->value);
-				if ($filter->property == 'stockmin') {
-					$stockMin = $filter->value;
-					if ($stockMin == 1) {
-						$stockMin = 0; // to distinguish between no filter and filter for stock > 0
-					}
-				}
+				if ($filter->property == 'stockmin' && !empty($filter->value)) $stockMin = true; // with or without stock
 				if ($filter->property == 'content') $contentValue = strtolower($this->db->escape($filter->value));
 				if ($filter->property == 'statusfilter') $statusFilter = $this->db->escape($filter->value);
 			}
 		}
 
 		if ($includeTotal) {
-			$res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin);
+			$res = $this->extLoadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin);
 			$total = $res;
 		} else {
-			$res = $this->_loadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin, $limit, $start);
+			$res = $this->extLoadWarehouses($fkProduct, $fkBatch, $batch, $statusFilter, $contentValue, $sumStock, $exclude, $stockMin, $limit, $start);
 		}
 
-		$this->_makeNumericLabelSortable();
+		if (empty($conf->global->DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS)) $this->_makeNumericLabelSortable();
 
 		if ($start == 0 && !in_array(0, $exclude)) {
 			// create allwarehouse record with total warehouse stock, only for first page
@@ -401,15 +398,18 @@ class ExtDirectFormProduct extends FormProduct
 	 *									'warehouseinternal' = select products from warehouses for internal correct/transfer only
 	 * @param   string  $contentValue   content search string
 	 * @param	boolean	$sumStock		sum total stock of a warehouse, default true
+	 * @param   array   $exclude        array of warehouse ids to exclude from result
+	 * @param   boolean $stockMin       false for no filter, true to exclude warehouses without stock
 	 * @param   int     $limit          paging limit
 	 * @param   int     $start          paging start
 	 * @return  int  		    		Nb of loaded lines, 0 if already loaded, <0 if KO
 	 */
-	private function _loadWarehouses($fk_product = 0, $fk_batch = 0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $exclude = array(), $stockMin = false, $limit = 0, $start = 0)
+	public function extLoadWarehouses($fk_product = 0, $fk_batch = 0, $batch = '', $statusFilter = '', $contentValue = '', $sumStock = true, $exclude = array(), $stockMin = false, $limit = 0, $start = 0)
 	{
 		dol_syslog(get_class($this).'::loadWarehouses fk_product='.$fk_product.'fk_batch='.$fk_batch.'batch='.$batch.'statusFilter='.$statusFilter.'contentValue='.$contentValue.'sumStock='.$sumStock.'limit='.$limit.'start='.$start, LOG_DEBUG);
 
 		$warehouseStatus = array();
+		$barcodeTypes = array();
 
 		$barcodeTypeData = $this->readBarcodeType(new stdClass);
 		foreach ($barcodeTypeData as $barcodeType) {
@@ -469,9 +469,9 @@ class ExtDirectFormProduct extends FormProduct
 		if ($stockMin !== false) {
 			if (!empty($fk_product) && $fk_product > 0) {
 				if (!empty($batch)) {
-					$sql .= " AND pb.qty > ".((float) $stockMin);
+					$sql .= " AND pb.qty <> 0";
 				} else {
-					$sql .= " AND ps.reel > ".((float) $stockMin);
+					$sql .= " AND ps.reel <> 0";
 				}
 			}
 		}
@@ -493,7 +493,7 @@ class ExtDirectFormProduct extends FormProduct
 
 			// minimum stock
 			if ($stockMin !== false) {
-				$sql .= " HAVING sum(ps.reel) >= ".((float) $stockMin);
+				$sql .= " HAVING sum(ps.reel) <> 0";
 			}
 		}
 		if (ExtDirect::checkDolVersion(0, '7.0', '')) {
@@ -577,7 +577,7 @@ class ExtDirectFormProduct extends FormProduct
 			$digits = '%0'.$maxLabelLen.'d';
 		}
 		foreach ($this->cache_warehouses as &$warehouse) {
-			$numericPart = (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] > 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
+			$numericPart = (isset($numericLabel[$warehouse['id']]) && $numericLabel[$warehouse['id']] >= 0) ? sprintf($digits, $numericLabel[$warehouse['id']]) : '';
 			if (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'num-alfa') {
 				$warehouse['label'] =  $numericPart . $alphaLabel[$warehouse['id']];
 			} elseif (isset($orderLabel[$warehouse['id']]) && $orderLabel[$warehouse['id']] == 'alfa-num') {

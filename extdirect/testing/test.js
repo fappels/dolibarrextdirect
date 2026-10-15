@@ -2176,7 +2176,7 @@ describe("shipment", function () {
 				trueHeight: .2,
 				note_private: 'connectortest private',
 				note_public: 'connectortest public',
-				tracking_number: 'connectortest tracking',
+				tracking_number: 'connectortesttracking',
 				deliver_date: Ext.Date.format(new Date(), 'U')
 			};
 			shipment = Ext.create('ConnectorTest.model.Shipment');
@@ -2325,7 +2325,7 @@ describe("shipment", function () {
 			expect(testresults).toContain(shipmentRef);
 			expect(testresults).toContain('connectortest public');
 			expect(testresults).toContain('connectortest private');
-			expect(testresults).toContain('connectortest tracking');
+			expect(testresults).toContain('connectortesttracking');
 			expect(testresults).toContain(1);
 			expect(testresults).toContain(2);
 			expect(testresults).toContain('location incoterms');
@@ -4311,6 +4311,18 @@ describe("delete Purchase orders", function () {
 			Ext.getStore('PurchaseOrderLine').filter([Ext.create('Ext.util.Filter', { property: "order_id", value: purchaseOrderId }), Ext.create('Ext.util.Filter', { property: "warehouse_id", value: -1 })]);
 			Ext.getStore('PurchaseOrderLine').load({
 				callback: function (records) {
+					Ext.Array.each(records, function (record) {
+						if (record.get('reception_id')) {
+							Ext.getStore('Reception').clearFilter();
+							Ext.getStore('Reception').filter([Ext.create('Ext.util.Filter', { property: "id", value: record.get('reception_id') })]);
+							Ext.getStore('Reception').load({
+								callback: function (receptions) {
+									Ext.getStore('Reception').remove(receptions);
+									Ext.getStore('Reception').sync();
+								}
+							});
+						}
+					});
 					Ext.getStore('PurchaseOrderLine').remove(records);
 					Ext.getStore('PurchaseOrderLine').sync({
 						success: function() {
