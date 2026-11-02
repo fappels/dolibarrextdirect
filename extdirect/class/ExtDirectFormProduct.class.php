@@ -157,7 +157,8 @@ class ExtDirectFormProduct extends FormProduct
 				array_push($data, $row);
 			} elseif (!empty($fkProduct) || $sumStock) {
 				$sql = "SELECT sum(ps.reel) as stock FROM ".MAIN_DB_PREFIX."product_stock as ps";
-				if (!empty($fkProduct)) $sql.= " WHERE ps.fk_product = ".$fkProduct;
+				$sql.= " WHERE e.entity IN (".getEntity('stock', 1).")";
+				if (!empty($fkProduct)) $sql.= " AND ps.fk_product = ".$fkProduct;
 				$resql = $this->db->query($sql);
 				if ($resql) {
 					$obj = $this->db->fetch_object($resql);
