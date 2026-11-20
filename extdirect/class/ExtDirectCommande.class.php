@@ -1363,8 +1363,19 @@ class ExtDirectCommande extends Commande
 						$isService = true;
 					}
 
-					if ($isService || $isFreeLine || isset($warehouse_id) || $myprod->stock_reel == 0) {
-						if ($isService || $isFreeLine || $warehouse_id == -1) {
+					// check if the split by warehouse will give at least one row, if not the line is returned with total stock
+					$hasStockWarehouse = false;
+					if (!$isService && !$isFreeLine && !isset($warehouse_id) && $myprod->stock_reel != 0 && is_array($myprod->stock_warehouse)) {
+						foreach ($myprod->stock_warehouse as $stockWarehouse) {
+							if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stockWarehouse->real > 0)) {
+								$hasStockWarehouse = true;
+								break;
+							}
+						}
+					}
+
+					if ($isService || $isFreeLine || isset($warehouse_id) || $myprod->stock_reel == 0 || !$hasStockWarehouse) {
+						if ($isService || $isFreeLine || (isset($warehouse_id) && $warehouse_id == -1)) {
 							// get orderline with complete stock
 							$row = new stdClass;
 							$row->id = $line->id;

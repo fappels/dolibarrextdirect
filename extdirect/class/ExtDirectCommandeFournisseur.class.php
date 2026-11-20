@@ -1038,6 +1038,8 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 
 					}
 				}
+				$warehouseObject = new Entrepot($this->db);
+				$warehouseList = $warehouseObject->list_array();
 				foreach ($this->lines as $line) {
 					if (!isset($id) || ($id == $line->id)) {
 						$isService = false;
@@ -1081,7 +1083,17 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						} elseif (!$isFreeLine && ExtDirect::checkDolVersion(0, '19.0') && !$myprod->isStockManaged()) {
 							$isService = true;
 						}
-						if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0)) {
+						// check if the split by warehouse will give at least one row, if not the line is returned with total stock
+						$hasStockWarehouse = false;
+						if (!$isService && !$isFreeLine && empty($warehouse_id) && $myprod->stock_reel != 0) {
+							foreach ($warehouseList as $warehouse => $warehouseLabel) {
+								if (!empty($myprod->stock_warehouse[$warehouse]->real)) {
+									$hasStockWarehouse = true;
+									break;
+								}
+							}
+						}
+						if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0) || !$hasStockWarehouse) {
 							if (($warehouse_id == -1 || $isService || $isFreeLine )) {
 								// get orderline with complete stock
 								$row = new stdClass;
@@ -1266,8 +1278,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 							}
 						} else {
 							// read list of oderlines split by warehouse stock (to show stock available in all warehouse)
-							$warehouseObject = new Entrepot($this->db);
-							$warehouseList = $warehouseObject->list_array();
 							foreach ($warehouseList as $warehouse=>$warehouseLabel) {
 								if (!empty($myprod->stock_warehouse[$warehouse]->real)) {
 									$row = new stdClass;
