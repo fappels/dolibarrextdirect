@@ -35,9 +35,7 @@ class ExtDirectActivities extends ExtDirectActivity
 	/** @var User */
 	private $_user;
 
-	private $_mainConstants = array(
-		'MAIN_DEFAULT_WAREHOUSE'
-	);
+	private $_mainConstants = array();
 
 	/** Constructor
 	 *
@@ -46,6 +44,11 @@ class ExtDirectActivities extends ExtDirectActivity
 	public function __construct($login)
 	{
 		global $conf, $langs, $user, $db;
+
+		// only send MAIN_DEFAULT_WAREHOUSE when allowed by hidden constant
+		if (!empty($conf->global->DIRECTCONNECT_USE_MAIN_DEFAULT_WAREHOUSE)) {
+			$this->_mainConstants[] = 'MAIN_DEFAULT_WAREHOUSE';
+		}
 
 		if (!empty($login)) {
 			if ((is_object($login) && get_class($db) == get_class($login)) || $user->id > 0 || $user->fetch('', $login, '', 1) > 0) {
