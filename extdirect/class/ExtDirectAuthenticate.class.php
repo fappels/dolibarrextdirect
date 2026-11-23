@@ -197,6 +197,7 @@ class ExtDirectAuthenticate extends ExtDirect
 			$result->session_cookie_samesite = $cookieParams['samesite'];
 			$result->session_cookie_secure =  $cookieParams['secure'];
 			!empty($conf->multicurrency->enabled) ? $result->multicurrency_enabled = 1 : $result->multicurrency_enabled = 0;
+			$result->warehouse_id = (!empty($this->_user->warehouse_id)) ? $this->_user->warehouse_id : 0;
 			return $result;
 		}
 	}
