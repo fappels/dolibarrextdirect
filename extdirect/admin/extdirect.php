@@ -216,14 +216,14 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<tr '.$bc[$var].'>';
 	print '<td>'.$langs->trans("AutoAsignAbility").'</td>';
 	print '<td width="60" align="right">';
-	print $form->selectyesno("auto_asign", $conf->global->DIRECTCONNECT_AUTO_ASIGN, 1);
+	print $form->selectyesno("auto_asign", (!empty($conf->global->DIRECTCONNECT_AUTO_ASIGN) ? 1 : 0), 1);
 	print '</td><td align="right">';
 	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
 	print '</td>';
 	print '</tr>';
 	print '</form>';
 
-	if ($conf->global->DIRECTCONNECT_AUTO_ASIGN) {
+	if (!empty($conf->global->DIRECTCONNECT_AUTO_ASIGN)) {
 		// select auto asigned user
 
 		$var = $var ? 0 : 1;
@@ -234,9 +234,9 @@ if ($mode == $tabs['tab1']->mode) {
 		print '<td>'.$langs->trans("AutoUser").'</td>';
 		print '<td align="right">';
 		if (!empty($conf->multicompany->enabled) && !empty($conf->global->MULTICOMPANY_TRANSVERSE_MODE)) {
-			print $extDirect->selectdolusers($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
+			print $extDirect->selectdolusers((!empty($conf->global->DIRECTCONNECT_AUTO_USER) ? $conf->global->DIRECTCONNECT_AUTO_USER : 0), 'userid', 1, $userExclude, 0, '', '');
 		} else {
-			print $form->select_dolusers($conf->global->DIRECTCONNECT_AUTO_USER, 'userid', 1, $userExclude, 0, '', '');
+			print $form->select_dolusers((!empty($conf->global->DIRECTCONNECT_AUTO_USER) ? $conf->global->DIRECTCONNECT_AUTO_USER : 0), 'userid', 1, $userExclude, 0, '', '');
 		}
 		print '</td><td align="right"><input type="submit" class="button" value="'.$langs->trans("Modify").'"></td>';
 		print '</tr>';
@@ -251,7 +251,7 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<tr '.$bc[$var].'>';
 	print '<td>'.$langs->trans("UseUserRightsToAllowModules").'</td>';
 	print '<td width="60" align="right">';
-	print $form->selectyesno("userights", $conf->global->DIRECTCONNECT_USE_RIGHTS, 1);
+	print $form->selectyesno("userights", (!empty($conf->global->DIRECTCONNECT_USE_RIGHTS) ? 1 : 0), 1);
 	print '</td><td align="right">';
 	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
 	print '</td>';
@@ -266,7 +266,7 @@ if ($mode == $tabs['tab1']->mode) {
 	print '<tr '.$bc[$var].'>';
 	print '<td>'.$langs->trans("DisableSortableWarehouseLabels").'</td>';
 	print '<td width="60" align="right">';
-	print $form->selectyesno("disable_sortable_warehouselabels", $conf->global->DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS, 1);
+	print $form->selectyesno("disable_sortable_warehouselabels", (!empty($conf->global->DIRECTCONNECT_DISABLE_SORTABLE_WAREHOUSELABELS) ? 1 : 0), 1);
 	print '</td><td align="right">';
 	print '<input type="submit" class="button" value="'.$langs->trans("Modify").'">';
 	print '</td>';
