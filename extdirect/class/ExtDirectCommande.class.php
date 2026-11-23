@@ -1365,9 +1365,17 @@ class ExtDirectCommande extends Commande
 
 					// check if the split by warehouse will give at least one row, if not the line is returned with total stock
 					$hasStockWarehouse = false;
+					$defaultWarehouseAllowed = array();
 					if (!$isService && !$isFreeLine && !isset($warehouse_id) && $myprod->stock_reel != 0 && is_array($myprod->stock_warehouse)) {
-						foreach ($myprod->stock_warehouse as $stockWarehouse) {
-							if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stockWarehouse->real > 0)) {
+						// determine allowed warehouses, fall back to all others when default warehouse has no stock
+						$onlyDefaultWarehouse = !empty($conf->global->MOBILIDCONNECT_ONLY_PICKING_FROM_DEFAULT_WAREHOUSE) && !empty($myprod->fk_default_warehouse);
+						if ($onlyDefaultWarehouse && isset($myprod->stock_warehouse[$myprod->fk_default_warehouse]) && $myprod->stock_warehouse[$myprod->fk_default_warehouse]->real > 0) {
+							$defaultWarehouseAllowed[] = $myprod->fk_default_warehouse;
+						} else {
+							$defaultWarehouseAllowed = array_keys($myprod->stock_warehouse);
+						}
+						foreach ($myprod->stock_warehouse as $warehouse => $stockWarehouse) {
+							if (in_array($warehouse, $defaultWarehouseAllowed) && (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stockWarehouse->real > 0))) {
 								$hasStockWarehouse = true;
 								break;
 							}
@@ -1548,6 +1556,7 @@ class ExtDirectCommande extends Commande
 							}
 						}
 					} else {
+						// build rows for allowed warehouses ($defaultWarehouseAllowed is determined above)
 						foreach ($myprod->stock_warehouse as $warehouse=>$stock_warehouse) {
 							if (empty($conf->global->STOCK_MUST_BE_ENOUGH_FOR_SHIPMENT) || ($stock_warehouse->real > 0)) {
 								$row = new stdClass;
