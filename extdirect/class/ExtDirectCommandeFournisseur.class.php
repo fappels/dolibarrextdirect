@@ -212,7 +212,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						$row->reduction += round($noDiscountHT - $line->total_ht, 2);
 					}
 					$totalAsked += $line->qty;
-					if (!method_exists($this, 'loadReceptions')) $totalShipped += $this->getDispatched($line->id, $line->fk_product);
+					if (!method_exists($this, 'loadReceptions')) $totalShipped += $this->getTotalDispatched($line->id, $line->fk_product);
 				}
 				if (method_exists($this, 'loadReceptions')) {
 					$this->loadReceptions();
@@ -1045,7 +1045,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						$isService = false;
 						$qtyShipped = 0;
 						if ($line->fk_product) {
-							$qtyShipped = $this->getDispatched($line->id, $line->fk_product);
+							$qtyShipped = $this->getTotalDispatched($line->id, $line->fk_product);
 							if ($filterdispatched && $qtyShipped >= $line->qty) {
 								continue;
 							}
@@ -1085,15 +1085,19 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						}
 						// check if the split by warehouse will give at least one row, if not the line is returned with total stock
 						$hasStockWarehouse = false;
-						if (!$isService && !$isFreeLine && empty($warehouse_id) && $myprod->stock_reel != 0) {
+						$dispatchedByWarehouse = array();
+						if (!$isService && !$isFreeLine && empty($warehouse_id)) {
+							$dispatchedByWarehouse = $this->getDispatchedByWarehouse($line->id, $line->fk_product);
+						}
+						if (!$isService && !$isFreeLine && empty($warehouse_id) && ($myprod->stock_reel != 0 || !empty($dispatchedByWarehouse))) {
 							foreach ($warehouseList as $warehouse => $warehouseLabel) {
-								if (!empty($myprod->stock_warehouse[$warehouse]->real)) {
+								if (!empty($myprod->stock_warehouse[$warehouse]->real) || !empty($dispatchedByWarehouse[$warehouse])) {
 									$hasStockWarehouse = true;
 									break;
 								}
 							}
 						}
-						if ($isService || $isFreeLine || !empty($warehouse_id) || ($myprod->stock_reel == 0) || !$hasStockWarehouse) {
+						if ($isService || $isFreeLine || !empty($warehouse_id) || !$hasStockWarehouse) {
 							if (($warehouse_id == -1 || $isService || $isFreeLine )) {
 								// get orderline with complete stock
 								$row = new stdClass;
@@ -1279,7 +1283,7 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 						} else {
 							// read list of oderlines split by warehouse stock (to show stock available in all warehouse)
 							foreach ($warehouseList as $warehouse=>$warehouseLabel) {
-								if (!empty($myprod->stock_warehouse[$warehouse]->real)) {
+								if (!empty($myprod->stock_warehouse[$warehouse]->real) || !empty($dispatchedByWarehouse[$warehouse])) {
 									$row = new stdClass;
 									$row->id = $line->id.'_'.$warehouse;
 									$row->is_virtual_stock = false;
@@ -1333,9 +1337,9 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 									$row->date_start = $line->date_start;
 									$row->date_end = $line->date_end;
 									// qty shipped for each product line limited to qty asked, if > qty_asked and more lines of same product move to next orderline of same product
-									$row->qty_shipped = $this->getDispatched($line->id, $line->fk_product, $warehouse); // to get only qty shipped from this warehouse
-									$row->qty_toreceive = $row->qty_asked - $this->getDispatched($line->id, $line->fk_product); // to get total qty shipped from all warehouse to calculate qty to receive
-									$row->stock = (float) $myprod->stock_warehouse[$warehouse]->real;
+									$row->qty_shipped = isset($dispatchedByWarehouse[$warehouse]) ? $dispatchedByWarehouse[$warehouse] : 0; // to get only qty shipped from this warehouse
+									$row->qty_toreceive = $row->qty_asked - array_sum($dispatchedByWarehouse); // to get total qty shipped from all warehouse to calculate qty to receive
+									$row->stock = isset($myprod->stock_warehouse[$warehouse]) ? (float) $myprod->stock_warehouse[$warehouse]->real : 0;
 									if (!empty($conf->global->STOCK_SHOW_VIRTUAL_STOCK_IN_PRODUCTS_COMBO)) {
 										$row->is_virtual_stock = true;
 										$row->total_stock = $myprod->stock_theorique;
@@ -1930,15 +1934,46 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 	}
 
 	/**
-	 * private method the get qty dispatched for product
+	 * private method to get the received quantity of an order line, split by warehouse
+	 *
+	 * @param int $lineId order line id
+	 * @param int $productId product id
+	 * @return array<int,float|string> received quantity indexed by warehouse id (0 if no warehouse)
+	 */
+	private function getDispatchedByWarehouse($lineId, $productId)
+	{
+		$result = array();
+
+		if ($productId) {
+			$sql = "SELECT cfd.fk_entrepot, sum(cfd.qty) as qty";
+			$sql.= " FROM ".MAIN_DB_PREFIX.$this->table_element_reception_line." as cfd";
+			$sql.= " WHERE cfd.".$this->key_ship_line_order." = ".((int) $this->id);
+			$sql.= " AND cfd.fk_product = ".((int) $productId);
+			$sql.= " AND cfd.".$this->key_ship_line_order_line." = ".((int) $lineId);
+			$sql.= " GROUP BY cfd.fk_entrepot";
+			$resql = $this->db->query($sql);
+			if ($resql) {
+				while ($obj = $this->db->fetch_object($resql)) {
+					if (!empty($obj->qty)) {
+						$result[(int) $obj->fk_entrepot] = price2num($obj->qty, 5); // key 0 = received without warehouse
+					}
+				}
+				$this->db->free($resql);
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * private method to get the total quantity dispatched for a product
 	 *
 	 * @param int $lineId supplier order line id
-	 * @param int $productId product to get qty ditpatched
-	 * @param int $warehouseId warehouse id
+	 * @param int $productId product to get qty dispatched
 	 *
-	 * @return int qty
+	 * @return float|string qty
 	 */
-	private function getDispatched($lineId, $productId, $warehouseId = 0)
+	private function getTotalDispatched($lineId, $productId)
 	{
 		$dispatched = 0;
 		$qtyShipped = 0;
@@ -1949,9 +1984,6 @@ class ExtDirectCommandeFournisseur extends CommandeFournisseur
 			$sql.= " WHERE cfd.".$this->key_ship_line_order." = ".$this->id;
 			$sql.= " AND cfd.fk_product = ".$productId;
 			$sql.= " AND cfd.".$this->key_ship_line_order_line." = ".$lineId;
-			if ($warehouseId > 0) {
-				$sql.= " AND cfd.fk_entrepot = ".$warehouseId;
-			}
 			$resql=$this->db->query($sql);
 			if ($resql) {
 				$obj = $this->db->fetch_object($resql);
