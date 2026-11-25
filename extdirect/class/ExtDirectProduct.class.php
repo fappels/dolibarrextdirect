@@ -47,6 +47,7 @@ class ExtDirectProduct extends ProductFournisseur
 	/** @var array<string> used constants */
 	private $_productConstants = array(
 		'PRODUCT_USE_SUPPLIER_PACKAGING',
+		'MAIN_USE_ADVANCED_PERMS',
 		'STOCK_ALLOW_NEGATIVE_TRANSFER', // V21-
 		'STOCK_DISALLOW_NEGATIVE_TRANSFER' // V22+
 	);
@@ -136,8 +137,26 @@ class ExtDirectProduct extends ProductFournisseur
 		if (!isset($this->_user->rights->produit->lire)) return PERMISSIONERROR;
 
 		$results = ExtDirect::readConstants($this->db, $params, $this->_user, $this->_productConstants);
+		array_push($results, $this->getUserRightsConstant());
 
 		return $results;
+	}
+
+	/**
+	 * Get the product and service rights of the user as a constant, so the client can hide fields accordingly
+	 *
+	 * @return stdClass constant USER_RIGHTS with value a json string of the rights
+	 */
+	protected function getUserRightsConstant()
+	{
+		$rights = new stdClass;
+		$rights->produit = isset($this->_user->rights->produit) ? $this->_user->rights->produit : new stdClass;
+		$rights->service = isset($this->_user->rights->service) ? $this->_user->rights->service : new stdClass;
+		$row = new stdClass;
+		$row->constant = 'USER_RIGHTS';
+		$row->value = json_encode($rights);
+
+		return $row;
 	}
 
 	/**
