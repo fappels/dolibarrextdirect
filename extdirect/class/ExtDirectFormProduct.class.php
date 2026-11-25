@@ -429,10 +429,8 @@ class ExtDirectFormProduct extends FormProduct
 		}
 		if (ExtDirect::checkDolVersion(0, '16.0', '')) {
 			$sql = "SELECT e.rowid, e.ref as label, e.description, e.statut, e.fk_parent, e.barcode, e.fk_barcode_type";
-		} elseif (ExtDirect::checkDolVersion(0, '7.0', '')) {
-			$sql = "SELECT e.rowid, e.ref as label, e.description, e.statut, e.fk_parent";
 		} else {
-			$sql = "SELECT e.rowid, e.label, e.description, e.statut";
+			$sql = "SELECT e.rowid, e.ref as label, e.description, e.statut, e.fk_parent";
 		}
 		if (!empty($fk_product)) {
 			if (!empty($fk_batch) || !empty($batch)) {
@@ -479,30 +477,18 @@ class ExtDirectFormProduct extends FormProduct
 		}
 
 		if (!empty($contentValue)) {
-			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-				$fields = array('e.ref', 'e.description');
-			} else {
-				$fields = array('e.label', 'e.description');
-			}
+			$fields = array('e.ref', 'e.description');
 			$sql .= natural_search($fields, $contentValue);
 		}
 		if ($sumStock && empty($fk_product)) {
-			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-				$sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut, e.fk_parent";
-			} else {
-				$sql.= " GROUP BY e.rowid, e.label, e.description, e.statut";
-			}
+			$sql.= " GROUP BY e.rowid, e.ref, e.description, e.statut, e.fk_parent";
 
 			// minimum stock
 			if ($stockMin !== false) {
 				$sql .= " HAVING sum(ps.reel) <> 0";
 			}
 		}
-		if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-			$sql.= " ORDER BY e.ref";
-		} else {
-			$sql.= " ORDER BY e.label";
-		}
+		$sql.= " ORDER BY e.ref";
 		if (!empty($limit)) {
 			$sql .= $this->db->plimit($limit, $start);
 		}
@@ -631,11 +617,7 @@ class ExtDirectFormProduct extends FormProduct
 		if (!isset($this->db)) return CONNECTERROR;
 
 		$results = array();
-		if (ExtDirect::checkDolVersion(0, '10.0', '')) {
-			$sql = "SELECT rowid, label, code, short_label, scale, unit_type";
-		} else {
-			$sql = "SELECT rowid, label, code, short_label";
-		}
+		$sql = "SELECT rowid, label, code, short_label, scale, unit_type";
 		$sql.= " FROM ".MAIN_DB_PREFIX."c_units";
 		$sql.= " WHERE active > 0";
 		$sql.= " ORDER BY rowid";
@@ -649,10 +631,8 @@ class ExtDirectFormProduct extends FormProduct
 				$row->id = $obj->rowid;
 				$row->label = ($langs->transnoentities('unit'.$obj->code)!=$obj->label?$langs->transnoentities('unit'.$obj->code):$obj->label);
 				$row->short_label = ($langs->transnoentities($obj->short_label)!=$obj->short_label?$langs->transnoentities($obj->short_label):$obj->short_label);
-				if (ExtDirect::checkDolVersion(0, '10.0', '')) {
-					$row->scale = $obj->scale;
-					$row->unit_type = $obj->unit_type;
-				}
+				$row->scale = $obj->scale;
+				$row->unit_type = $obj->unit_type;
 				array_push($results, $row);
 				$i++;
 			}

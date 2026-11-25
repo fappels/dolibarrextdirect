@@ -649,13 +649,13 @@ class ExtDirect
 		$dolMajorMinorVersion = $dolVersion[0].'.'.$dolVersion[1];
 
 		if ($validate) {
-			$minVersion = '6.0';
+			$minVersion = '10.0';
 			$maxVersion = '24.0'; // tested version
 		}
 		if (empty($minVersion) && empty($maxVersion)) {
 			return $dolMajorMinorVersion;
 		} else {
-			if (empty($minVersion)) $minVersion = '6.0';
+			if (empty($minVersion)) $minVersion = '10.0';
 			if (empty($maxVersion)) $maxVersion = '25.0'; // debugging version
 			if (version_compare($minVersion, $dolMajorMinorVersion, '<=') && version_compare($maxVersion, $dolMajorMinorVersion, '>=')) {
 				return 1;

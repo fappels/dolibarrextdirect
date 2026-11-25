@@ -253,7 +253,7 @@ class ExtDirectProduct extends ProductFournisseur
 					}
 					$row->price_base_type=$this->multiprices_base_type[$multiprices_index];
 					$row->multiprices_index=$multiprices_index;
-				} elseif (ExtDirect::checkDolVersion(0, '10.0') && !empty($socid)) {
+				} elseif (!empty($socid)) {
 					$priceArray = $this->getSellPrice($mysoc, $customer);
 					$row->price=$priceArray['pu_ht'];
 					$row->price_ttc=$priceArray['pu_ttc'];
@@ -1469,11 +1469,7 @@ class ExtDirectProduct extends ProductFournisseur
 		$sqlFields = 'SELECT p.rowid as id, p.ref, p.label, p.barcode, p.entity, p.seuil_stock_alerte, p.stock as total_stock, p.price, p.price_ttc';
 		if ($warehouseFilter) {
 			$sqlFields .= ', ps.fk_entrepot, ps.reel as stock';
-			if (ExtDirect::checkDolVersion(0, '7.0', '')) {
-				$sqlFields .= ", COALESCE(e.ref,'|0| Stock') as warehouse";
-			} else {
-				$sqlFields .= ", COALESCE(e.label,'|0| Stock') as warehouse";
-			}
+			$sqlFields .= ", COALESCE(e.ref,'|0| Stock') as warehouse";
 		} else {
 			$sqlFields .= ", '". $langs->trans(ExtDirectFormProduct::ALLWAREHOUSE_LABEL). "' as warehouse";
 		}
@@ -1582,10 +1578,8 @@ class ExtDirectProduct extends ProductFournisseur
 						if ($warehouseFilter) {
 							if (ExtDirect::checkDolVersion(0, '16.0', '')) {
 								$sqlWhere .= "(e.ref = '".$value. "' OR e.barcode = '".$value."') OR ";
-							} elseif (ExtDirect::checkDolVersion(0, '7.0', '')) {
-								$sqlWhere .= "e.ref = '".$value. "' OR ";
 							} else {
-								$sqlWhere .= "e.label = '".$value. "' OR ";
+								$sqlWhere .= "e.ref = '".$value. "' OR ";
 							}
 						}
 						$sqlWhere .= natural_search($fields, $filter->value, 0, 1);
