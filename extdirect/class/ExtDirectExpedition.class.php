@@ -702,7 +702,7 @@ class ExtDirectExpedition extends Expedition
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectexpeditionreadshipmentlist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'readShipmentList';
 
 		$statusFilterCount = 0;
@@ -726,6 +726,7 @@ class ExtDirectExpedition extends Expedition
 		}
 
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'shipmentstatus_id') $shipmentstatus_id[$statusFilterCount++] = $filter->value;
 				elseif ($filter->property == 'orderstatus_id') $shipmentstatus_id[$statusFilterCount++] = $filter->value; // deprecated

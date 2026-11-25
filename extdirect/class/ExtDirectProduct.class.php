@@ -1438,7 +1438,7 @@ class ExtDirectProduct extends ProductFournisseur
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectproductreadproductlist'));
-		$parameters = array('filter' => $param->filter);
+		$parameters = array();
 		$action = 'readProductList';
 
 		$filterSize = 0;
@@ -1459,6 +1459,7 @@ class ExtDirectProduct extends ProductFournisseur
 			$start = $param->start;
 		}
 		if (isset($param->filter)) {
+			$parameters['filter'] = $param->filter;
 			$filterSize = count($param->filter);
 			foreach ($param->filter as $key => $filter) {
 				if ($filter->property == 'multiprices_index' && ! empty($conf->global->PRODUIT_MULTIPRICES)) $multiPriceLevel=$filter->value;

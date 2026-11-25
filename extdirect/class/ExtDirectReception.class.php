@@ -461,7 +461,7 @@ class ExtDirectReception extends Reception
 		$data = array();
 		$rows = array();
 		$hookmanager->initHooks(array('extdirectreceptionextlist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'extList';
 
 		$statusFilterCount = 0;
@@ -486,6 +486,7 @@ class ExtDirectReception extends Reception
 		}
 
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'status_id') $status_id[$statusFilterCount++] = $filter->value;
 				elseif ($filter->property == 'ref') $ref = $filter->value;

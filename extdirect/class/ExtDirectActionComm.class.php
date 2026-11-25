@@ -282,7 +282,7 @@ class ExtDirectActionComm extends ActionComm
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectactioncommreadactionlist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'readActionList';
 
 		$filterSize = 0;
@@ -293,6 +293,7 @@ class ExtDirectActionComm extends ActionComm
 			$start = $params->start;
 		}
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			$filterSize = count($params->filter);
 		}
 		if (isset($params->include_total)) {

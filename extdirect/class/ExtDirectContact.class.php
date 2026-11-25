@@ -305,7 +305,7 @@ class ExtDirectContact extends Contact
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectcontactreadcontactlist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'readContactList';
 		$filterSize = 0;
 		$includeTotal = true;
@@ -315,6 +315,7 @@ class ExtDirectContact extends Contact
 			$start = $params->start;
 		}
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			$filterSize = count($params->filter);
 		}
 		if (isset($params->include_total)) {

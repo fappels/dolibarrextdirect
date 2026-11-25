@@ -742,7 +742,7 @@ class ExtDirectCommande extends Commande
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectcommandereadorderlist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'readOrderList';
 
 		$statusFilterCount = 0;
@@ -771,6 +771,7 @@ class ExtDirectCommande extends Commande
 		}
 
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'orderstatus_id') $orderstatus_id[$statusFilterCount++]=$filter->value; // add id config in client filter for ExtJs
 				elseif ($filter->property == 'ref') $ref=$filter->value;

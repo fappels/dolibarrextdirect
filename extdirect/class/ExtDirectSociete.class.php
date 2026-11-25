@@ -378,7 +378,7 @@ class ExtDirectSociete extends Societe
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectsocietereadsocietelist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'readSocieteList';
 		$filterSize = 0;
 		$limit=null;
@@ -390,6 +390,7 @@ class ExtDirectSociete extends Societe
 			$start = $params->start;
 		}
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			$filterSize = count($params->filter);
 		}
 		if (isset($params->include_total)) {

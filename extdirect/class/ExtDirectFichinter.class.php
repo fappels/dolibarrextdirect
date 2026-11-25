@@ -526,7 +526,7 @@ class ExtDirectFichinter extends Fichinter
 		$result = new stdClass;
 		$data = array();
 		$hookmanager->initHooks(array('extdirectfichinterreadlist'));
-		$parameters = array('filter' => $params->filter);
+		$parameters = array();
 		$action = 'readList';
 
 		$statusFilterCount = 0;
@@ -549,6 +549,7 @@ class ExtDirectFichinter extends Fichinter
 		}
 
 		if (isset($params->filter)) {
+			$parameters['filter'] = $params->filter;
 			foreach ($params->filter as $key => $filter) {
 				if ($filter->property == 'status_id') $orderstatus_id[$statusFilterCount++]=$filter->value;
 				elseif ($filter->property == 'ref') $ref=$filter->value;
