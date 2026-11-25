@@ -498,6 +498,21 @@ class ExtDirectCommande extends Commande
 						}
 						break;
 					case 3:
+						// double check total shipped qty equals total asked qty, else skip cloture
+						$this->loadExpeditions();
+						$totalAsked = 0;
+						$totalShipped = 0;
+						foreach ($this->lines as $line) {
+							if ($line->product_type == 0) {
+								$totalAsked += $line->qty;
+								$totalShipped += isset($this->expeditions[$line->id]) ? $this->expeditions[$line->id] : 0;
+							}
+						}
+						if (price2num($totalShipped, 'MS') != price2num($totalAsked, 'MS')) {
+							dol_syslog(get_class($this)."::updateOrder cloture skipped for order ".$this->ref.": total shipped qty ".$totalShipped." differs from total asked qty ".$totalAsked, LOG_ERR);
+							$result = 0;
+							break;
+						}
 						$result = $this->cloture($this->_user);
 						break;
 					default:
